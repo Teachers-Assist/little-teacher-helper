@@ -1,0 +1,91 @@
+/* Print-specific styles */
+@media print {
+  /* Hide non-printable elements */
+  .no-print,
+  button,
+  nav,
+  header,
+  footer,
+  .navigation {
+    display: none !important;
+  }
+
+  /* Reset background and colors */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  /* Ensure content is visible */
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  /* Prevent page breaks inside elements */
+  h1, h2, h3, h4, h5, h6,
+  img, table, pre, blockquote {
+    page-break-inside: avoid;
+  }
+
+  /* Keep headings with content */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  /* Table styling */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Links */
+  a[href]::after {
+    content: none;
+  }
+
+  /* Cards and containers */
+  .card {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* Status badges - preserve colors for print */
+  .status-submitted {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .status-not-submitted {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+

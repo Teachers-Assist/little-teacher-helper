@@ -68,11 +68,11 @@
 - [x] T025 [P] [US1] Create StudentList component in src/components/StudentList.tsx
 - [x] T026 [US1] Create homepage/entry point in src/app/page.tsx with teacher/helper role selection
 - [x] T027 [US1] Create teacher dashboard page in src/app/teacher/page.tsx
-- [ ] T028 [US1] Create room list page in src/app/teacher/rooms/page.tsx
+- [x] T028 [US1] Create room list page in src/app/teacher/rooms/page.tsx
 - [x] T029 [US1] Create new room page with form in src/app/teacher/rooms/new/page.tsx
 - [x] T030 [US1] Create room detail page in src/app/teacher/rooms/[id]/page.tsx
 - [x] T031 [US1] Create QRCode display page in src/app/teacher/rooms/[id]/qrcode/page.tsx
-- [ ] T032 [US1] Implement useRoom hook for room data management in src/hooks/useRoom.ts
+- [x] T032 [US1] Implement useRoom hook for room data management in src/hooks/useRoom.ts
 
 **Checkpoint**: User Story 1 complete - Teacher can create rooms, add students, and generate QRCode
 
@@ -89,13 +89,13 @@
 - [x] T033 [P] [US2] Implement GET /api/rooms/join/[code] endpoint in src/app/api/rooms/join/[code]/route.ts
 - [x] T034 [US2] Implement GET, PATCH /api/submissions endpoints in src/app/api/submissions/route.ts
 - [x] T035 [US2] Implement GET /api/items/[itemId]/submissions endpoint in src/app/api/items/[id]/submissions/route.ts
-- [ ] T036 [P] [US2] Create QRScanner component using html5-qrcode in src/components/QRScanner.tsx
-- [ ] T037 [P] [US2] Create SubmissionForm component in src/components/SubmissionForm.tsx
+- [x] T036 [P] [US2] Create QRScanner component using html5-qrcode in src/components/QRScanner.tsx
+- [x] T037 [P] [US2] Create SubmissionForm component in src/components/SubmissionForm.tsx
 - [x] T038 [US2] Create join room page (QRCode destination) in src/app/join/[code]/page.tsx
 - [x] T039 [US2] Create helper main page (select item) in src/app/helper/[roomId]/page.tsx
 - [x] T040 [US2] Create submission recording page in src/app/helper/[roomId]/[itemId]/page.tsx
-- [ ] T041 [US2] Implement localStorage wrapper for offline data in src/lib/offline/storage.ts
-- [ ] T042 [US2] Implement offline operation queue in src/lib/offline/queue.ts
+- [x] T041 [US2] Implement localStorage wrapper for offline data in src/lib/offline/storage.ts
+- [x] T042 [US2] Implement offline operation queue in src/lib/offline/queue.ts
 
 **Checkpoint**: User Story 2 complete - Helper can scan QRCode, join room, and record submissions
 
@@ -109,11 +109,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] Implement GET /api/items/[itemId]/report endpoint in src/app/api/items/[id]/report/route.ts
-- [ ] T044 [P] [US3] Create ReportView component in src/components/ReportView.tsx
-- [ ] T045 [US3] Integrate report view into room detail page in src/app/teacher/rooms/[id]/page.tsx
-- [ ] T046 [US3] Implement report export functions (text, print) in src/lib/report.ts
-- [ ] T047 [US3] Add print-friendly CSS styles in src/styles/print.css
+- [x] T043 [US3] Implement GET /api/items/[itemId]/report endpoint in src/app/api/items/[id]/report/route.ts
+- [x] T044 [P] [US3] Create ReportView component in src/components/ReportView.tsx
+- [x] T045 [US3] Integrate report view into room detail page in src/app/teacher/rooms/[id]/page.tsx
+- [x] T046 [US3] Implement report export functions (text, print) in src/lib/report.ts
+- [x] T047 [US3] Add print-friendly CSS styles in src/styles/print.css
 
 **Checkpoint**: User Story 3 complete - Teacher can view and export submission reports
 
@@ -127,12 +127,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T048 [US4] Implement POST /api/sync endpoint in src/app/api/sync/route.ts
-- [ ] T049 [P] [US4] Create NetworkStatus component in src/components/NetworkStatus.tsx
-- [ ] T050 [P] [US4] Create SyncIndicator component in src/components/SyncIndicator.tsx
+- [x] T048 [US4] Implement POST /api/sync endpoint in src/app/api/sync/route.ts
+- [x] T049 [P] [US4] Create NetworkStatus component in src/components/NetworkStatus.tsx
+- [x] T050 [P] [US4] Create SyncIndicator component in src/components/SyncIndicator.tsx
 - [ ] T051 [US4] Implement offline sync logic in src/lib/offline/sync.ts
-- [ ] T052 [US4] Implement useNetworkStatus hook in src/hooks/useNetworkStatus.ts
-- [ ] T053 [US4] Implement useOfflineSync hook in src/hooks/useOfflineSync.ts
+- [x] T052 [US4] Implement useNetworkStatus hook in src/hooks/useNetworkStatus.ts
+- [x] T053 [US4] Implement useOfflineSync hook in src/hooks/useOfflineSync.ts
 - [ ] T054 [US4] Integrate offline/online status display in helper pages
 - [ ] T055 [US4] Configure Service Worker caching strategies in next.config.js
 
@@ -148,12 +148,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T056 [US5] Implement GET, POST /api/rooms/[roomId]/items endpoints in src/app/api/rooms/[id]/items/route.ts
-- [ ] T057 [US5] Implement GET, PATCH, DELETE /api/items/[id] endpoints in src/app/api/items/[id]/route.ts
+- [x] T056 [US5] Implement GET, POST /api/rooms/[roomId]/items endpoints in src/app/api/rooms/[id]/items/route.ts
+- [x] T057 [US5] Implement GET, PATCH, DELETE /api/items/[id] endpoints in src/app/api/items/[id]/route.ts
 - [ ] T058 [P] [US5] Create ItemList component for displaying items in src/components/ItemList.tsx
 - [ ] T059 [US5] Create item management page in src/app/teacher/items/[roomId]/page.tsx
-- [ ] T060 [US5] Update helper main page to show item selection in src/app/helper/[roomId]/page.tsx
-- [ ] T061 [US5] Add item statistics to room detail page in src/app/teacher/rooms/[id]/page.tsx
+- [x] T060 [US5] Update helper main page to show item selection in src/app/helper/[roomId]/page.tsx
+- [x] T061 [US5] Add item statistics to room detail page in src/app/teacher/rooms/[id]/page.tsx
 
 **Checkpoint**: User Story 5 complete - Multiple items can be created and tracked independently
 
