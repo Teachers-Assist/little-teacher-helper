@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
+import { ToastProvider } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: '小老師助手',
@@ -14,8 +15,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
+    icon: '/icons/icon.svg',
+    apple: '/icons/icon.svg',
   },
 };
 
@@ -43,9 +44,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 dark:from-slate-900 dark:to-slate-800">
-        <main className="flex min-h-screen flex-col">{children}</main>
+        <ToastProvider>
+          <main className="flex min-h-screen flex-col">{children}</main>
+        </ToastProvider>
       </body>
     </html>
   );
 }
-

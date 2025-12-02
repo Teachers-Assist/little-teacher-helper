@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#0284c7"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg-gradient)"/>
+  <!-- Clipboard body -->
+  <rect x="116" y="96" width="280" height="340" rx="24" fill="white"/>
+  <!-- Clipboard clip -->
+  <rect x="196" y="72" width="120" height="48" rx="8" fill="#475569"/>
+  <!-- Check marks (students checked) -->
+  <g fill="none" stroke="#10b981" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M152 200 L184 232 L232 168"/>
+    <path d="M152 280 L184 312 L232 248"/>
+    <path d="M152 360 L184 392 L232 328"/>
+  </g>
+  <!-- Lines (student names) -->
+  <g fill="#94a3b8">
+    <rect x="268" y="188" width="100" height="16" rx="4"/>
+    <rect x="268" y="268" width="100" height="16" rx="4"/>
+    <rect x="268" y="348" width="100" height="16" rx="4"/>
+  </g>
+</svg>
+

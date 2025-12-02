@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { NetworkStatus } from '@/components/NetworkStatus';
+import { SyncIndicator } from '@/components/SyncIndicator';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { formatDate } from '@/lib/utils';
 
 interface Room {
@@ -24,6 +27,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   const [room, setRoom] = useState<Room | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,33 +40,35 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           setItems(offlineData.items?.[roomId] || []);
         }
 
-        // Then try to fetch fresh data
-        const [roomRes, itemsRes] = await Promise.all([
-          fetch(`/api/rooms/${roomId}`),
-          fetch(`/api/rooms/${roomId}/items`),
-        ]);
+        // Then try to fetch fresh data if online
+        if (isOnline) {
+          const [roomRes, itemsRes] = await Promise.all([
+            fetch(`/api/rooms/${roomId}`),
+            fetch(`/api/rooms/${roomId}/items`),
+          ]);
 
-        if (roomRes.ok) {
-          const roomData = await roomRes.json();
-          setRoom(roomData);
-          // Update offline cache
-          offlineData.rooms = offlineData.rooms || {};
-          offlineData.rooms[roomId] = {
-            id: roomData.id,
-            name: roomData.name,
-            code: roomData.code,
-          };
+          if (roomRes.ok) {
+            const roomData = await roomRes.json();
+            setRoom(roomData);
+            // Update offline cache
+            offlineData.rooms = offlineData.rooms || {};
+            offlineData.rooms[roomId] = {
+              id: roomData.id,
+              name: roomData.name,
+              code: roomData.code,
+            };
+          }
+
+          if (itemsRes.ok) {
+            const itemsData = await itemsRes.json();
+            setItems(itemsData);
+            // Update offline cache
+            offlineData.items = offlineData.items || {};
+            offlineData.items[roomId] = itemsData;
+          }
+
+          localStorage.setItem('helperOfflineData', JSON.stringify(offlineData));
         }
-
-        if (itemsRes.ok) {
-          const itemsData = await itemsRes.json();
-          setItems(itemsData);
-          // Update offline cache
-          offlineData.items = offlineData.items || {};
-          offlineData.items[roomId] = itemsData;
-        }
-
-        localStorage.setItem('helperOfflineData', JSON.stringify(offlineData));
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -71,7 +77,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
     };
 
     fetchData();
-  }, [roomId]);
+  }, [roomId, isOnline]);
 
   if (isLoading) {
     return (
@@ -99,7 +105,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   }
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen p-6 pb-24">
       {/* Header */}
       <div className="mb-6">
         <Link href="/join" className="mb-2 block text-sky-500 hover:text-sky-600">
@@ -107,6 +113,11 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{room.name}</h1>
         <p className="text-slate-600 dark:text-slate-300">選擇要登記的項目</p>
+      </div>
+
+      {/* Sync Status */}
+      <div className="mb-4">
+        <SyncIndicator />
       </div>
 
       {/* Items List */}
@@ -119,6 +130,11 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           <p className="text-slate-600 dark:text-slate-300">
             請等待老師建立登記項目
           </p>
+          {!isOnline && (
+            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+              📴 目前離線，連線後會自動更新
+            </p>
+          )}
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -152,7 +168,9 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           ))}
         </div>
       )}
+
+      {/* Network Status Toast */}
+      <NetworkStatus />
     </div>
   );
 }
-

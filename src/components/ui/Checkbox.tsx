@@ -7,10 +7,13 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   label?: string;
   description?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** Alias for size prop to avoid HTML input size conflict */
+  checkboxSize?: 'sm' | 'md' | 'lg';
 }
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, label, description, size = 'md', id, ...props }, ref) => {
+  ({ className, label, description, size, checkboxSize, id, ...props }, ref) => {
+    const actualSize = checkboxSize ?? size ?? 'md';
     const checkboxId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
 
     const sizes = {
@@ -33,7 +36,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             type="checkbox"
             id={checkboxId}
             className={cn(
-              sizes[size],
+              sizes[actualSize],
               'cursor-pointer rounded border-2 border-slate-300 dark:border-slate-600',
               'text-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2',
               'transition-all duration-150',
@@ -51,7 +54,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
                 htmlFor={checkboxId}
                 className={cn(
                   'cursor-pointer font-medium text-slate-900 dark:text-white',
-                  labelSizes[size]
+                  labelSizes[actualSize]
                 )}
               >
                 {label}

@@ -130,10 +130,10 @@
 - [x] T048 [US4] Implement POST /api/sync endpoint in src/app/api/sync/route.ts
 - [x] T049 [P] [US4] Create NetworkStatus component in src/components/NetworkStatus.tsx
 - [x] T050 [P] [US4] Create SyncIndicator component in src/components/SyncIndicator.tsx
-- [ ] T051 [US4] Implement offline sync logic in src/lib/offline/sync.ts
+- [x] T051 [US4] Implement offline sync logic in src/lib/offline/sync.ts
 - [x] T052 [US4] Implement useNetworkStatus hook in src/hooks/useNetworkStatus.ts
 - [x] T053 [US4] Implement useOfflineSync hook in src/hooks/useOfflineSync.ts
-- [ ] T054 [US4] Integrate offline/online status display in helper pages
+- [x] T054 [US4] Integrate offline/online status display in helper pages
 - [ ] T055 [US4] Configure Service Worker caching strategies in next.config.js
 
 **Checkpoint**: User Story 4 complete - App works offline with automatic sync on reconnection
@@ -150,8 +150,8 @@
 
 - [x] T056 [US5] Implement GET, POST /api/rooms/[roomId]/items endpoints in src/app/api/rooms/[id]/items/route.ts
 - [x] T057 [US5] Implement GET, PATCH, DELETE /api/items/[id] endpoints in src/app/api/items/[id]/route.ts
-- [ ] T058 [P] [US5] Create ItemList component for displaying items in src/components/ItemList.tsx
-- [ ] T059 [US5] Create item management page in src/app/teacher/items/[roomId]/page.tsx
+- [x] T058 [P] [US5] Create ItemList component for displaying items in src/components/ItemList.tsx
+- [x] T059 [US5] Create item management page in src/app/teacher/items/[roomId]/page.tsx
 - [x] T060 [US5] Update helper main page to show item selection in src/app/helper/[roomId]/page.tsx
 - [x] T061 [US5] Add item statistics to room detail page in src/app/teacher/rooms/[id]/page.tsx
 
@@ -163,14 +163,14 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T062 [P] Add loading states and skeleton UI across all pages
-- [ ] T063 [P] Implement error boundaries and error pages (404, 500) in src/app/
-- [ ] T064 [P] Add toast notifications for user feedback using React Hot Toast
-- [ ] T065 Optimize touch interactions for tablet devices (44x44px touch targets)
-- [ ] T066 Add accessibility attributes (ARIA labels, focus management)
-- [ ] T067 [P] Create PWA icons set in public/icons/ (192x192, 512x512)
-- [ ] T068 Performance optimization: implement React.memo and useMemo where beneficial
-- [ ] T069 Run quickstart.md validation to ensure development setup works
+- [x] T062 [P] Add loading states and skeleton UI across all pages
+- [x] T063 [P] Implement error boundaries and error pages (404, 500) in src/app/
+- [x] T064 [P] Add toast notifications for user feedback using React Hot Toast
+- [x] T065 Optimize touch interactions for tablet devices (44x44px touch targets)
+- [x] T066 Add accessibility attributes (ARIA labels, focus management)
+- [x] T067 [P] Create PWA icons set in public/icons/ (192x192, 512x512)
+- [x] T068 Performance optimization: implement React.memo and useMemo where beneficial
+- [x] T069 Run quickstart.md validation to ensure development setup works
 
 ---
 
