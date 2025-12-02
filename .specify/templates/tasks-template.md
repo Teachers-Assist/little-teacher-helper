@@ -249,3 +249,12 @@ With multiple developers:
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+
+### Constitution Compliance
+
+Before marking any task complete, verify:
+- **MVP-First**: Is this the minimum needed to deliver value?
+- **Occam's Razor**: Is there a simpler solution?
+- **KISS**: Can a new team member understand this in 10 minutes?
+- **TS Ecosystem**: Does this use TypeScript consistently? (No plain .js files)
+- **User-Centric**: Does this benefit the teacher/TA workflow?

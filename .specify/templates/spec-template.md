@@ -18,6 +18,11 @@
   - Tested independently
   - Deployed independently
   - Demonstrated to users independently
+  
+  CONSTITUTION ALIGNMENT:
+  - MVP-First: Each story MUST be the smallest implementation that delivers value
+  - User-Centric: Stories MUST map to real teacher/TA tasks (collecting textbooks, tracking forms)
+  - KISS: Stories MUST be explainable to non-technical users
 -->
 
 ### User Story 1 - [Brief Title] (Priority: P1)

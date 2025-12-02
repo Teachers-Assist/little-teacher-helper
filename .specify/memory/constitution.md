@@ -1,50 +1,155 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+同步影響報告
+==================
+版本變更: 1.1.0 → 1.2.0 (繁體中文化)
 
-## Core Principles
+修改內容:
+- 全文件翻譯為繁體中文
+- 保持所有原則和規則不變
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+核心原則 (5 條):
+  1. MVP 優先開發
+  2. 奧坎剃刀原則
+  3. KISS 原則
+  4. TypeScript 生態統一
+  5. 以使用者為中心的簡潔性
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+模板更新需求:
+✅ plan-template.md - Constitution Check 已對齊
+✅ spec-template.md - 需求與簡潔原則對齊
+✅ tasks-template.md - 任務組織與 MVP 方法相容
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+待辦事項: 無
+==================
+-->
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+# 小老師幫手 專案憲章
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+## 核心原則
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### 一、MVP 優先開發
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+每個功能必須從能夠為老師和 TA 提供價值的最小可行實作開始。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- **不可違反的規則**:
+  - 新功能必須在第一次迭代就可部署且可使用
+  - 功能在核心功能驗證前，不得包含「錦上添花」的附加項目
+  - 如果一個功能無法用一句話描述，則必須進一步拆分
+- **理由**: 老師需要能快速使用的工具。今天一個簡單可用的功能，比下個月一個完美的功能更有價值。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### 二、奧坎剃刀原則
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+當存在多種解決方案時，必須選擇符合需求的最簡單方案。
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- **不可違反的規則**:
+  - 複雜的解決方案必須在規格文件中記錄正當理由
+  - 僅在原生方案不足時才能添加第三方函式庫
+  - 不得為單次使用的情況建立抽象層
+  - 如果能用更少的程式碼解決，就必須這麼做
+- **理由**: 簡單的解決方案更容易維護、除錯和交接。一個教學助理工具不應該需要博士學位才能理解。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### 三、KISS 原則（保持簡單）
+
+所有程式碼、架構和流程必須保持簡單，讓任何團隊成員都能在 10 分鐘內理解。
+
+- **不可違反的規則**:
+  - 函式必須只做一件事並且做好
+  - 檔案結構必須盡可能扁平（避免深層嵌套）
+  - 設定必須使用合理的預設值；避免過度參數化
+  - 註解必須解釋「為什麼」，而非「是什麼」
+- **理由**: 複雜性是可靠性的敵人。簡單的系統故障更少，修復更快。
+
+### 四、TypeScript 生態統一
+
+所有應用程式碼必須在前端和後端統一使用 TypeScript。
+
+- **不可違反的規則**:
+  - 後端必須使用 Node.js 執行環境搭配 TypeScript
+  - 前端必須使用現代 TypeScript 框架（React、Vue 或原生 TS）
+  - 所有原始碼必須使用 TypeScript（不允許純 .js 檔案）
+  - tsconfig.json 中必須啟用嚴格模式（`strict: true`）
+  - 共用的型別/工具必須提取到共用模組
+- **理由**: TypeScript 提供型別安全性，能及早捕捉錯誤，改善 IDE 支援，並使程式碼庫自我文件化。統一的型別語言減少上下文切換，並實現安全的程式碼共享。
+
+### 五、以使用者為中心的簡潔性
+
+功能必須從老師/TA 的視角設計，而非開發者視角。
+
+- **不可違反的規則**:
+  - 每個功能必須對應到真實的使用者任務（收課本、追蹤回條）
+  - 介面必須讓非技術使用者無需培訓即可操作
+  - 錯誤訊息必須是可行動的，並使用淺顯易懂的語言
+  - 資料輸入必須最小化必填欄位
+- **理由**: 老師很忙。工具應該節省時間，而非製造新的負擔。
+
+## 技術約束
+
+### 技術棧要求
+
+| 層級 | 技術 | 備註 |
+|------|------|------|
+| 語言 | TypeScript | 所有程式碼強制使用 |
+| 執行環境 | Node.js (LTS 版本) | 後端執行 |
+| 前端 | React / Vue / 原生 TS | 選擇一種，保持一致 |
+| 資料庫 | 彈性選擇 | MVP 階段使用 SQLite，後續視需求擴展 |
+| 測試 | Jest / Vitest | 統一測試執行器 |
+| 型別檢查 | 嚴格模式 | tsconfig.json 中 `strict: true` |
+
+### 依賴套件政策
+
+- **最小依賴**: 每次 `npm install` 都必須有正當理由
+- **定期審計**: 發布前執行 `npm audit`
+- **優先內建**: 盡可能使用 Node.js 內建模組
+
+### 安全基準
+
+- 使用者資料（學生姓名、班級資訊）必須受到保護
+- 未加密的敏感資料不得存放在客戶端儲存
+- API 端點必須驗證輸入
+
+## 開發工作流程
+
+### 程式碼審查標準
+
+所有程式碼變更必須依據核心原則進行審查：
+
+1. **MVP 檢查**: 這個變更是否只實作最小必要功能？
+2. **簡單性檢查**: 是否有更簡單的方法達成這個目的？
+3. **KISS 檢查**: 新團隊成員能在 10 分鐘內理解這個嗎？
+4. **使用者檢查**: 這是否直接有益於老師/TA 的工作流程？
+
+### 品質門檻
+
+- [ ] 程式碼通過 Linting（ESLint）
+- [ ] 測試通過（如果該功能有測試）
+- [ ] 沒有未記錄正當理由的新依賴套件
+- [ ] 功能可向非技術使用者展示
+
+### 分支策略
+
+- `main`: 可上線的程式碼
+- `feature/*`: 新功能（從 main 分支，透過 PR 合併）
+- 分支應保持短生命週期（理想上少於 1 週）
+
+## 治理
+
+### 修訂程序
+
+1. 透過文件化的討論提出變更
+2. 變更必須包含與專案目標一致的理由
+3. 依照語意化版本規則更新憲章版本
+4. 視需要更新所有依賴的模板
+
+### 版本政策
+
+- **主版本 (MAJOR)**: 原則刪除、重新定義，或向後不相容的治理變更
+- **次版本 (MINOR)**: 新增原則、章節實質性擴展
+- **修訂版本 (PATCH)**: 澄清、措辭改進、錯字修正
+
+### 合規審查
+
+- 所有 PR 必須驗證是否符合核心原則
+- 如引入複雜性，必須在 PR 描述中說明理由
+- 定期審查（每季）以確保憲章仍然相關
+
+**版本**: 1.2.0 | **批准日期**: 2025-12-02 | **最後修訂**: 2025-12-02

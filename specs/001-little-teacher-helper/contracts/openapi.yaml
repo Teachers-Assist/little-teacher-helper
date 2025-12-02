@@ -1,0 +1,923 @@
+openapi: 3.0.3
+info:
+  title: 小老師助手系統 API
+  description: |
+    Little Teacher Helper API - 讓小老師幫忙收回條和登記作業繳交狀況的系統
+    
+    ## 認證機制
+    - 老師端: Session-based (Cookie)
+    - 小老師端: 無需認證，透過 room code 加入
+    
+    ## 離線支援
+    - 支援離線操作，資料暫存本機
+    - 網路恢復後自動同步
+  version: 1.0.0
+  contact:
+    name: Little Teacher Helper Team
+
+servers:
+  - url: /api
+    description: Next.js API Routes
+
+tags:
+  - name: Teachers
+    description: 老師相關操作
+  - name: Rooms
+    description: 房間管理
+  - name: Students
+    description: 學生管理
+  - name: Items
+    description: 登記項目管理
+  - name: Submissions
+    description: 繳交記錄
+  - name: Sync
+    description: 離線同步
+
+paths:
+  # ============= Teachers =============
+  /teachers:
+    post:
+      tags: [Teachers]
+      summary: 建立老師帳號
+      description: MVP 階段簡化版本，無需密碼驗證
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeacherRequest'
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Teacher'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /teachers/{id}:
+    get:
+      tags: [Teachers]
+      summary: 取得老師資訊
+      parameters:
+        - $ref: '#/components/parameters/TeacherId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Teacher'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============= Rooms =============
+  /rooms:
+    get:
+      tags: [Rooms]
+      summary: 取得老師的所有房間
+      parameters:
+        - name: teacherId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+
+    post:
+      tags: [Rooms]
+      summary: 建立新房間
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoomRequest'
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomWithCode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /rooms/{id}:
+    get:
+      tags: [Rooms]
+      summary: 取得房間詳情
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Rooms]
+      summary: 更新房間設定
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoomRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Rooms]
+      summary: 刪除房間
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '204':
+          description: 刪除成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rooms/join/{code}:
+    get:
+      tags: [Rooms]
+      summary: 透過代碼加入房間
+      description: 小老師掃描 QRCode 後呼叫此 API 取得房間資訊
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z0-9]{6}$'
+          description: 6 位房間代碼
+      responses:
+        '200':
+          description: 成功加入
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomJoinResponse'
+        '404':
+          description: 房間不存在或已停用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ============= Students =============
+  /rooms/{roomId}/students:
+    get:
+      tags: [Students]
+      summary: 取得房間內所有學生
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+        - name: includeRemoved
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: 是否包含已移除的學生
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+
+    post:
+      tags: [Students]
+      summary: 新增學生
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentRequest'
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /rooms/{roomId}/students/batch:
+    post:
+      tags: [Students]
+      summary: 批次新增學生
+      description: 一次新增多位學生，適合從名單匯入
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateStudentsRequest'
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: integer
+                    description: 成功建立的數量
+                  students:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Student'
+
+  /students/{id}:
+    patch:
+      tags: [Students]
+      summary: 更新學生資料
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+
+    delete:
+      tags: [Students]
+      summary: 移除學生
+      description: Soft delete，標記為已移除
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '204':
+          description: 移除成功
+
+  # ============= Items =============
+  /rooms/{roomId}/items:
+    get:
+      tags: [Items]
+      summary: 取得房間內所有登記項目
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+        - name: activeOnly
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: 是否只返回啟用中的項目
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+    post:
+      tags: [Items]
+      summary: 新增登記項目
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  /items/{id}:
+    get:
+      tags: [Items]
+      summary: 取得項目詳情（含繳交統計）
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemDetail'
+
+    patch:
+      tags: [Items]
+      summary: 更新項目
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+    delete:
+      tags: [Items]
+      summary: 停用項目
+      description: Soft delete，標記為停用
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '204':
+          description: 停用成功
+
+  # ============= Submissions =============
+  /items/{itemId}/submissions:
+    get:
+      tags: [Submissions]
+      summary: 取得項目的所有繳交記錄
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubmissionWithStudent'
+
+  /submissions:
+    patch:
+      tags: [Submissions]
+      summary: 更新繳交狀態
+      description: 更新單筆或多筆繳交記錄
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubmissionsRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+
+  # ============= Sync =============
+  /sync:
+    post:
+      tags: [Sync]
+      summary: 同步離線資料
+      description: 批次同步小老師端的離線操作
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: 同步成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '409':
+          description: 部分資料衝突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncConflictResponse'
+
+  # ============= Reports =============
+  /items/{itemId}/report:
+    get:
+      tags: [Items]
+      summary: 取得項目繳交報表
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, text, print]
+            default: json
+          description: |
+            報表格式：
+            - json: JSON 結構化資料
+            - text: 純文字（適合 LINE）
+            - print: HTML 列印格式
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  【數學作業】繳交狀況
+                  已繳交：25人
+                  未繳交：5人
+                  
+                  未繳交名單：
+                  1. 王小明
+                  2. 李小華
+            text/html:
+              schema:
+                type: string
+
+components:
+  schemas:
+    # ===== Teacher =====
+    Teacher:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateTeacherRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          format: email
+
+    # ===== Room =====
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: '^[A-Z0-9]{6}$'
+        name:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    RoomWithCode:
+      allOf:
+        - $ref: '#/components/schemas/Room'
+        - type: object
+          properties:
+            qrCodeUrl:
+              type: string
+              description: QRCode 圖片的 Data URL
+
+    RoomDetail:
+      allOf:
+        - $ref: '#/components/schemas/Room'
+        - type: object
+          properties:
+            studentCount:
+              type: integer
+            itemCount:
+              type: integer
+            teacher:
+              $ref: '#/components/schemas/Teacher'
+
+    RoomJoinResponse:
+      type: object
+      properties:
+        room:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+
+    CreateRoomRequest:
+      type: object
+      required: [name, teacherId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        teacherId:
+          type: string
+          format: uuid
+
+    UpdateRoomRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        isActive:
+          type: boolean
+
+    # ===== Student =====
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        seatNumber:
+          type: integer
+          minimum: 1
+          maximum: 99
+        isRemoved:
+          type: boolean
+
+    CreateStudentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        seatNumber:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    BatchCreateStudentsRequest:
+      type: object
+      required: [students]
+      properties:
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateStudentRequest'
+          minItems: 1
+          maxItems: 50
+
+    UpdateStudentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        seatNumber:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    # ===== Item =====
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ItemDetail:
+      allOf:
+        - $ref: '#/components/schemas/Item'
+        - type: object
+          properties:
+            submittedCount:
+              type: integer
+            notSubmittedCount:
+              type: integer
+            totalCount:
+              type: integer
+
+    CreateItemRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dueDate:
+          type: string
+          format: date-time
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dueDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+
+    # ===== Submission =====
+    Submission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUBMITTED, NOT_SUBMITTED]
+        updatedAt:
+          type: string
+          format: date-time
+        syncedAt:
+          type: string
+          format: date-time
+
+    SubmissionWithStudent:
+      allOf:
+        - $ref: '#/components/schemas/Submission'
+        - type: object
+          properties:
+            student:
+              $ref: '#/components/schemas/Student'
+
+    UpdateSubmissionsRequest:
+      type: object
+      required: [submissions]
+      properties:
+        submissions:
+          type: array
+          items:
+            type: object
+            required: [studentId, itemId, status]
+            properties:
+              studentId:
+                type: string
+                format: uuid
+              itemId:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [SUBMITTED, NOT_SUBMITTED]
+
+    # ===== Sync =====
+    SyncRequest:
+      type: object
+      required: [operations]
+      properties:
+        deviceId:
+          type: string
+          description: 裝置識別碼
+        operations:
+          type: array
+          items:
+            type: object
+            required: [id, type, payload, timestamp]
+            properties:
+              id:
+                type: string
+                description: 操作的唯一 ID
+              type:
+                type: string
+                enum: [UPDATE_SUBMISSION]
+              payload:
+                type: object
+                properties:
+                  studentId:
+                    type: string
+                    format: uuid
+                  itemId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [SUBMITTED, NOT_SUBMITTED]
+              timestamp:
+                type: string
+                format: date-time
+
+    SyncResponse:
+      type: object
+      properties:
+        synced:
+          type: integer
+          description: 成功同步的操作數
+        operationIds:
+          type: array
+          items:
+            type: string
+          description: 已同步的操作 ID
+
+    SyncConflictResponse:
+      type: object
+      properties:
+        synced:
+          type: integer
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              operationId:
+                type: string
+              reason:
+                type: string
+              serverValue:
+                type: object
+
+    # ===== Report =====
+    Report:
+      type: object
+      properties:
+        item:
+          $ref: '#/components/schemas/Item'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            submitted:
+              type: integer
+            notSubmitted:
+              type: integer
+            submissionRate:
+              type: number
+              format: float
+        submittedStudents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+        notSubmittedStudents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+
+    # ===== Common =====
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  parameters:
+    TeacherId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    RoomId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    RoomIdPath:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    StudentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ItemId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ItemIdPath:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: 請求格式錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+

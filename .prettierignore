@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+public/
+coverage/
+package-lock.json
+pnpm-lock.yaml
+*.min.js
+prisma/migrations/
+

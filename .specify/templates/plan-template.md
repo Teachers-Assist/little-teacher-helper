@@ -31,7 +31,13 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| Principle | Check | Status |
+|-----------|-------|--------|
+| I. MVP-First | Is this the smallest implementation that delivers value? | ⬜ |
+| II. Occam's Razor | Is this the simplest solution? Any simpler alternatives? | ⬜ |
+| III. KISS | Can a new team member understand this in 10 minutes? | ⬜ |
+| IV. TS Ecosystem | Does this use TypeScript consistently? (No plain .js) | ⬜ |
+| V. User-Centric | Does this directly benefit teacher/TA workflow? | ⬜ |
 
 ## Project Structure
 

@@ -1,0 +1,54 @@
+{
+  "name": "little-teacher-helper",
+  "version": "1.0.0",
+  "description": "讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
+  },
+  "keywords": [
+    "pwa",
+    "next.js",
+    "education",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@9.13.0+sha256.5cc43c266a7e1f28e35cb9e6b33694e424198d6d778e315b9c06313d2f6dab7b",
+  "dependencies": {
+    "@prisma/client": "5",
+    "html5-qrcode": "^2.3.8",
+    "next": "^16.0.6",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^24.10.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.22",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.0.6",
+    "next-pwa": "^5.6.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.7.3",
+    "prisma": "5",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3"
+  }
+}
