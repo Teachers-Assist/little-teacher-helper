@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { cn } from '@/lib/utils';
 
 interface NavItemProps {
   href: string;
@@ -14,11 +15,11 @@ interface NavItemProps {
 
 function NavItem({ href, icon, label, active }: NavItemProps) {
   return (
-    <Link href={href} className={`nav-item ${active ? 'nav-item-active' : ''}`}>
+    <Link href={href} className={cn('nav-item', { 'nav-item-active': active })}>
       <Icon
         name={icon}
         size={17}
-        className={active ? 'text-black' : 'text-slate-400'}
+        className={cn({ 'text-black': active, 'text-slate-400': !active })}
       />
       {label}
     </Link>

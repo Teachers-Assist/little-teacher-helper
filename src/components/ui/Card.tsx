@@ -18,8 +18,10 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       className={cn(
         size === 'sm' ? 'card-sm' : 'card',
-        variant === 'elevated' && 'shadow-md shadow-violet-100/60',
-        variant === 'bordered' && 'border-2 border-primary-200',
+        {
+          'shadow-md shadow-violet-100/60': variant === 'elevated',
+          'border-2 border-primary-200':   variant === 'bordered',
+        },
         className
       )}
       {...props}

@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 interface Item {
   id: string;
@@ -56,7 +56,9 @@ export function ItemList({
         return (
           <Card
             key={item.id}
-            className={`transition-all ${onItemClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : ''}`}
+            className={cn('transition-all', {
+              'cursor-pointer hover:shadow-md hover:-translate-y-0.5': !!onItemClick,
+            })}
             onClick={() => onItemClick?.(item.id)}
           >
             <CardContent className="py-4">

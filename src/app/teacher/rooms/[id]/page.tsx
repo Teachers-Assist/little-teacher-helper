@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StudentList } from '@/components/StudentList';
 import { ReportView } from '@/components/ReportView';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 interface Room {
   id: string;
@@ -184,11 +184,10 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-primary-600 text-primary-700'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={cn('flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors', {
+                'border-b-2 border-primary-600 text-primary-700': activeTab === tab.id,
+                'text-slate-500 hover:text-slate-900':            activeTab !== tab.id,
+              })}
             >
               <Icon name={tab.icon} size={14} />
               {tab.label}
