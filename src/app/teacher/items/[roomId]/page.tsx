@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { ItemList } from '@/components/ItemList';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatDate } from '@/lib/utils';
 
 interface Room {
@@ -38,41 +38,29 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
           fetch(`/api/rooms/${roomId}`),
           fetch(`/api/rooms/${roomId}/items?activeOnly=false`),
         ]);
-
-        if (roomRes.ok) {
-          setRoom(await roomRes.json());
-        }
-        if (itemsRes.ok) {
-          setItems(await itemsRes.json());
-        }
+        if (roomRes.ok) setRoom(await roomRes.json());
+        if (itemsRes.ok) setItems(await itemsRes.json());
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, [roomId]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
-
     setIsAddingItem(true);
     try {
       const response = await fetch(`/api/rooms/${roomId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newItemName.trim(),
-          dueDate: newItemDueDate || undefined,
-        }),
+        body: JSON.stringify({ name: newItemName.trim(), dueDate: newItemDueDate || undefined }),
       });
-
       if (response.ok) {
-        const item = await response.json();
-        setItems((prev) => [item, ...prev]);
+        setItems((prev) => [await response.json(), ...prev]);
         setNewItemName('');
         setNewItemDueDate('');
       }
@@ -85,19 +73,14 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
 
   const handleEditItem = async (itemId: string) => {
     if (!editName.trim()) return;
-
     try {
       const response = await fetch(`/api/items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editName.trim() }),
       });
-
       if (response.ok) {
-        const updatedItem = await response.json();
-        setItems((prev) =>
-          prev.map((item) => (item.id === itemId ? updatedItem : item))
-        );
+        setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, name: editName.trim() } : item)));
         setEditingItemId(null);
         setEditName('');
       }
@@ -113,12 +96,9 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !isActive }),
       });
-
       if (response.ok) {
-        const updatedItem = await response.json();
-        setItems((prev) =>
-          prev.map((item) => (item.id === itemId ? updatedItem : item))
-        );
+        const updated = await response.json();
+        setItems((prev) => prev.map((item) => (item.id === itemId ? updated : item)));
       }
     } catch (error) {
       console.error('Failed to toggle item:', error);
@@ -127,10 +107,12 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 text-4xl animate-pulse">📋</div>
-          <p className="text-slate-600 dark:text-slate-300">載入中...</p>
+          <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
+            <Icon name="lucide:clipboard-list" size={24} className="text-primary-600" />
+          </div>
+          <p className="text-sm text-slate-500">載入中...</p>
         </div>
       </div>
     );
@@ -138,11 +120,11 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
 
   if (!room) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 text-4xl">😕</div>
-          <p className="text-slate-600 dark:text-slate-300">找不到該房間</p>
-          <Link href="/teacher" className="mt-4 text-sky-500 hover:text-sky-600">
+          <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
+          <p className="mb-3 text-slate-600">找不到該房間</p>
+          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">
             返回儀表板
           </Link>
         </div>
@@ -151,35 +133,28 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
   }
 
   return (
-    <div className="min-h-screen p-6">
-      {/* Header */}
-      <div className="mb-6">
+    <>
+      {/* Page Header */}
+      <div className="page-header">
         <Link
           href={`/teacher/rooms/${roomId}`}
-          className="mb-2 block text-sky-500 hover:text-sky-600"
+          className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600"
         >
-          ← 返回 {room.name}
+          <Icon name="lucide:arrow-left" size={14} />
+          返回 {room.name}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          📋 登記項目管理
-        </h1>
-        <p className="text-slate-600 dark:text-slate-300">{room.name}</p>
+        <h1 className="text-xl font-bold text-slate-900">登記項目管理</h1>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Add Item Form */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>新增登記項目</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddItem} className="space-y-4">
+      <div className="page-body">
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+          {/* Add Form */}
+          <div className="lg:col-span-1">
+            <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">新增登記項目</h3>
+              <form onSubmit={handleAddItem} className="space-y-3">
                 <div>
-                  <label
-                    htmlFor="itemName"
-                    className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                  >
+                  <label htmlFor="itemName" className="mb-1 block text-xs font-medium text-slate-500">
                     項目名稱
                   </label>
                   <input
@@ -188,15 +163,12 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                     placeholder="例如：數學作業"
-                    className="w-full rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 focus:border-sky-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                     maxLength={100}
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="dueDate"
-                    className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                  >
+                  <label htmlFor="dueDate" className="mb-1 block text-xs font-medium text-slate-500">
                     截止日期（選填）
                   </label>
                   <input
@@ -204,45 +176,37 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
                     id="dueDate"
                     value={newItemDueDate}
                     onChange={(e) => setNewItemDueDate(e.target.value)}
-                    className="w-full rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 focus:border-sky-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                   />
                 </div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  isLoading={isAddingItem}
-                >
+                <Button type="submit" variant="primary" size="sm" className="w-full" isLoading={isAddingItem}>
                   新增項目
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Item List */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>項目列表 ({items.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Item List */}
+          <div className="lg:col-span-2">
+            <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                項目列表
+                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">
+                  {items.length}
+                </span>
+              </h3>
               {items.length === 0 ? (
-                <div className="py-8 text-center">
-                  <div className="mb-2 text-4xl">📋</div>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    尚無登記項目
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    建立項目後，小老師就可以開始登記繳交狀況
-                  </p>
+                <div className="py-10 text-center">
+                  <Icon name="lucide:clipboard-list" size={36} className="mx-auto mb-2 text-slate-200" />
+                  <p className="text-sm text-slate-500">尚無登記項目</p>
+                  <p className="mt-1 text-xs text-slate-400">建立項目後，小老師就可以開始登記繳交狀況</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4"
+                      className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3"
                     >
                       <div className="flex-1 min-w-0">
                         {editingItemId === item.id ? (
@@ -251,70 +215,55 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                              className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
                               autoFocus
                             />
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => handleEditItem(item.id)}
-                            >
+                            <Button size="sm" variant="primary" onClick={() => handleEditItem(item.id)}>
                               儲存
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => {
-                                setEditingItemId(null);
-                                setEditName('');
-                              }}
+                              onClick={() => { setEditingItemId(null); setEditName(''); }}
                             >
                               取消
                             </Button>
                           </div>
                         ) : (
                           <>
-                            <p className="font-medium text-slate-900 dark:text-white">
-                              {item.name}
-                            </p>
+                            <p className="text-sm font-medium text-slate-900">{item.name}</p>
                             {item.dueDate && (
-                              <p className="text-sm text-slate-500">
-                                截止：{formatDate(item.dueDate)}
-                              </p>
+                              <p className="text-xs text-slate-400">截止：{formatDate(item.dueDate)}</p>
                             )}
                           </>
                         )}
                       </div>
                       {editingItemId !== item.id && (
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button
+                        <div className="ml-4 flex items-center gap-2">
+                          <StatusBadge
+                            variant={item.isActive ? 'success' : 'neutral'}
                             size="sm"
-                            variant={item.isActive ? 'secondary' : 'outline'}
+                            className="cursor-pointer"
                             onClick={() => handleToggleActive(item.id, item.isActive)}
                           >
                             {item.isActive ? '啟用中' : '已停用'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingItemId(item.id);
-                              setEditName(item.name);
-                            }}
+                          </StatusBadge>
+                          <button
+                            className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                            onClick={() => { setEditingItemId(item.id); setEditName(item.name); }}
                           >
-                            ✏️
-                          </Button>
+                            <Icon name="lucide:pencil" size={14} />
+                          </button>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
-

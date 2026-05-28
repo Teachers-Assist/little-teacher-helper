@@ -1,39 +1,218 @@
 @import 'tailwindcss';
 
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+
 @theme {
   --font-family-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Primary Colors */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
-  --color-primary-950: #082f49;
-  
-  /* Status Colors */
-  --color-success-50: #f0fdf4;
+
+  /* Primary: Indigo-Violet */
+  --color-primary-50:  #f0eeff;
+  --color-primary-100: #e3dcff;
+  --color-primary-200: #cabdff;
+  --color-primary-300: #aa96ff;
+  --color-primary-400: #8e72fc;
+  --color-primary-500: #7c5ef8;
+  --color-primary-600: #6d48ee;
+  --color-primary-700: #5c38d4;
+  --color-primary-800: #4b2fac;
+  --color-primary-900: #3d2989;
+  --color-primary-950: #261860;
+
+  /* Status */
+  --color-success-50:  #f0fdf4;
+  --color-success-100: #dcfce7;
   --color-success-500: #22c55e;
   --color-success-600: #16a34a;
-  
-  --color-warning-50: #fffbeb;
+  --color-warning-50:  #fffbeb;
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
-  
-  --color-danger-50: #fef2f2;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
+  --color-danger-50:   #fef2f2;
+  --color-danger-500:  #ef4444;
+  --color-danger-600:  #dc2626;
 }
 
-* {
+/* ─── Component layer ────────────────────────────────────────────────────── */
+/*
+ * All visual tokens live here. When redesigning, change this layer —
+ * not the JSX files. Pages should use semantic class names, not raw utilities.
+ */
+
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 font-medium rounded-lg
+           cursor-pointer select-none transition-colors duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-sm  { @apply text-sm   px-3   py-1.5; }
+  .btn-md  { @apply text-sm   px-4   py-2;   }
+  .btn-lg  { @apply text-base px-5   py-2.5; }
+
+  .btn-primary   { @apply bg-primary-600   text-white     hover:bg-primary-700   active:bg-primary-800   focus-visible:ring-primary-500;   }
+  .btn-secondary { @apply bg-emerald-500   text-white     hover:bg-emerald-600   active:bg-emerald-700   focus-visible:ring-emerald-500;   }
+  .btn-outline   { @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-slate-400; }
+  .btn-ghost     { @apply text-slate-600   hover:bg-slate-100  hover:text-slate-900  active:bg-slate-200  focus-visible:ring-slate-400;   }
+  .btn-danger    { @apply bg-red-500       text-white     hover:bg-red-600       active:bg-red-700       focus-visible:ring-red-500;       }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+
+  .card        { @apply bg-white rounded-xl border border-[#ede9fe] p-5; }
+  .card-sm     { @apply bg-white rounded-xl border border-[#ede9fe] p-4; }
+  .card-hover  { @apply hover:border-primary-300 hover:bg-primary-50/20 transition-colors cursor-pointer; }
+  .card-title  { @apply text-sm font-semibold text-slate-700 mb-3; }
+
+  /* ── Form inputs ─────────────────────────────────────────────────────── */
+
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+           transition-colors focus:border-primary-500 focus:outline-none
+           focus:ring-1 focus:ring-primary-500/20;
+  }
+  .input-lg { @apply px-4 py-2.5 text-base; }
+
+  /* ── Badges ──────────────────────────────────────────────────────────── */
+
+  .badge         { @apply inline-flex items-center gap-1 rounded-full text-xs font-medium px-2 py-0.5; }
+  .badge-md      { @apply px-2.5 py-1; }
+  .badge-lg      { @apply text-sm px-3 py-1.5; }
+  .badge-dot     { @apply rounded-full; }
+
+  .badge-success { @apply bg-emerald-50 text-emerald-700; }
+  .badge-warning { @apply bg-amber-50   text-amber-700;   }
+  .badge-danger  { @apply bg-red-50     text-red-600;     }
+  .badge-info    { @apply bg-primary-50 text-primary-700; }
+  .badge-neutral { @apply bg-slate-100  text-slate-600;   }
+
+  .badge-dot-success { @apply bg-emerald-500; }
+  .badge-dot-warning { @apply bg-amber-500;   }
+  .badge-dot-danger  { @apply bg-red-500;     }
+  .badge-dot-info    { @apply bg-primary-500; }
+  .badge-dot-neutral { @apply bg-slate-400;   }
+
+  /* ── Sidebar nav ─────────────────────────────────────────────────────── */
+
+  .nav-item {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium
+           transition-colors duration-150 text-slate-600
+           hover:bg-slate-50 hover:text-slate-900;
+  }
+  .nav-item-active { @apply bg-primary-50 text-primary-700; }
+
+  /* ── Page structure ──────────────────────────────────────────────────── */
+
+  .page-title    { @apply text-xl font-bold text-slate-900; }
+  .page-subtitle { @apply text-sm text-slate-500 mt-0.5; }
+
+  /* ── Empty states ────────────────────────────────────────────────────── */
+
+  .empty-state {
+    @apply rounded-xl border border-dashed border-primary-200 bg-white py-14 text-center;
+  }
+
+  /* ── Loading placeholder ─────────────────────────────────────────────── */
+
+  .loading-icon {
+    @apply inline-flex items-center justify-center rounded-xl bg-primary-100 animate-pulse;
+  }
+}
+
+/* ─── Sidebar Layout ─────────────────────────────────────────────────────── */
+
+.sidebar-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #ede9fe;
+  background: #ffffff;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: #f8f7ff;
+}
+
+.page-header {
+  padding: 1.25rem 1.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.page-body {
+  padding: 1.5rem 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none;
+  }
+  .page-header,
+  .page-body {
+    padding: 1rem;
+  }
+}
+
+/* ─── Classic Layout (helper / join pages) ───────────────────────────────── */
+
+.lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #ede9fe;
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(8px);
+}
+
+.lp-header-inner {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 2rem;
+}
+
+.lp-body {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2rem;
+}
+
+.lp-body-narrow {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .lp-header-inner,
+  .lp-body,
+  .lp-body-narrow {
+    padding: 1rem;
+  }
+}
+
+/* ─── Global resets ──────────────────────────────────────────────────────── */
+
+*,
+::before,
+::after {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 html,
@@ -42,33 +221,25 @@ body {
   overflow-x: hidden;
 }
 
-/* Touch-friendly minimum sizes */
-button,
-[role="button"],
-input[type="checkbox"],
-input[type="radio"],
-select {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Focus styles for accessibility */
+button,
+[role='button'] {
+  min-height: 36px;
+  min-width: 36px;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
-/* Remove tap highlight on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Print styles */
 @media print {
   .no-print {
     display: none !important;

@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#0ea5e9',
+  themeColor: '#6d48ee',
 };
 
 export default function RootLayout({
@@ -43,7 +43,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 dark:from-slate-900 dark:to-slate-800">
+      <body className="min-h-screen bg-[#f8f7ff] text-slate-900">
         <ToastProvider>
           <main className="flex min-h-screen flex-col">{children}</main>
         </ToastProvider>

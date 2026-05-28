@@ -10,20 +10,21 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+          50: '#f0eeff',
+          100: '#e3dcff',
+          200: '#cabdff',
+          300: '#aa96ff',
+          400: '#8e72fc',
+          500: '#7c5ef8',
+          600: '#6d48ee',
+          700: '#5c38d4',
+          800: '#4b2fac',
+          900: '#3d2989',
+          950: '#261860',
         },
         success: {
           50: '#f0fdf4',
+          100: '#dcfce7',
           500: '#22c55e',
           600: '#16a34a',
         },
@@ -45,16 +46,9 @@ const config: Config = {
         '18': '4.5rem',
         '88': '22rem',
       },
-      minHeight: {
-        'touch': '44px', // 觸控友善最小高度
-      },
-      minWidth: {
-        'touch': '44px', // 觸控友善最小寬度
-      },
     },
   },
   plugins: [],
 };
 
 export default config;
-
