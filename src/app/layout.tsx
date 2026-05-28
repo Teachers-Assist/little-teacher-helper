@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next';
+﻿import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
 import { ToastProvider } from '@/components/ui';
 
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#6d48ee',
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({
@@ -43,7 +43,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-[#f8f7ff] text-slate-900">
+      <body className="min-h-screen bg-amber-50 text-slate-900">
         <ToastProvider>
           <main className="flex min-h-screen flex-col">{children}</main>
         </ToastProvider>

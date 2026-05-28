@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';

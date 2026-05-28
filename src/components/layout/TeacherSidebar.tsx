@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,7 +18,7 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
       <Icon
         name={icon}
         size={17}
-        className={active ? 'text-primary-600' : 'text-slate-400'}
+        className={active ? 'text-black' : 'text-slate-400'}
       />
       {label}
     </Link>
@@ -39,9 +39,9 @@ export function TeacherSidebar() {
   return (
     <aside className="app-sidebar">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 border-b border-[#ede9fe] px-4 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-          <Icon name="lucide:book-open" size={15} className="text-white" />
+      <div className="flex items-center gap-2.5 border-b-2 border-black px-4 py-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-accent-400">
+          <Icon name="lucide:book-open" size={15} className="text-black" />
         </div>
         <span className="text-sm font-bold text-slate-900">小老師助手</span>
       </div>
@@ -66,7 +66,7 @@ export function TeacherSidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="space-y-0.5 border-t border-[#ede9fe] px-2 py-3">
+      <div className="space-y-0.5 border-t-2 border-black px-2 py-3">
         <NavItem href="#" icon="lucide:settings" label="設定" active={false} />
         {teacherName && (
           <div className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2">

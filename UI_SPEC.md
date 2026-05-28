@@ -13,20 +13,26 @@
 
 ---
 
+## 風格概述
+
+**平面 2D 插畫風**：thick black border（`border-2 border-black`）貫穿全站；卡片與按鈕有偏移陰影（`4px 4px 0 #000`），hover 時陰影縮小並位移，呈現可按壓的立體感。
+
 ## 色系 Token
 
-顏色統一使用 `@theme` 定義的 token，禁止直接用 Tailwind 的 `violet-*`、`indigo-*` 等原始顏色 class。
+顏色統一使用 `@theme` 定義的 token，禁止直接用 Tailwind 的 `violet-*`、`indigo-*`、`yellow-*` 等原始顏色 class。
 
 | 用途 | 使用方式 | 十六進位參考 |
 |------|---------|------------|
-| 品牌主色 | `primary-600` | `#6d48ee` |
-| 主色懸停 | `primary-700` | `#5c38d4` |
-| 主色淡背景 | `primary-50` | `#f0eeff` |
-| 卡片 / 分隔線 border | `[#ede9fe]`（硬碼） | — |
-| 頁面背景 | `[#f8f7ff]`（硬碼） | — |
-| 成功狀態 | `emerald-*` | — |
-| 警告狀態 | `amber-*` | — |
-| 危險狀態 | `red-*` | — |
+| 品牌主色（藍） | `primary-500 / primary-600` | `#3b82f6 / #2563eb` |
+| 主色淡背景 | `primary-100` | `#dbeafe` |
+| 強調色（黃） | `accent-400` | `#facc15` |
+| 強調淡背景 | `accent-100 / accent-300` | `#fef9c3 / #fde047` |
+| 卡片 / 分隔線 border | `border-2 border-black` | — |
+| 頁面背景 | `bg-amber-50` / `.app-main` | `#fffbeb` |
+| Logo 方塊 | `bg-accent-400 border-2 border-black` | — |
+| 成功狀態 | `green-200 / green-900` | — |
+| 警告狀態 | `accent-300 / slate-900` | — |
+| 危險狀態 | `red-200 / red-900` | — |
 | 主要文字 | `slate-900` | — |
 | 次要文字 | `slate-500` | — |
 | 輔助文字 | `slate-400` | — |
@@ -204,10 +210,11 @@ const USED_ICONS = [
 
 | 禁止 | 應改用 |
 |------|-------|
-| `bg-violet-600`, `bg-indigo-*` | `bg-primary-600` 等 primary token |
-| 為按鈕手寫 `px-* py-* rounded-* bg-*` | `<Button variant size>` |
+| `bg-violet-*`, `bg-indigo-*`, `bg-yellow-*` | `bg-primary-*` 或 `bg-accent-*` token |
+| 為按鈕手寫 `px-* py-* rounded-* bg-* border-*` | `<Button variant size>` |
 | 為卡片手寫 `rounded-xl border bg-white p-*` | `<Card>` 或 `.card` / `.card-sm` |
-| 為 input 手寫 focus ring | `.input` class |
+| 為 input 手寫 border + focus ring | `.input` class |
+| 在卡片 / 按鈕上加 `shadow-*` Tailwind utility | 陰影已在 CSS 元件層定義，不要額外加 |
 | 在 `/teacher/*` 以外使用 `.page-header` / `.page-body` | 用 `.lp-header` / `.lp-body-narrow` |
 | 直接 import `@iconify/react` | `import { Icon } from '@/components/ui/Icon'` |
 | 用舊 Icon API `icon=` / `width=` props | `name=` / `size=` props |

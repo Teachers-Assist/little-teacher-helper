@@ -123,7 +123,7 @@ export default function SubmissionPage({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff]">
+      <div className="flex min-h-screen items-center justify-center bg-amber-50">
         <div className="text-center">
           <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
             <Icon name="lucide:pen-line" size={24} className="text-primary-600" />
@@ -139,7 +139,7 @@ export default function SubmissionPage({
   const percentage = totalCount > 0 ? Math.round((submittedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#f8f7ff] pb-24">
+    <div className="min-h-screen bg-amber-50 pb-24">
       {/* Header */}
       <div className="lp-header">
         <div className="lp-body-narrow" style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
@@ -158,7 +158,7 @@ export default function SubmissionPage({
         <SyncIndicator />
 
         {/* Summary */}
-        <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+        <div className="rounded-xl border-2 border-black bg-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
@@ -199,7 +199,7 @@ export default function SubmissionPage({
         </div>
 
         {/* Student List */}
-        <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+        <div className="rounded-xl border-2 border-black bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-700">學生名單</h3>
           <StudentList
             students={students}
@@ -212,7 +212,7 @@ export default function SubmissionPage({
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-[#ede9fe] bg-white/95 backdrop-blur-sm py-3">
+      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-black bg-white/95 backdrop-blur-sm py-3">
         <div
           className="lp-body-narrow flex items-center justify-between"
           style={{ paddingTop: 0, paddingBottom: 0 }}

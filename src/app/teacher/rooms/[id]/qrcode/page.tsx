@@ -74,7 +74,7 @@ export default function QRCodePage({ params }: { params: Promise<{ id: string }>
 
       <div className="page-body">
         <div className="flex flex-col items-center">
-          <div className="w-full max-w-sm rounded-xl border border-[#ede9fe] bg-white p-6 text-center">
+          <div className="w-full max-w-sm rounded-xl border-2 border-black bg-white p-6 text-center">
             <QRCodeDisplay roomCode={room.code} roomName={room.name} size={260} />
           </div>
           <div className="mt-4 no-print">

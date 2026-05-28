@@ -67,7 +67,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff]">
+      <div className="flex min-h-screen items-center justify-center bg-amber-50">
         <div className="text-center">
           <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
             <Icon name="lucide:clipboard-list" size={24} className="text-primary-600" />
@@ -80,7 +80,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
 
   if (!room) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8f7ff] p-6">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6">
         <Icon name="lucide:frown" size={40} className="mb-3 text-slate-300" />
         <p className="mb-4 text-slate-600">找不到該房間</p>
         <Link href="/join">
@@ -91,7 +91,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7ff] pb-24">
+    <div className="min-h-screen bg-amber-50 pb-24">
       {/* Header */}
       <div className="lp-header">
         <div className="lp-body-narrow" style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
@@ -133,7 +133,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           <div className="grid gap-3 sm:grid-cols-2">
             {items.map((item) => (
               <Link key={item.id} href={`/helper/${roomId}/${item.id}`}>
-                <div className="group rounded-xl border border-[#ede9fe] bg-white p-4 transition-colors hover:border-primary-300 hover:bg-primary-50/30 cursor-pointer">
+                <div className="group rounded-xl border-2 border-black bg-white p-4 transition-colors hover:bg-accent-100 cursor-pointer">
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-slate-900 group-hover:text-primary-700 transition-colors">
                       {item.name}

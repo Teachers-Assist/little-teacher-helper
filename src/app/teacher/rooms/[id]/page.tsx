@@ -179,7 +179,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="page-body">
         {/* Tabs */}
-        <div className="mb-5 flex gap-1 border-b border-[#ede9fe]">
+        <div className="mb-5 flex gap-1 border-b-2 border-black">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -205,7 +205,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-3">
             {/* Room Info Card */}
-            <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+            <div className="rounded-xl border-2 border-black bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-700">房間資訊</h3>
               <div className="space-y-3">
                 <div>
@@ -227,7 +227,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Add Form */}
             {activeTab === 'students' && (
-              <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <div className="rounded-xl border-2 border-black bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">新增學生</h3>
                 <form onSubmit={handleAddStudent} className="space-y-2">
                   <div className="flex gap-2">
@@ -238,14 +238,14 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                       placeholder="座號"
                       min="1"
                       max="99"
-                      className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-2 text-center text-sm focus:border-primary-500 focus:outline-none"
+                      className="w-16 rounded-lg border-2 border-black bg-white px-2 py-2 text-center text-sm focus:border-primary-500 focus:outline-none"
                     />
                     <input
                       type="text"
                       value={newStudentName}
                       onChange={(e) => setNewStudentName(e.target.value)}
                       placeholder="學生姓名"
-                      className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                      className="flex-1 rounded-lg border-2 border-black bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                       maxLength={50}
                     />
                   </div>
@@ -257,7 +257,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             )}
 
             {activeTab === 'items' && (
-              <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <div className="rounded-xl border-2 border-black bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">新增登記項目</h3>
                 <form onSubmit={handleAddItem} className="space-y-2">
                   <input
@@ -265,7 +265,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                     placeholder="項目名稱（如：數學作業）"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                    className="w-full rounded-lg border-2 border-black bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                     maxLength={100}
                   />
                   <Button type="submit" variant="primary" size="sm" className="w-full" isLoading={isAddingItem}>
@@ -276,12 +276,12 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             )}
 
             {activeTab === 'report' && items.length > 0 && (
-              <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <div className="rounded-xl border-2 border-black bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">選擇項目</h3>
                 <select
                   value={selectedItemId || ''}
                   onChange={(e) => setSelectedItemId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-lg border-2 border-black bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                 >
                   {items.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -296,14 +296,14 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
           {/* Main Content */}
           <div className="lg:col-span-2">
             {activeTab === 'students' && (
-              <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <div className="rounded-xl border-2 border-black bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">學生名單</h3>
                 <StudentList students={students} isReadOnly showSubmissionStatus={false} />
               </div>
             )}
 
             {activeTab === 'items' && (
-              <div className="rounded-xl border border-[#ede9fe] bg-white p-4">
+              <div className="rounded-xl border-2 border-black bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-slate-700">登記項目列表</h3>
                 {items.length === 0 ? (
                   <div className="py-10 text-center">
@@ -337,7 +337,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             {activeTab === 'report' && (
               <>
                 {items.length === 0 ? (
-                  <div className="rounded-xl border border-[#ede9fe] bg-white p-10 text-center">
+                  <div className="rounded-xl border-2 border-black bg-white p-10 text-center">
                     <Icon name="lucide:bar-chart-2" size={36} className="mx-auto mb-2 text-slate-200" />
                     <p className="text-sm text-slate-500">尚無登記項目</p>
                     <p className="mt-1 text-xs text-slate-400">建立項目後才能查看報表</p>

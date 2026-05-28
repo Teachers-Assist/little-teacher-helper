@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import '@/lib/icons-setup';
 import { Icon as IconifyIcon } from '@iconify/react';

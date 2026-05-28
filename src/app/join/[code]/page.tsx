@@ -49,7 +49,7 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff]">
+      <div className="flex min-h-screen items-center justify-center bg-amber-50">
         <div className="text-center">
           <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
             <Icon name="lucide:search" size={24} className="text-primary-600" />
@@ -62,8 +62,8 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff] px-4">
-        <div className="w-full max-w-sm rounded-xl border border-[#ede9fe] bg-white p-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-amber-50 px-4">
+        <div className="w-full max-w-sm rounded-xl border-2 border-black bg-white p-8 text-center">
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-red-50">
             <Icon name="lucide:alert-circle" size={24} className="text-red-500" />
           </div>
@@ -80,8 +80,8 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
   if (!data) return null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff] px-4">
-      <div className="w-full max-w-sm rounded-xl border border-[#ede9fe] bg-white p-8">
+    <div className="flex min-h-screen items-center justify-center bg-amber-50 px-4">
+      <div className="w-full max-w-sm rounded-xl border-2 border-black bg-white p-8">
         <div className="mb-5 text-center">
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
             <Icon name="lucide:check-circle-2" size={24} className="text-emerald-500" />

@@ -40,7 +40,7 @@ export default function JoinPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8f7ff] px-4 py-10">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4 py-10">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
@@ -51,7 +51,7 @@ export default function JoinPage() {
           <p className="mt-1 text-sm text-slate-500">掃描 QRCode 或輸入房間代碼</p>
         </div>
 
-        <div className="rounded-xl border border-[#ede9fe] bg-white p-6 space-y-5">
+        <div className="rounded-xl border-2 border-black bg-white p-6 space-y-5">
           {/* QR Scanner */}
           {showScanner ? (
             <div>
@@ -63,7 +63,7 @@ export default function JoinPage() {
           ) : (
             <button
               onClick={() => setShowScanner(true)}
-              className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-[#cabdff] bg-primary-50 py-7 text-center transition-colors hover:border-primary-400 hover:bg-primary-100"
+              className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-black bg-accent-100 py-7 text-center transition-colors hover:border-primary-400 hover:bg-primary-100"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white">
                 <Icon name="lucide:camera" size={24} className="text-primary-600" />
@@ -98,7 +98,7 @@ export default function JoinPage() {
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 placeholder="例如：ABC123"
                 maxLength={6}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-center text-xl font-mono tracking-widest uppercase focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
+                className="w-full rounded-lg border-2 border-black bg-white px-4 py-3 text-center text-xl font-mono tracking-widest uppercase focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
               />
             </div>
 

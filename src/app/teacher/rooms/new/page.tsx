@@ -84,7 +84,7 @@ export default function NewRoomPage() {
       </div>
 
       <div className="page-body">
-        <div className="mx-auto max-w-lg rounded-xl border border-[#ede9fe] bg-white p-6">
+        <div className="mx-auto max-w-lg rounded-xl border-2 border-black bg-white p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Room Name */}
             <div>
@@ -97,7 +97,7 @@ export default function NewRoomPage() {
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 placeholder="例如：三年二班"
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
+                className="w-full rounded-lg border-2 border-black bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
                 maxLength={100}
               />
             </div>
@@ -117,7 +117,7 @@ export default function NewRoomPage() {
                 onChange={(e) => setStudentNames(e.target.value)}
                 placeholder={`1 王小明\n2 李小華\n3 張小強`}
                 rows={8}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 font-mono text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
+                className="w-full rounded-lg border-2 border-black bg-white px-4 py-2.5 font-mono text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
               />
             </div>
 

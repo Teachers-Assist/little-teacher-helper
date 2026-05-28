@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { Button } from '@/components/ui/Button';

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-10 bg-[#f8f7ff]">
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-10 bg-amber-50">
       {/* Hero */}
       <div className="mb-10 text-center">
         <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600">
