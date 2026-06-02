@@ -27,12 +27,16 @@
   "license": "ISC",
   "packageManager": "pnpm@9.13.0+sha256.5cc43c266a7e1f28e35cb9e6b33694e424198d6d778e315b9c06313d2f6dab7b",
   "dependencies": {
+    "@iconify-json/lucide": "^1.2.109",
+    "@iconify/react": "^6.0.2",
     "@prisma/client": "5",
+    "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "next": "^16.0.6",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",

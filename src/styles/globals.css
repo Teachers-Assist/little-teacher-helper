@@ -1,39 +1,271 @@
 @import 'tailwindcss';
 
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+
 @theme {
   --font-family-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Primary Colors */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
-  --color-primary-950: #082f49;
-  
-  /* Status Colors */
-  --color-success-50: #f0fdf4;
+
+  /* Primary: School Blue */
+  --color-primary-50:  #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* Accent: School Yellow */
+  --color-accent-50:  #fefce8;
+  --color-accent-100: #fef9c3;
+  --color-accent-200: #fef08a;
+  --color-accent-300: #fde047;
+  --color-accent-400: #facc15;
+  --color-accent-500: #eab308;
+  --color-accent-600: #ca8a04;
+  --color-accent-700: #a16207;
+  --color-accent-800: #854d0e;
+  --color-accent-900: #713f12;
+  --color-accent-950: #422006;
+
+  /* Status */
+  --color-success-50:  #f0fdf4;
+  --color-success-100: #dcfce7;
   --color-success-500: #22c55e;
   --color-success-600: #16a34a;
-  
-  --color-warning-50: #fffbeb;
+  --color-warning-50:  #fffbeb;
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
-  
-  --color-danger-50: #fef2f2;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
+  --color-danger-50:   #fef2f2;
+  --color-danger-500:  #ef4444;
+  --color-danger-600:  #dc2626;
 }
 
-* {
+/* ─── Component layer ────────────────────────────────────────────────────── */
+/*
+ * All visual tokens live here. Redesign by editing this layer only —
+ * JSX files use semantic class names and should not need to change.
+ */
+
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 font-bold rounded-lg
+           border-2 border-black cursor-pointer select-none
+           transition-all duration-100
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .btn:not(:disabled):hover {
+    box-shadow: 1px 1px 0 #000;
+    transform: translate(2px, 2px);
+  }
+  .btn:not(:disabled):active {
+    box-shadow: none;
+    transform: translate(3px, 3px);
+  }
+
+  .btn-sm  { @apply text-sm   px-3   py-1.5; }
+  .btn-md  { @apply text-sm   px-4   py-2;   }
+  .btn-lg  { @apply text-base px-5   py-2.5; }
+
+  .btn-primary   { @apply bg-primary-500  text-white;  }
+  .btn-secondary { @apply bg-accent-400   text-black;  }
+  .btn-outline   { @apply bg-white        text-black;  }
+  .btn-danger    { @apply bg-red-500      text-white;  }
+
+  .btn-ghost {
+    @apply bg-transparent text-slate-700 border-transparent;
+    box-shadow: none;
+  }
+  .btn-ghost:not(:disabled):hover {
+    @apply bg-accent-100 text-black border-black;
+    box-shadow: none;
+    transform: none;
+  }
+  .btn-ghost:not(:disabled):active {
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+
+  .card {
+    @apply bg-white rounded-xl border-2 border-black p-5;
+    box-shadow: 4px 4px 0 #000;
+  }
+  .card-sm {
+    @apply bg-white rounded-xl border-2 border-black p-4;
+    box-shadow: 4px 4px 0 #000;
+  }
+  .card-hover {
+    @apply transition-all duration-100 cursor-pointer;
+  }
+  .card-hover:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000;
+  }
+  .card-hover:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
+  .card-title { @apply text-sm font-bold text-slate-800 mb-3; }
+
+  /* ── Form inputs ─────────────────────────────────────────────────────── */
+
+  .input {
+    @apply w-full rounded-lg border-2 border-black bg-white px-3 py-2 text-sm
+           transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-1;
+  }
+  .input-lg { @apply px-4 py-2.5 text-base; }
+
+  /* ── Badges ──────────────────────────────────────────────────────────── */
+
+  .badge     { @apply inline-flex items-center gap-1 rounded-full text-xs font-bold px-2 py-0.5 border border-black; }
+  .badge-md  { @apply px-2.5 py-1; }
+  .badge-lg  { @apply text-sm px-3 py-1.5 border-2 border-black; }
+
+  .badge-success { @apply bg-green-200   text-green-900;   }
+  .badge-warning { @apply bg-accent-300  text-slate-900;   }
+  .badge-danger  { @apply bg-red-200     text-red-900;     }
+  .badge-info    { @apply bg-primary-200 text-primary-900; }
+  .badge-neutral { @apply bg-slate-100   text-slate-700;   }
+
+  .badge-dot-success { @apply bg-green-500;   }
+  .badge-dot-warning { @apply bg-accent-500;  }
+  .badge-dot-danger  { @apply bg-red-500;     }
+  .badge-dot-info    { @apply bg-primary-500; }
+  .badge-dot-neutral { @apply bg-slate-400;   }
+
+  /* ── Sidebar nav ─────────────────────────────────────────────────────── */
+
+  .nav-item {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium
+           transition-all duration-100 text-slate-700
+           hover:bg-accent-100 hover:text-black;
+  }
+  .nav-item-active {
+    @apply bg-accent-300 text-black font-bold;
+    border: 2px solid #000;
+  }
+
+  /* ── Page structure ──────────────────────────────────────────────────── */
+
+  .page-title    { @apply text-xl font-bold text-slate-900; }
+  .page-subtitle { @apply text-sm text-slate-600 mt-0.5; }
+
+  /* ── Empty states ────────────────────────────────────────────────────── */
+
+  .empty-state {
+    @apply rounded-xl border-2 border-dashed border-black bg-white py-14 text-center;
+  }
+
+  /* ── Loading placeholder ─────────────────────────────────────────────── */
+
+  .loading-icon {
+    @apply inline-flex items-center justify-center rounded-xl bg-accent-200 animate-pulse;
+  }
+}
+
+/* ─── Sidebar Layout ─────────────────────────────────────────────────────── */
+
+.sidebar-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 3px solid #000;
+  background: #ffffff;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: #fffbeb;
+}
+
+.page-header {
+  padding: 1.25rem 1.75rem;
+  background: #ffffff;
+  border-bottom: 3px solid #000;
+}
+
+.page-body {
+  padding: 1.5rem 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none;
+  }
+  .page-header,
+  .page-body {
+    padding: 1rem;
+  }
+}
+
+/* ─── Classic Layout (helper / join pages) ───────────────────────────────── */
+
+.lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 3px solid #000;
+  background-color: #ffffff;
+}
+
+.lp-header-inner {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 2rem;
+}
+
+.lp-body {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2rem;
+}
+
+.lp-body-narrow {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .lp-header-inner,
+  .lp-body,
+  .lp-body-narrow {
+    padding: 1rem;
+  }
+}
+
+/* ─── Global resets ──────────────────────────────────────────────────────── */
+
+*,
+::before,
+::after {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 html,
@@ -42,33 +274,25 @@ body {
   overflow-x: hidden;
 }
 
-/* Touch-friendly minimum sizes */
-button,
-[role="button"],
-input[type="checkbox"],
-input[type="radio"],
-select {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Focus styles for accessibility */
+button,
+[role='button'] {
+  min-height: 36px;
+  min-width: 36px;
+}
+
 :focus-visible {
-  outline: 2px solid var(--color-primary-500);
+  outline: 2px solid #000;
   outline-offset: 2px;
 }
 
-/* Remove tap highlight on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Print styles */
 @media print {
   .no-print {
     display: none !important;

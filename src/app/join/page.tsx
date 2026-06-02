@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { QRScanner } from '@/components/QRScanner';
 
 export default function JoinPage() {
@@ -18,10 +18,8 @@ export default function JoinPage() {
       setError('請輸入房間代碼');
       return;
     }
-
     setIsLoading(true);
     setError('');
-
     try {
       router.push(`/join/${code.toUpperCase()}`);
     } catch {
@@ -42,94 +40,80 @@ export default function JoinPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">
-            <span className="mr-2 text-3xl">🙋</span>
-            加入房間
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {/* QR Scanner */}
-            {showScanner ? (
-              <div>
-                <QRScanner
-                  onScan={handleScan}
-                  onError={(err) => setError(err)}
-                />
-                <Button
-                  variant="outline"
-                  className="mt-4 w-full"
-                  onClick={() => setShowScanner(false)}
-                >
-                  取消掃描
-                </Button>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4 py-10">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
+            <Icon name="lucide:book-open" size={24} className="text-white" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">加入房間</h1>
+          <p className="mt-1 text-sm text-slate-500">掃描 QRCode 或輸入房間代碼</p>
+        </div>
+
+        <div className="rounded-xl border-2 border-black bg-white p-6 space-y-5">
+          {/* QR Scanner */}
+          {showScanner ? (
+            <div>
+              <QRScanner onScan={handleScan} onError={(err) => setError(err)} />
+              <Button variant="outline" className="mt-3 w-full" size="sm" onClick={() => setShowScanner(false)}>
+                取消掃描
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowScanner(true)}
+              className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-black bg-accent-100 py-7 text-center transition-colors hover:border-primary-400 hover:bg-primary-100"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white">
+                <Icon name="lucide:camera" size={24} className="text-primary-600" />
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 p-8">
-                <div className="mb-4 text-6xl">📷</div>
-                <p className="mb-4 text-sm text-slate-600 dark:text-slate-300 text-center">
-                  掃描老師提供的 QRCode 快速加入
-                </p>
-                <Button variant="primary" onClick={() => setShowScanner(true)}>
-                  開啟相機掃描
-                </Button>
+              <div>
+                <p className="text-sm font-medium text-primary-700">掃描 QRCode</p>
+                <p className="text-xs text-primary-500">點此開啟相機</p>
+              </div>
+            </button>
+          )}
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-slate-400">或手動輸入</span>
+            </div>
+          </div>
+
+          {/* Manual Input */}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label htmlFor="roomCode" className="mb-1.5 block text-xs font-medium text-slate-500">
+                房間代碼
+              </label>
+              <input
+                type="text"
+                id="roomCode"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                placeholder="例如：ABC123"
+                maxLength={6}
+                className="w-full rounded-lg border-2 border-black bg-white px-4 py-3 text-center text-xl font-mono tracking-widest uppercase focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600">
+                {error}
               </div>
             )}
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-300 dark:border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">
-                  或手動輸入
-                </span>
-              </div>
-            </div>
-
-            {/* Manual code input */}
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label
-                  htmlFor="roomCode"
-                  className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                >
-                  房間代碼
-                </label>
-                <input
-                  type="text"
-                  id="roomCode"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  placeholder="例如：ABC123"
-                  maxLength={6}
-                  className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3 text-center text-2xl font-mono tracking-widest uppercase focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                />
-              </div>
-
-              {error && (
-                <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400">
-                  {error}
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                variant="secondary"
-                size="lg"
-                className="w-full"
-                isLoading={isLoading}
-              >
-                加入房間
-              </Button>
-            </form>
-          </div>
-        </CardContent>
-      </Card>
+            <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
+              加入房間
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
