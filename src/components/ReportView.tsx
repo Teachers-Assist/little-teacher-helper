@@ -25,17 +25,32 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
   const [records, setRecords] = useState<RecordRow[] | null>(null);
   const [error, setError] = useState(false);
   const [notice, setNotice] = useState('');
+  const [loadedTaskId, setLoadedTaskId] = useState(task.id);
 
-  useEffect(() => {
+  // Reset to loading state when switching tasks (React's recommended
+  // "adjust state during render" pattern, instead of setState inside an effect).
+  if (loadedTaskId !== task.id) {
+    setLoadedTaskId(task.id);
     setRecords(null);
     setError(false);
+  }
+
+  useEffect(() => {
+    let active = true;
     fetch(`/api/records?taskId=${task.id}`)
       .then((res) => {
         if (!res.ok) throw new Error('failed');
         return res.json();
       })
-      .then((data: RecordRow[]) => setRecords(data))
-      .catch(() => setError(true));
+      .then((data: RecordRow[]) => {
+        if (active) setRecords(data);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [task.id]);
 
   const report: ReportData | null = useMemo(() => {

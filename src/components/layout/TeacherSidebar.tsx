@@ -2,10 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { messages } from '@/messages/zh-TW';
+
+// Read teacherName from localStorage as an external store (SSR-safe).
+const emptySubscribe = (): (() => void) => () => {};
+const getTeacherName = (): string => localStorage.getItem('teacherName') || '';
+const getServerTeacherName = (): string => '';
 
 interface NavItemProps {
   href: string;
@@ -29,11 +34,7 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
 
 export function TeacherSidebar() {
   const pathname = usePathname();
-  const [teacherName, setTeacherName] = useState('');
-
-  useEffect(() => {
-    setTeacherName(localStorage.getItem('teacherName') || '');
-  }, []);
+  const teacherName = useSyncExternalStore(emptySubscribe, getTeacherName, getServerTeacherName);
 
   const isRooms = pathname.startsWith('/teacher/rooms') || pathname.startsWith('/teacher/tasks');
   const isDashboard = pathname === '/teacher';

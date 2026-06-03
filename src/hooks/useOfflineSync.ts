@@ -36,13 +36,6 @@ export function useOfflineSync() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-sync when coming back online
-  useEffect(() => {
-    if (wasOffline && isOnline) {
-      sync();
-    }
-  }, [wasOffline, isOnline]);
-
   const sync = useCallback(async () => {
     if (!isOnline) {
       console.log('Cannot sync: offline');
@@ -71,6 +64,16 @@ export function useOfflineSync() {
       }));
     }
   }, [isOnline]);
+
+  // Auto-sync when coming back online. This is a deliberate side-effect that
+  // synchronizes the offline queue with the server on a network-state
+  // transition; the resulting `isSyncing` update is intended, not a cascade.
+  useEffect(() => {
+    if (wasOffline && isOnline) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional external-system sync on reconnect
+      sync();
+    }
+  }, [wasOffline, isOnline, sync]);
 
   return {
     ...status,

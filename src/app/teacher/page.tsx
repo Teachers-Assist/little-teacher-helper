@@ -19,7 +19,7 @@ interface Room {
 }
 
 export default function TeacherDashboard() {
-  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [, setTeacherId] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState('');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);

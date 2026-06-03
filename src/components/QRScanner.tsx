@@ -17,6 +17,11 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const handleError = (err: string) => {
+    setError(err);
+    onError?.(err);
+  };
+
   const startScanning = () => {
     if (!containerRef.current) return;
 
@@ -46,7 +51,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
           stopScanning();
           onScan(decodedText.toUpperCase());
         } else {
-          setError(messages.qr.invalid);
+          handleError(messages.qr.invalid);
         }
       },
       (errorMessage) => {
@@ -71,11 +76,6 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
       stopScanning();
     };
   }, []);
-
-  const handleError = (err: string) => {
-    setError(err);
-    onError?.(err);
-  };
 
   return (
     <div className="flex flex-col items-center">
