@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 
 interface StudentInput {
   name: string;
-  seatNumber?: number;
+  seatNumber: number;
 }
 
 export async function POST(
@@ -44,14 +45,24 @@ export async function POST(
         );
       }
       if (
-        student.seatNumber !== undefined &&
-        (student.seatNumber < 1 || student.seatNumber > 99)
+        !Number.isInteger(student.seatNumber) ||
+        student.seatNumber < 1 ||
+        student.seatNumber > 99
       ) {
         return NextResponse.json(
-          { error: '座號必須在 1-99 之間' },
+          { error: '座號為必填，且必須在 1-99 之間' },
           { status: 400 }
         );
       }
+    }
+
+    // 名單內座號不可重複
+    const seats = students.map((s) => s.seatNumber);
+    if (new Set(seats).size !== seats.length) {
+      return NextResponse.json(
+        { error: '名單中有重複的座號' },
+        { status: 400 }
+      );
     }
 
     // Create all students
@@ -60,7 +71,7 @@ export async function POST(
         prisma.student.create({
           data: {
             name: student.name.trim(),
-            seatNumber: student.seatNumber || null,
+            seatNumber: student.seatNumber,
             roomId,
           },
         })
@@ -75,6 +86,12 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: '有座號與班級中現有學生重複' },
+        { status: 409 }
+      );
+    }
     console.error('Failed to batch create students:', error);
     return NextResponse.json(
       { error: '批次新增學生失敗' },

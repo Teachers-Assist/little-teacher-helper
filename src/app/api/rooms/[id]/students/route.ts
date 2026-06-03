@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 
 export async function GET(
@@ -51,9 +52,9 @@ export async function POST(
       );
     }
 
-    if (seatNumber !== undefined && (seatNumber < 1 || seatNumber > 99)) {
+    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) {
       return NextResponse.json(
-        { error: '座號必須在 1-99 之間' },
+        { error: '座號為必填，且必須在 1-99 之間' },
         { status: 400 }
       );
     }
@@ -61,13 +62,19 @@ export async function POST(
     const student = await prisma.student.create({
       data: {
         name: name.trim(),
-        seatNumber: seatNumber || null,
+        seatNumber,
         roomId,
       },
     });
 
     return NextResponse.json(student, { status: 201 });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: '此座號在班級中已存在' },
+        { status: 409 }
+      );
+    }
     console.error('Failed to create student:', error);
     return NextResponse.json(
       { error: '新增學生失敗' },

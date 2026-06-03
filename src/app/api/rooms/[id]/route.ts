@@ -20,7 +20,7 @@ export async function GET(
         _count: {
           select: {
             students: true,
-            items: true,
+            tasks: true,
           },
         },
       },

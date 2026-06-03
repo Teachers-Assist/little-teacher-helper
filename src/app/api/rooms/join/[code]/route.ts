@@ -24,12 +24,14 @@ export async function GET(
           },
           orderBy: [{ seatNumber: 'asc' }, { name: 'asc' }],
         },
-        items: {
-          where: { isActive: true },
+        tasks: {
           select: {
             id: true,
             name: true,
+            type: true,
+            assignedSeatNumber: true,
             dueDate: true,
+            status: true,
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -57,7 +59,7 @@ export async function GET(
         code: room.code,
       },
       students: room.students,
-      items: room.items,
+      tasks: room.tasks,
     });
   } catch (error) {
     console.error('Failed to join room:', error);
