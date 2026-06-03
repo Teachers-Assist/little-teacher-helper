@@ -4,6 +4,7 @@
   "description": "讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
