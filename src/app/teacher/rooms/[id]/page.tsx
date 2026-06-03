@@ -114,6 +114,8 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
+
   const tabs = [
     { id: 'students', label: '學生', icon: 'lucide:users', count: students.length },
     { id: 'tasks', label: '任務', icon: 'lucide:clipboard-list', count: tasks.length },
@@ -305,8 +307,8 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                     <Icon name="lucide:bar-chart-2" size={36} className="mx-auto mb-2 text-slate-200" />
                     <p className="text-sm text-slate-500">{messages.teacher.noTasks}</p>
                   </div>
-                ) : selectedTaskId ? (
-                  <ReportView taskId={selectedTaskId} />
+                ) : selectedTask ? (
+                  <ReportView task={selectedTask} roomName={room.name} students={students} />
                 ) : null}
               </>
             )}

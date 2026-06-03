@@ -81,6 +81,34 @@ export const messages = {
     leave: '離開房間',
   },
 
+  // 報表
+  report: {
+    loading: '載入報表中...',
+    loadFailed: '無法載入報表',
+    copyText: '複製文字',
+    print: '列印',
+    copied: '已複製到剪貼簿',
+    copyFailed: '複製失敗',
+    recorded: (done: number, total: number) => `已登記 ${done}/${total}`,
+    submitted: '已繳交',
+    notSubmitted: '未繳交',
+    submissionRate: '繳交率',
+    allSubmitted: '全班已繳交完成！',
+    grade: '成績',
+    notRecorded: '未登記',
+    // 列印 / 純文字用
+    resultSubmitted: '已繳',
+    resultNotSubmitted: '未繳',
+    unitPerson: '人',
+    incompleteList: '未完成登記名單',
+    allDone: '全部完成！',
+    colSeat: '座號',
+    colName: '姓名',
+    colResult: '結果',
+    generatedAt: (t: string) => `產生時間：${t}`,
+    printTitle: (task: string) => `${task} - 登記報表`,
+  },
+
   // 老師端
   teacher: {
     studentsUnit: (n: number) => `${n} 位學生`,
