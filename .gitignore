@@ -7,6 +7,11 @@ node_modules/
 out/
 build/
 
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+cloudflare-env.d.ts
+
 # Production
 dist/
 

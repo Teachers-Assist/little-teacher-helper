@@ -60,8 +60,8 @@ export default function ItemManagementPage({ params }: { params: Promise<{ roomI
         body: JSON.stringify({ name: newItemName.trim(), dueDate: newItemDueDate || undefined }),
       });
       if (response.ok) {
-        const item = await response.json();
-        setItems((prev) => [item, ...prev]);
+        const newItem = await response.json();
+        setItems((prev) => [newItem, ...prev]);
         setNewItemName('');
         setNewItemDueDate('');
       }
