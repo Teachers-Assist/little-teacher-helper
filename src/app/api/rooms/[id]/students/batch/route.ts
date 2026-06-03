@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
+import { messages } from '@/messages/zh-TW';
 
 interface StudentInput {
   name: string;
@@ -17,52 +18,34 @@ export async function POST(
     const { students } = body as { students: StudentInput[] };
 
     if (!students || !Array.isArray(students) || students.length === 0) {
-      return NextResponse.json(
-        { error: '請提供學生名單' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: messages.student.batchEmpty }, { status: 400 });
     }
 
     if (students.length > 50) {
-      return NextResponse.json(
-        { error: '一次最多新增 50 位學生' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: messages.student.batchTooMany }, { status: 400 });
     }
 
     // Validate each student
     for (const student of students) {
       if (!student.name || student.name.trim().length === 0) {
-        return NextResponse.json(
-          { error: '學生名字不可為空' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: messages.student.nameRequired }, { status: 400 });
       }
       if (student.name.length > 50) {
-        return NextResponse.json(
-          { error: '學生名字長度不可超過 50 字元' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: messages.student.nameTooLong }, { status: 400 });
       }
       if (
         !Number.isInteger(student.seatNumber) ||
         student.seatNumber < 1 ||
         student.seatNumber > 99
       ) {
-        return NextResponse.json(
-          { error: '座號為必填，且必須在 1-99 之間' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: messages.student.seatRequired }, { status: 400 });
       }
     }
 
     // 名單內座號不可重複
     const seats = students.map((s) => s.seatNumber);
     if (new Set(seats).size !== seats.length) {
-      return NextResponse.json(
-        { error: '名單中有重複的座號' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: messages.student.seatDuplicateInList }, { status: 400 });
     }
 
     // Create all students
@@ -87,16 +70,10 @@ export async function POST(
     );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json(
-        { error: '有座號與班級中現有學生重複' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: messages.student.seatDuplicateExisting }, { status: 409 });
     }
     console.error('Failed to batch create students:', error);
-    return NextResponse.json(
-      { error: '批次新增學生失敗' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: messages.student.batchFailed }, { status: 500 });
   }
 }
 

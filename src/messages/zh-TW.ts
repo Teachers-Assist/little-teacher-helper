@@ -122,6 +122,23 @@ export const messages = {
     studentsCount: (n: number) => `${n} 位學生`,
     tasksCount: (n: number) => `${n} 個任務`,
     joinButton: '加入房間',
+    // 後端會回給使用者看的錯誤
+    roomNotFound: '找不到該房間，請確認代碼是否正確',
+    roomInactive: '該房間已停用',
+  },
+
+  // 學生相關的後端錯誤（會在老師端顯示給使用者）
+  student: {
+    nameRequired: '學生姓名為必填欄位',
+    nameTooLong: '學生姓名長度不可超過 50 字元',
+    seatRequired: '座號為必填，且必須在 1-99 之間',
+    seatDuplicate: '此座號在班級中已存在',
+    seatDuplicateInList: '名單中有重複的座號',
+    seatDuplicateExisting: '有座號與班級中現有學生重複',
+    createFailed: '新增學生失敗',
+    batchEmpty: '請提供學生名單',
+    batchTooMany: '一次最多新增 50 位學生',
+    batchFailed: '批次新增學生失敗',
   },
 
   // 小老師身分（座號選擇與指派提示）
