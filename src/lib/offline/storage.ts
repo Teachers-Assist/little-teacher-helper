@@ -17,14 +17,23 @@ function createEmptyData(): OfflineData {
   };
 }
 
-/**
- * 取得離線資料
- */
-export function getOfflineData(): OfflineData {
+// ===== 反應式訂閱層 =====
+// localStorage 是離線資料的單一真相，但它本身沒有訂閱機制。這裡維護一份
+// 與 localStorage 同步的記憶體快照（cache）與訂閱者集合，讓 React 元件可透過
+// useSyncExternalStore 即時得知任何寫入（saveX / queueRecordUpdate / processSyncQueue）。
+// 每次寫入都會替換 cache 參照並通知訂閱者；getSnapshot 回傳穩定的 cache 參照，
+// 在無寫入時參照不變，符合 useSyncExternalStore 的快取要求。
+
+let cache: OfflineData | null = null;
+const listeners = new Set<() => void>();
+
+// SSR / 首次水合用的固定空快照（getServerSnapshot 必須每次回傳同一參照）
+const SERVER_SNAPSHOT: OfflineData = createEmptyData();
+
+function readFromStorage(): OfflineData {
   if (typeof window === 'undefined') {
     return createEmptyData();
   }
-
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : createEmptyData();
@@ -34,8 +43,58 @@ export function getOfflineData(): OfflineData {
   }
 }
 
+function emitChange(): void {
+  listeners.forEach((listener) => listener());
+}
+
 /**
- * 儲存離線資料
+ * 訂閱離線資料變化（給 useSyncExternalStore 使用）
+ */
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * 取得目前快照（穩定參照，僅在寫入後改變）。給 useSyncExternalStore 使用。
+ */
+export function getSnapshot(): OfflineData {
+  if (cache === null) {
+    cache = readFromStorage();
+  }
+  return cache;
+}
+
+/**
+ * SSR / 首次水合用的快照。
+ */
+export function getServerSnapshot(): OfflineData {
+  return SERVER_SNAPSHOT;
+}
+
+// 跨分頁同步：其他分頁寫入 localStorage 時更新本分頁快取並通知訂閱者。
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === STORAGE_KEY) {
+      cache = readFromStorage();
+      emitChange();
+    }
+  });
+}
+
+/**
+ * 取得離線資料（每次回傳可安全就地修改的新副本，供寫入流程使用）
+ */
+export function getOfflineData(): OfflineData {
+  return readFromStorage();
+}
+
+/**
+ * 儲存離線資料：寫入 localStorage 後更新記憶體快照並通知訂閱者。
+ * 由於所有寫入函式（saveX / queueRecordUpdate / processSyncQueue）最終都會
+ * 呼叫此函式，訂閱者因此能對任何離線資料變動即時反應。
  */
 export function saveOfflineData(data: OfflineData): void {
   if (typeof window === 'undefined') return;
@@ -44,7 +103,12 @@ export function saveOfflineData(data: OfflineData): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Failed to save offline data:', error);
+    return;
   }
+
+  // 採用剛寫入的物件作為新快照（每次寫入皆為新參照 → 觸發重新渲染）
+  cache = data;
+  emitChange();
 }
 
 /**
@@ -104,6 +168,23 @@ export function saveTasks(roomId: string, tasks: Task[]): void {
 export function getTasks(roomId: string): Task[] {
   const data = getOfflineData();
   return data.tasks[roomId] || [];
+}
+
+/**
+ * 寫入 / 更新單一任務到本機快取（依 id 取代，否則新增）。
+ * 用於登記頁取得伺服器最新單筆任務、或標記完成後更新狀態。
+ */
+export function saveTask(roomId: string, task: Task): void {
+  const data = getOfflineData();
+  const list = data.tasks[roomId] ?? [];
+  const index = list.findIndex((t) => t.id === task.id);
+  if (index >= 0) {
+    list[index] = task;
+  } else {
+    list.push(task);
+  }
+  data.tasks[roomId] = list;
+  saveOfflineData(data);
 }
 
 /**

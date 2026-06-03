@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, use, useCallback } from 'react';
+import { useState, useEffect, use, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { RecordForm, RecordValueMap } from '@/components/RecordForm';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { SyncIndicator } from '@/components/SyncIndicator';
-import { Student, Task, TaskStatus, SubmissionStatus } from '@/types';
+import { Task, TaskStatus, SubmissionStatus, OfflineRecordEntry } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { getRoom, getStudents, getTasks, getRecords, cacheSyncedRecords } from '@/lib/offline/storage';
-import { queueRecordUpdate, processSyncQueue } from '@/lib/offline/queue';
+import { saveTask, saveStudents, cacheSyncedRecords } from '@/lib/offline/storage';
+import { queueRecordUpdate } from '@/lib/offline/queue';
+import { requestSync } from '@/lib/offline/syncController';
+import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
 import { messages } from '@/messages/zh-TW';
 
@@ -23,7 +25,7 @@ interface RecordApiItem {
   updatedAt?: string;
 }
 
-function valuesFromRecords(records: { [studentId: string]: { submissionStatus?: SubmissionStatus; gradeValue?: number } }): RecordValueMap {
+function valuesFromRecords(records: { [studentId: string]: OfflineRecordEntry }): RecordValueMap {
   const map: RecordValueMap = {};
   Object.entries(records).forEach(([studentId, entry]) => {
     map[studentId] = { submissionStatus: entry.submissionStatus, gradeValue: entry.gradeValue };
@@ -37,21 +39,20 @@ export default function RecordPage({
   params: Promise<{ roomId: string; taskId: string }>;
 }) {
   const { roomId, taskId } = use(params);
-  const [seatNumber, setSeatNumber] = useState<number | null>(null);
-  const [task, setTask] = useState<Task | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [values, setValues] = useState<RecordValueMap>({});
+  // 單一真相：座號、任務、學生、登記值全部讀自離線 store；登記寫入後畫面自動更新
+  const room = useOfflineRoom(roomId);
+  const task = useOfflineTask(roomId, taskId);
+  const students = useOfflineStudents(roomId);
+  const records = useOfflineRecords(taskId);
   const [isLoading, setIsLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
 
-  useEffect(() => {
-    const load = async () => {
-      const room = getRoom(roomId);
-      if (room) setSeatNumber(room.seatNumber);
-      setStudents(getStudents(roomId));
-      setTask(getTasks(roomId).find((t) => t.id === taskId) ?? null);
-      setValues(valuesFromRecords(getRecords(taskId)));
+  const seatNumber = room?.seatNumber ?? null;
+  const values = useMemo(() => valuesFromRecords(records), [records]);
 
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
       if (isOnline) {
         try {
           const [taskRes, recordsRes, studentsRes] = await Promise.all([
@@ -59,33 +60,28 @@ export default function RecordPage({
             fetch(`/api/records?taskId=${taskId}`),
             fetch(`/api/rooms/${roomId}/students`),
           ]);
-          if (taskRes.ok) setTask(await taskRes.json());
-          if (studentsRes.ok) setStudents(await studentsRes.json());
+          if (taskRes.ok) saveTask(roomId, (await taskRes.json()) as Task);
+          if (studentsRes.ok) saveStudents(roomId, await studentsRes.json());
           if (recordsRes.ok) {
-            const rows = (await recordsRes.json()) as RecordApiItem[];
-            const map: RecordValueMap = {};
-            rows.forEach((r) => {
-              map[r.studentId] = {
-                submissionStatus: r.submissionStatus ?? undefined,
-                gradeValue: r.gradeValue ?? undefined,
-              };
-            });
-            setValues(map);
-            // 回寫已同步記錄到本機，供之後離線檢視
-            cacheSyncedRecords(taskId, rows);
+            // 回寫已同步記錄到本機（store），畫面 values 隨之更新並供離線檢視
+            cacheSyncedRecords(taskId, (await recordsRes.json()) as RecordApiItem[]);
           }
         } catch (error) {
           console.error('Failed to load task:', error);
         }
       }
-      setIsLoading(false);
+      if (active) setIsLoading(false);
     };
     load();
+    return () => {
+      active = false;
+    };
   }, [roomId, taskId, isOnline]);
 
   const persist = useCallback(
     (studentId: string, value: { submissionStatus?: SubmissionStatus; gradeValue?: number | null }) => {
       if (!task || seatNumber == null) return;
+      // 寫入 store（依意圖寫入或刪除）＋ 入佇列；畫面 values 由 useOfflineRecords 反應更新
       const result = queueRecordUpdate({
         task,
         studentId,
@@ -95,22 +91,7 @@ export default function RecordPage({
       });
       if (!result.ok) return;
 
-      // 更新畫面狀態：刪除意圖（取消勾選 / 清空成績）就移除該筆
-      setValues((prev) => {
-        const next = { ...prev };
-        const isDelete =
-          value.submissionStatus === SubmissionStatus.NOT_SUBMITTED ||
-          value.gradeValue === null ||
-          value.gradeValue === undefined;
-        if (isDelete && value.submissionStatus !== SubmissionStatus.SUBMITTED) {
-          delete next[studentId];
-        } else {
-          next[studentId] = { submissionStatus: value.submissionStatus, gradeValue: value.gradeValue ?? undefined };
-        }
-        return next;
-      });
-
-      if (isOnline) processSyncQueue();
+      if (isOnline) requestSync();
     },
     [task, seatNumber, isOnline]
   );
@@ -124,7 +105,7 @@ export default function RecordPage({
         body: JSON.stringify({ status: TaskStatus.HELPER_COMPLETED }),
       });
       if (res.ok) {
-        setTask((prev) => (prev ? { ...prev, status: TaskStatus.HELPER_COMPLETED } : prev));
+        saveTask(roomId, { ...task, status: TaskStatus.HELPER_COMPLETED });
       }
     } catch (error) {
       console.error('Failed to mark complete:', error);

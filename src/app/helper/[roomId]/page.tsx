@@ -9,40 +9,30 @@ import { NetworkStatus } from '@/components/NetworkStatus';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { getRoom, getTasks, saveTasks, saveStudents } from '@/lib/offline/storage';
+import { getRoom, saveTasks, saveStudents } from '@/lib/offline/storage';
+import { useOfflineRoom, useOfflineTasks } from '@/lib/offline/store';
 import { messages } from '@/messages/zh-TW';
 
 export default function HelperRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
-  const [roomName, setRoomName] = useState('');
-  const [seatNumber, setSeatNumber] = useState<number | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // 單一真相：房間與任務直接讀自離線 store，寫入後畫面自動更新（不再各持 useState 副本）
+  const room = useOfflineRoom(roomId);
+  const tasks = useOfflineTasks(roomId);
   const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
   const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
-    const load = async () => {
-      const room = getRoom(roomId);
-      if (!room) {
-        setNotFound(true);
-        setIsLoading(false);
-        return;
-      }
-      setRoomName(room.name);
-      setSeatNumber(room.seatNumber);
-      setTasks(getTasks(roomId));
-
-      if (isOnline) {
+    let active = true;
+    const refresh = async () => {
+      // 以非反應式讀取判斷是否已加入房間，避免依賴反應式 room 造成重複 fetch
+      if (getRoom(roomId) && isOnline) {
         try {
           const [tasksRes, studentsRes] = await Promise.all([
             fetch(`/api/tasks/${roomId}`),
             fetch(`/api/rooms/${roomId}/students`),
           ]);
           if (tasksRes.ok) {
-            const fresh = (await tasksRes.json()) as Task[];
-            setTasks(fresh);
-            saveTasks(roomId, fresh);
+            saveTasks(roomId, (await tasksRes.json()) as Task[]);
           }
           if (studentsRes.ok) {
             saveStudents(roomId, await studentsRes.json());
@@ -51,9 +41,12 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           console.error('Failed to refresh tasks:', error);
         }
       }
-      setIsLoading(false);
+      if (active) setIsLoading(false);
     };
-    load();
+    refresh();
+    return () => {
+      active = false;
+    };
   }, [roomId, isOnline]);
 
   if (isLoading) {
@@ -69,7 +62,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
     );
   }
 
-  if (notFound || seatNumber == null) {
+  if (!room || room.seatNumber == null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6">
         <Icon name="lucide:frown" size={40} className="mb-3 text-slate-300" />
@@ -90,8 +83,8 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
             {messages.room.leave}
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-900">{roomName}</h1>
-            <span className="badge badge-info">{messages.identity.seatLabel(seatNumber)}</span>
+            <h1 className="text-lg font-bold text-slate-900">{room.name}</h1>
+            <span className="badge badge-info">{messages.identity.seatLabel(room.seatNumber)}</span>
           </div>
           <p className="mt-0.5 text-xs text-slate-500">{messages.task.listTitle}</p>
         </div>
@@ -102,7 +95,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           <SyncIndicator />
         </div>
 
-        <TaskList roomId={roomId} tasks={tasks} mySeatNumber={seatNumber} />
+        <TaskList roomId={roomId} tasks={tasks} mySeatNumber={room.seatNumber} />
 
         <NetworkStatus />
       </div>

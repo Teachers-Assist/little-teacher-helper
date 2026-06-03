@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useSyncStatus } from '@/lib/offline/store';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { messages } from '@/messages/zh-TW';
@@ -10,7 +10,7 @@ interface SyncIndicatorProps {
 }
 
 export function SyncIndicator({ className }: SyncIndicatorProps) {
-  const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useOfflineSync();
+  const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
 
   if (pendingCount === 0 && !isSyncing) {
     return null;
