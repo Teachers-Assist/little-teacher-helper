@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { Button } from '@/components/ui/Button';
 import { parseRoomCodeFromURL } from '@/lib/qrcode';
+import { messages } from '@/messages/zh-TW';
 
 interface QRScannerProps {
   onScan: (code: string) => void;
@@ -45,7 +46,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
           stopScanning();
           onScan(decodedText.toUpperCase());
         } else {
-          setError('無效的 QRCode，請掃描房間 QRCode');
+          setError(messages.qr.invalid);
         }
       },
       (errorMessage) => {
@@ -82,10 +83,10 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
         <div className="flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 p-8 w-full">
           <div className="mb-4 text-6xl">📷</div>
           <p className="mb-4 text-center text-slate-600 dark:text-slate-300">
-            點擊下方按鈕開啟相機掃描 QRCode
+            {messages.qr.scanInstruction}
           </p>
           <Button variant="primary" onClick={startScanning}>
-            開始掃描
+            {messages.qr.startScan}
           </Button>
         </div>
       ) : (
@@ -100,7 +101,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
             onClick={stopScanning}
             className="mt-4 w-full"
           >
-            停止掃描
+            {messages.qr.stopScan}
           </Button>
         </div>
       )}

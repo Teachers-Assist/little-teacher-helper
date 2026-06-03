@@ -285,10 +285,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 觸控目標尺寸 ≥ 44×44px（NFR-002，平板觸控友善） */
 button,
 [role='button'] {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 :focus-visible {

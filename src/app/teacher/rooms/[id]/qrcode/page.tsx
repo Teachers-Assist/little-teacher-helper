@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
+import { messages } from '@/messages/zh-TW';
 
 interface Room {
   id: string;
@@ -38,7 +39,7 @@ export default function QRCodePage({ params }: { params: Promise<{ id: string }>
           <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
             <Icon name="lucide:qr-code" size={24} className="text-primary-600" />
           </div>
-          <p className="text-sm text-slate-500">載入中...</p>
+          <p className="text-sm text-slate-500">{messages.common.loading}</p>
         </div>
       </div>
     );
@@ -49,9 +50,9 @@ export default function QRCodePage({ params }: { params: Promise<{ id: string }>
       <div className="flex h-full min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
-          <p className="mb-3 text-slate-600">找不到該房間</p>
+          <p className="mb-3 text-slate-600">{messages.room.notFoundTitle}</p>
           <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">
-            返回儀表板
+            {messages.teacher.backToDashboard}
           </Link>
         </div>
       </div>
@@ -67,9 +68,9 @@ export default function QRCodePage({ params }: { params: Promise<{ id: string }>
           className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600"
         >
           <Icon name="lucide:arrow-left" size={14} />
-          返回房間
+          {messages.qr.backToRoom}
         </Link>
-        <h1 className="text-xl font-bold text-slate-900">QR Code — {room.name}</h1>
+        <h1 className="text-xl font-bold text-slate-900">{messages.qr.pageTitle(room.name)}</h1>
       </div>
 
       <div className="page-body">
@@ -80,7 +81,7 @@ export default function QRCodePage({ params }: { params: Promise<{ id: string }>
           <div className="mt-4 no-print">
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Icon name="lucide:printer" size={15} />
-              列印 QRCode
+              {messages.qr.printQrcode}
             </Button>
           </div>
         </div>

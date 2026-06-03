@@ -1,15 +1,16 @@
 ﻿import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
 import { ToastProvider } from '@/components/ui';
+import { messages } from '@/messages/zh-TW';
 
 export const metadata: Metadata = {
-  title: '小老師助手',
-  description: '讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式',
+  title: messages.app.name,
+  description: messages.app.description,
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '小老師助手',
+    title: messages.app.name,
   },
   formatDetection: {
     telephone: false,

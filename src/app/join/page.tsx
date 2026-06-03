@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { QRScanner } from '@/components/QRScanner';
+import { messages } from '@/messages/zh-TW';
 
 export default function JoinPage() {
   const [roomCode, setRoomCode] = useState('');
@@ -15,7 +16,7 @@ export default function JoinPage() {
 
   const handleJoin = async (code: string) => {
     if (!code.trim()) {
-      setError('請輸入房間代碼');
+      setError(messages.qr.emptyCode);
       return;
     }
     setIsLoading(true);
@@ -23,7 +24,7 @@ export default function JoinPage() {
     try {
       router.push(`/join/${code.toUpperCase()}`);
     } catch {
-      setError('加入房間失敗，請確認代碼是否正確');
+      setError(messages.qr.joinFailedRetry);
     } finally {
       setIsLoading(false);
     }
@@ -47,8 +48,8 @@ export default function JoinPage() {
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
             <Icon name="lucide:book-open" size={24} className="text-white" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">加入房間</h1>
-          <p className="mt-1 text-sm text-slate-500">掃描 QRCode 或輸入房間代碼</p>
+          <h1 className="text-xl font-bold text-slate-900">{messages.qr.enterTitle}</h1>
+          <p className="mt-1 text-sm text-slate-500">{messages.qr.enterHint}</p>
         </div>
 
         <div className="rounded-xl border-2 border-black bg-white p-6 space-y-5">
@@ -57,7 +58,7 @@ export default function JoinPage() {
             <div>
               <QRScanner onScan={handleScan} onError={(err) => setError(err)} />
               <Button variant="outline" className="mt-3 w-full" size="sm" onClick={() => setShowScanner(false)}>
-                取消掃描
+                {messages.qr.cancelScan}
               </Button>
             </div>
           ) : (
@@ -69,8 +70,8 @@ export default function JoinPage() {
                 <Icon name="lucide:camera" size={24} className="text-primary-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-primary-700">掃描 QRCode</p>
-                <p className="text-xs text-primary-500">點此開啟相機</p>
+                <p className="text-sm font-medium text-primary-700">{messages.qr.scanTitle}</p>
+                <p className="text-xs text-primary-500">{messages.qr.tapToOpenCamera}</p>
               </div>
             </button>
           )}
@@ -81,7 +82,7 @@ export default function JoinPage() {
               <div className="w-full border-t border-slate-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-2 text-slate-400">或手動輸入</span>
+              <span className="bg-white px-2 text-slate-400">{messages.qr.orManual}</span>
             </div>
           </div>
 
@@ -89,14 +90,14 @@ export default function JoinPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label htmlFor="roomCode" className="mb-1.5 block text-xs font-medium text-slate-500">
-                房間代碼
+                {messages.qr.roomCode}
               </label>
               <input
                 type="text"
                 id="roomCode"
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                placeholder="例如：ABC123"
+                placeholder={messages.qr.codePlaceholder}
                 maxLength={6}
                 className="w-full rounded-lg border-2 border-black bg-white px-4 py-3 text-center text-xl font-mono tracking-widest uppercase focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
               />
@@ -109,7 +110,7 @@ export default function JoinPage() {
             )}
 
             <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
-              加入房間
+              {messages.join.joinButton}
             </Button>
           </form>
         </div>

@@ -18,6 +18,98 @@ export const messages = {
     confirm: '確認',
     cancel: '取消',
     back: '返回',
+    retry: '重試',
+    backHome: '回到首頁',
+  },
+
+  // App metadata（瀏覽器分頁、PWA）
+  app: {
+    name: '小老師助手',
+    description: '讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式',
+  },
+
+  // 側欄導覽
+  nav: {
+    appName: '小老師助手',
+    sectionGeneral: '一般',
+    dashboard: '儀表板',
+    rooms: '班級房間',
+    settings: '設定',
+  },
+
+  // 首頁
+  landing: {
+    tagline: '讓收回條和登記作業變得更簡單',
+    teacherTitle: '我是老師',
+    teacherDesc: '建立班級房間、管理學生名單、查看繳交報表',
+    teacherCta: '進入老師面板',
+    helperTitle: '我是小老師',
+    helperDesc: '掃描 QRCode 加入房間、幫忙登記繳交狀況',
+    helperCta: '掃碼加入房間',
+    featureFastTitle: '快速登記',
+    featureFastDesc: '一鍵勾選即時更新',
+    featureOfflineTitle: '離線支援',
+    featureOfflineDesc: '無網路也能使用',
+    featureReportTitle: '清晰報表',
+    featureReportDesc: '一目了然的統計',
+  },
+
+  // QRCode 掃描與顯示
+  qr: {
+    enterTitle: '加入房間',
+    enterHint: '掃描 QRCode 或輸入房間代碼',
+    scanTitle: '掃描 QRCode',
+    tapToOpenCamera: '點此開啟相機',
+    scanInstruction: '點擊下方按鈕開啟相機掃描 QRCode',
+    startScan: '開始掃描',
+    stopScan: '停止掃描',
+    cancelScan: '取消掃描',
+    invalid: '無效的 QRCode，請掃描房間 QRCode',
+    orManual: '或手動輸入',
+    roomCode: '房間代碼',
+    codePlaceholder: '例如：ABC123',
+    emptyCode: '請輸入房間代碼',
+    joinFailedRetry: '加入房間失敗，請確認代碼是否正確',
+    generating: '產生 QRCode 中...',
+    generateFailed: '無法產生 QRCode',
+    copyCode: '複製代碼',
+    copyUrl: '複製連結',
+    codeCopied: '代碼已複製到剪貼簿',
+    urlCopied: '連結已複製到剪貼簿',
+    copyFailed: '複製失敗，請手動複製',
+    instruction: '讓小老師用手機掃描此 QRCode，或輸入上方代碼即可加入房間',
+    pageTitle: (room: string) => `QR Code — ${room}`,
+    printQrcode: '列印 QRCode',
+    backToRoom: '返回房間',
+  },
+
+  // 網路 / 同步狀態
+  network: {
+    online: '已連線',
+    offlineSync: '離線模式 - 資料將在連線後同步',
+  },
+  sync: {
+    syncing: '同步中...',
+    pending: (n: number) => `${n} 筆待同步`,
+    syncNow: '立即同步',
+    synced: '已同步',
+  },
+  toast: {
+    close: '關閉通知',
+  },
+
+  // 錯誤 / 找不到頁面
+  errorPage: {
+    notFoundTitle: '找不到頁面',
+    notFoundDesc: '您要找的頁面可能已被移除、名稱已更改，或暫時無法使用。',
+    teacherEntry: '老師入口',
+    helperEntry: '小老師入口',
+    errorTitle: '出錯了',
+    errorHeading: '發生了一些問題',
+    errorDesc: '很抱歉，應用程式遇到了一些問題。請嘗試重新載入頁面，或稍後再試。',
+    globalTitle: '嚴重錯誤',
+    globalHeading: '應用程式發生嚴重問題',
+    globalDesc: '很抱歉，發生了無法恢復的錯誤。請重新載入頁面或聯繫技術支援。',
   },
 
   join: {
@@ -29,6 +121,7 @@ export const messages = {
     roomName: '房間名稱',
     studentsCount: (n: number) => `${n} 位學生`,
     tasksCount: (n: number) => `${n} 個任務`,
+    joinButton: '加入房間',
   },
 
   // 小老師身分（座號選擇與指派提示）
@@ -50,6 +143,7 @@ export const messages = {
     typeSubmission: '繳交',
     typeGrade: '成績',
     statusActive: '進行中',
+    statusActiveOverdue: '進行中・逾期',
     statusHelperCompleted: '已標記完成',
     statusClosed: '已結案',
     dueLabel: (date: string) => `截止：${date}`,
@@ -66,6 +160,12 @@ export const messages = {
 
   record: {
     rosterTitle: '學生名單',
+    rosterEmpty: '尚未新增學生',
+    statusHeader: '繳交狀況',
+    listAria: '學生繳交狀況列表',
+    seatAria: (n: number) => `座號 ${n}`,
+    toggleAria: (name: string, submitted: boolean) =>
+      `${name}，${submitted ? '已繳交' : '未繳交'}`,
     submittedCount: (n: number) => `${n} 已繳`,
     notSubmittedCount: (n: number) => `${n} 未繳`,
     progress: (percent: number) => `完成度 ${percent}%`,
@@ -113,6 +213,48 @@ export const messages = {
   teacher: {
     studentsUnit: (n: number) => `${n} 位學生`,
     tasksUnit: (n: number) => `${n} 個任務`,
+
+    // 帳號 / 儀表板
+    welcome: (name: string) => `歡迎回來，${name}`,
+    manageRooms: '管理您的班級房間',
+    createRoom: '建立房間',
+    noRoomsTitle: '還沒有房間',
+    noRoomsDesc: '建立您的第一個班級房間，開始使用小老師助手',
+    createFirstRoom: '建立第一個房間',
+    createTeacherTitle: '建立老師帳號',
+    createTeacherHint: '請輸入您的名字以開始使用',
+    teacherNamePlaceholder: '例如：王老師',
+    start: '開始使用',
+    backToDashboard: '返回儀表板',
+
+    // 房間詳情
+    active: '啟用中',
+    inactive: '已停用',
+    showQrcode: '顯示 QRCode',
+    tabStudents: '學生',
+    tabTasks: '任務',
+    tabReport: '報表',
+    roomInfo: '房間資訊',
+    roomCodeLabel: '房間代碼',
+    studentCountLabel: '學生人數',
+    taskCountLabel: '任務數',
+    addStudent: '新增學生',
+    seatPlaceholder: '座號',
+    studentNamePlaceholder: '學生姓名',
+    add: '新增',
+    studentRoster: '學生名單',
+    selectTask: '選擇任務',
+
+    // 建立房間
+    newRoomTitle: '建立新房間',
+    className: '班級名稱',
+    classNamePlaceholder: '例如：三年二班',
+    rosterOptional: '學生名單（選填）',
+    rosterHint: '每行一位學生，可加上座號，例如：',
+    rosterExample: '1 王小明',
+    rosterPlaceholder: '1 王小明\n2 李小華\n3 張小強',
+    emptyClassName: '請輸入班級名稱',
+    createRoomFailed: '建立房間失敗，請稍後再試',
 
     // 任務管理
     taskMgmtTitle: '任務管理',

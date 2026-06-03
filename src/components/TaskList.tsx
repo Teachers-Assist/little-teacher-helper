@@ -62,7 +62,7 @@ export function TaskList({ roomId, tasks, mySeatNumber }: TaskListProps) {
                   <StatusBadge variant="neutral" size="sm">{messages.task.statusClosed}</StatusBadge>
                 )}
                 {lock === 'DUE_PASSED' && (
-                  <StatusBadge variant="danger" size="sm">{messages.task.statusActive}・逾期</StatusBadge>
+                  <StatusBadge variant="danger" size="sm">{messages.task.statusActiveOverdue}</StatusBadge>
                 )}
               </div>
 

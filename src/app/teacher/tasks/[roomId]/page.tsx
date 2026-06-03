@@ -138,7 +138,7 @@ export default function TaskManagementPage({ params }: { params: Promise<{ roomI
         <div className="text-center">
           <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
           <p className="mb-3 text-slate-600">{messages.room.notFoundTitle}</p>
-          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">儀表板</Link>
+          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">{messages.nav.dashboard}</Link>
         </div>
       </div>
     );

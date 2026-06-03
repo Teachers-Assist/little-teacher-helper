@@ -108,7 +108,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         <div className="text-center">
           <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
           <p className="mb-3 text-slate-600">{messages.room.notFoundTitle}</p>
-          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">儀表板</Link>
+          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">{messages.nav.dashboard}</Link>
         </div>
       </div>
     );
@@ -117,9 +117,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   const tabs = [
-    { id: 'students', label: '學生', icon: 'lucide:users', count: students.length },
-    { id: 'tasks', label: '任務', icon: 'lucide:clipboard-list', count: tasks.length },
-    { id: 'report', label: '報表', icon: 'lucide:bar-chart-2', count: null },
+    { id: 'students', label: messages.teacher.tabStudents, icon: 'lucide:users', count: students.length },
+    { id: 'tasks', label: messages.teacher.tabTasks, icon: 'lucide:clipboard-list', count: tasks.length },
+    { id: 'report', label: messages.teacher.tabReport, icon: 'lucide:bar-chart-2', count: null },
   ] as const;
 
   return (
@@ -127,19 +127,19 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
       <div className="page-header">
         <Link href="/teacher" className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600">
           <Icon name="lucide:arrow-left" size={14} />
-          返回儀表板
+          {messages.teacher.backToDashboard}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
             <StatusBadge variant={room.isActive ? 'success' : 'neutral'} dot size="sm">
-              {room.isActive ? '啟用中' : '已停用'}
+              {room.isActive ? messages.teacher.active : messages.teacher.inactive}
             </StatusBadge>
           </div>
           <Link href={`/teacher/rooms/${id}/qrcode`}>
             <Button variant="outline" size="sm">
               <Icon name="lucide:qr-code" size={15} />
-              顯示 QRCode
+              {messages.teacher.showQrcode}
             </Button>
           </Link>
         </div>
@@ -170,19 +170,19 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-3">
             <div className="card-sm">
-              <h3 className="card-title">房間資訊</h3>
+              <h3 className="card-title">{messages.teacher.roomInfo}</h3>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-slate-400">房間代碼</p>
+                  <p className="text-xs text-slate-400">{messages.teacher.roomCodeLabel}</p>
                   <p className="font-mono text-xl font-bold tracking-widest text-slate-900">{room.code}</p>
                 </div>
                 <div className="flex gap-4">
                   <div>
-                    <p className="text-xs text-slate-400">學生人數</p>
+                    <p className="text-xs text-slate-400">{messages.teacher.studentCountLabel}</p>
                     <p className="text-lg font-semibold text-slate-900">{students.length}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-400">任務數</p>
+                    <p className="text-xs text-slate-400">{messages.teacher.taskCountLabel}</p>
                     <p className="text-lg font-semibold text-slate-900">{tasks.length}</p>
                   </div>
                 </div>
@@ -191,14 +191,14 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
             {activeTab === 'students' && (
               <div className="card-sm">
-                <h3 className="card-title">新增學生</h3>
+                <h3 className="card-title">{messages.teacher.addStudent}</h3>
                 <form onSubmit={handleAddStudent} className="space-y-2">
                   <div className="flex gap-2">
                     <input
                       type="number"
                       value={newStudentSeat}
                       onChange={(e) => setNewStudentSeat(e.target.value)}
-                      placeholder="座號"
+                      placeholder={messages.teacher.seatPlaceholder}
                       min="1"
                       max="99"
                       required
@@ -208,14 +208,14 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                       type="text"
                       value={newStudentName}
                       onChange={(e) => setNewStudentName(e.target.value)}
-                      placeholder="學生姓名"
+                      placeholder={messages.teacher.studentNamePlaceholder}
                       className="input flex-1"
                       maxLength={50}
                     />
                   </div>
                   {addError && <p className="text-xs font-medium text-red-600">{addError}</p>}
                   <Button type="submit" variant="primary" size="sm" className="w-full" isLoading={isAddingStudent}>
-                    新增
+                    {messages.teacher.add}
                   </Button>
                 </form>
               </div>
@@ -236,7 +236,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
             {activeTab === 'report' && tasks.length > 0 && (
               <div className="card-sm">
-                <h3 className="card-title">選擇任務</h3>
+                <h3 className="card-title">{messages.teacher.selectTask}</h3>
                 <select
                   value={selectedTaskId || ''}
                   onChange={(e) => setSelectedTaskId(e.target.value)}
@@ -254,7 +254,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
           <div className="lg:col-span-2">
             {activeTab === 'students' && (
               <div className="card-sm">
-                <h3 className="card-title">學生名單</h3>
+                <h3 className="card-title">{messages.teacher.studentRoster}</h3>
                 <StudentList students={students} isReadOnly showSubmissionStatus={false} />
               </div>
             )}
