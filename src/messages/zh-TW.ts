@@ -80,6 +80,41 @@ export const messages = {
     rejoin: '重新加入',
     leave: '離開房間',
   },
+
+  // 老師端
+  teacher: {
+    studentsUnit: (n: number) => `${n} 位學生`,
+    tasksUnit: (n: number) => `${n} 個任務`,
+
+    // 任務管理
+    taskMgmtTitle: '任務管理',
+    backTo: (name: string) => `返回 ${name}`,
+    newTask: '新增任務',
+    taskName: '任務名稱',
+    taskNamePlaceholder: '例如：數學作業',
+    taskType: '任務類型',
+    assignSeat: '指定小老師（選填）',
+    assignNone: '不指定',
+    due: '截止時間（選填）',
+    createTask: '新增任務',
+    taskListTitle: '任務列表',
+    noTasks: '尚無任務',
+    noTasksHint: '建立任務後，小老師就可以開始登記',
+    recorded: (done: number, total: number) => `已登記 ${done}/${total}`,
+    assignedSeatLabel: (seat: number) => `指定 ${seat} 號`,
+    manageTask: '管理任務',
+
+    // 狀態操作
+    reopen: '重新開放',
+    close: '結案',
+    delete: '刪除',
+    reopenTitle: '重新開放任務',
+    reopenConfirm: '重新開放後小老師可繼續修改登記內容。',
+    closeTitle: '結案任務',
+    closeConfirm: '結案後此任務將不再開放登記。',
+    deleteTitle: '刪除任務',
+    deleteConfirm: '刪除後該任務的所有登記記錄都會一併移除，且無法復原。',
+  },
 } as const;
 
 export default messages;

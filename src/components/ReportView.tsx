@@ -28,10 +28,10 @@ interface Report {
 }
 
 interface ReportViewProps {
-  itemId: string;
+  taskId: string;
 }
 
-export function ReportView({ itemId }: ReportViewProps) {
+export function ReportView({ taskId }: ReportViewProps) {
   const [report, setReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function ReportView({ itemId }: ReportViewProps) {
     const fetchReport = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/items/${itemId}/report`);
+        const response = await fetch(`/api/items/${taskId}/report`);
         if (response.ok) {
           setReport(await response.json());
         } else {
@@ -55,11 +55,11 @@ export function ReportView({ itemId }: ReportViewProps) {
     };
 
     fetchReport();
-  }, [itemId]);
+  }, [taskId]);
 
   const handleCopyText = async () => {
     try {
-      const response = await fetch(`/api/items/${itemId}/report?format=text`);
+      const response = await fetch(`/api/items/${taskId}/report?format=text`);
       const text = await response.text();
       await navigator.clipboard.writeText(text);
       alert('已複製到剪貼簿！');
@@ -69,7 +69,7 @@ export function ReportView({ itemId }: ReportViewProps) {
   };
 
   const handlePrint = () => {
-    window.open(`/api/items/${itemId}/report?format=print`, '_blank');
+    window.open(`/api/items/${taskId}/report?format=print`, '_blank');
   };
 
   if (isLoading) {

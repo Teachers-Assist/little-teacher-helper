@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { messages } from '@/messages/zh-TW';
 
 interface Room {
   id: string;
@@ -13,7 +14,7 @@ interface Room {
   isActive: boolean;
   _count?: {
     students: number;
-    items: number;
+    tasks: number;
   };
 }
 
@@ -167,7 +168,7 @@ export default function TeacherDashboard() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Icon name="lucide:clipboard-list" size={13} />
-                      {room._count?.items || 0} 個項目
+                      {messages.teacher.tasksUnit(room._count?.tasks || 0)}
                     </span>
                   </div>
                   <div className="mt-3 inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1">

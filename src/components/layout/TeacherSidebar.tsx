@@ -34,7 +34,7 @@ export function TeacherSidebar() {
     setTeacherName(localStorage.getItem('teacherName') || '');
   }, []);
 
-  const isRooms = pathname.startsWith('/teacher/rooms') || pathname.startsWith('/teacher/items');
+  const isRooms = pathname.startsWith('/teacher/rooms') || pathname.startsWith('/teacher/tasks');
   const isDashboard = pathname === '/teacher';
 
   return (
