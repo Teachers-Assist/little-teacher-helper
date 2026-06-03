@@ -1,4 +1,4 @@
-import { OfflineData, OfflineRecordEntry, Student, Task } from '@/types';
+import { OfflineData, OfflineRecordEntry, SubmissionStatus, Student, Task } from '@/types';
 
 export type { OfflineRecordEntry };
 
@@ -145,6 +145,38 @@ export function removeRecord(taskId: string, studentId: string): void {
 export function getRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
   const data = getOfflineData();
   return (data.records[taskId] as { [studentId: string]: OfflineRecordEntry }) || {};
+}
+
+/**
+ * 線上載入時，用伺服器端記錄覆蓋本機該任務的快取，讓離線時也看得到。
+ * 線上以伺服器為準（與畫面取值一致）；尚未同步的離線編輯保存在同步佇列中，
+ * 連線後送出並反映到伺服器，不靠這份快取保留。
+ */
+export function cacheSyncedRecords(
+  taskId: string,
+  records: Array<{
+    studentId: string;
+    submissionStatus?: SubmissionStatus | null;
+    gradeValue?: number | null;
+    recorderSeatNumber: number;
+    isAssignedRecorder: boolean;
+    updatedAt?: string;
+  }>
+): void {
+  const data = getOfflineData();
+  const map: { [studentId: string]: OfflineRecordEntry } = {};
+  records.forEach((r) => {
+    map[r.studentId] = {
+      submissionStatus: r.submissionStatus ?? undefined,
+      gradeValue: r.gradeValue ?? undefined,
+      recorderSeatNumber: r.recorderSeatNumber,
+      isAssignedRecorder: r.isAssignedRecorder,
+      updatedAt: r.updatedAt ?? new Date().toISOString(),
+      synced: true,
+    };
+  });
+  data.records[taskId] = map;
+  saveOfflineData(data);
 }
 
 // 註：刻意不提供「清除房間 / 清除全部離線資料」函式。

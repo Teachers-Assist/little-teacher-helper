@@ -65,10 +65,7 @@ const StudentItem = memo(function StudentItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {student.seatNumber && (
-            <span 
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-600 text-xs font-medium"
-              aria-label={`座號 ${student.seatNumber}`}
-            >
+            <span className="seat-chip" aria-label={`座號 ${student.seatNumber}`}>
               {student.seatNumber}
             </span>
           )}
