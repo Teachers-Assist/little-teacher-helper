@@ -25,7 +25,7 @@ model Room {
   teacher   Teacher   @relation(fields: [teacherId], references: [id])
   teacherId String
   students  Student[]
-  items     Item[]
+  tasks     Task[]
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -35,47 +35,51 @@ model Room {
 }
 
 model Student {
-  id          String       @id @default(uuid())
-  name        String
-  seatNumber  Int?
-  room        Room         @relation(fields: [roomId], references: [id])
-  roomId      String
-  submissions Submission[]
-  isRemoved   Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  seatNumber Int
+  room       Room     @relation(fields: [roomId], references: [id])
+  roomId     String
+  records    Record[]
+  isRemoved  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([roomId, name, seatNumber])
+  @@unique([roomId, seatNumber])
   @@index([roomId])
 }
 
-model Item {
-  id          String       @id @default(uuid())
-  name        String
-  room        Room         @relation(fields: [roomId], references: [id])
-  roomId      String
-  dueDate     DateTime?
-  submissions Submission[]
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+model Task {
+  id                 String   @id @default(uuid())
+  name               String
+  type               String // SUBMISSION (繳交與否) | GRADE (成績數值)
+  room               Room     @relation(fields: [roomId], references: [id])
+  roomId             String
+  assignedSeatNumber Int? // 指定登記的小老師座號，可空、可事後補
+  dueDate            DateTime? // 截止時間，到期後鎖定（老師可手動解除）
+  status             String   @default("ACTIVE") // ACTIVE | HELPER_COMPLETED | CLOSED
+  records            Record[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([roomId])
 }
 
-model Submission {
-  id        String    @id @default(uuid())
-  student   Student   @relation(fields: [studentId], references: [id])
-  studentId String
-  item      Item      @relation(fields: [itemId], references: [id])
-  itemId    String
-  status    String    @default("NOT_SUBMITTED") // SUBMITTED or NOT_SUBMITTED
-  updatedBy String?
-  syncedAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model Record {
+  id                 String    @id @default(uuid())
+  task               Task      @relation(fields: [taskId], references: [id])
+  taskId             String
+  student            Student   @relation(fields: [studentId], references: [id])
+  studentId          String
+  submissionStatus   String? // SUBMISSION 類型：SUBMITTED | NOT_SUBMITTED
+  gradeValue         Int? // GRADE 類型：0-100
+  recorderSeatNumber Int // 實際操作登記的小老師座號
+  isAssignedRecorder Boolean // 此次登記者是否為任務指定的小老師
+  syncedAt           DateTime? // null 表示待同步
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  @@unique([studentId, itemId])
-  @@index([itemId])
+  @@unique([taskId, studentId])
+  @@index([taskId])
   @@index([studentId])
 }
