@@ -111,6 +111,71 @@ pnpm dev
 
 ## 核心功能開發指南
 
+### ⚠️ 開始寫元件前：建立 UI 文字檔
+
+**所有對使用者顯示的文字（提示、警告、錯誤訊息、狀態說明、按鈕標籤）都必須定義在 `src/messages/zh-TW.ts`，元件內不得直接硬寫中文字串。**
+
+原因：文字需要隨時調整語氣以符合學生年齡層，未來也可能支援多語言。集中管理才能快速全局調整。
+
+```bash
+mkdir -p src/messages
+touch src/messages/zh-TW.ts
+```
+
+建議的檔案結構（依功能模組分組）：
+
+```typescript
+// src/messages/zh-TW.ts
+
+export const messages = {
+  common: {
+    loading: '載入中...',
+    saving: '儲存中...',
+    syncing: '同步中...',
+    saved: '已儲存',
+    synced: '已同步',
+    offline: '離線模式',
+    pendingSync: '待同步',
+    error: '發生錯誤，請稍後再試',
+    confirm: '確認',
+    cancel: '取消',
+  },
+  identity: {
+    selectSeat: '請選擇你的座號',
+    isAssigned: '你是本任務指定的小老師',
+    notAssigned: '你不是本任務指定的小老師，仍可繼續登記',
+    noAssignment: '',
+    recordedAs: (seat: string) => `此次登記紀錄為：${seat} 號`,
+  },
+  task: {
+    selectTask: '選擇要登記的任務',
+    assignedToYou: '指定給你',
+    markComplete: '標記登記完畢',
+    markCompleteWarning: '標記後你將無法自行修改，如需更動須請老師重新開放。確定嗎？',
+    completed: '登記完畢',
+    lockedMessage: '此任務已完成，如需修改請告知老師重新開放',
+  },
+  record: {
+    numberOnly: '這裡只能填數字',
+    uploadingMessage: '正在上傳，老師和同學即將看得到',
+  },
+} as const;
+```
+
+在元件中使用：
+
+```typescript
+import { messages } from '@/messages/zh-TW';
+
+// 在元件內
+<p>{messages.identity.recordedAs(seatNumber)}</p>
+<button>{messages.task.markComplete}</button>
+```
+
+新增文字時，先在 `zh-TW.ts` 加入對應的 key，再在元件中引用。不要直接在 JSX 裡寫中文。
+
+---
+
 ### 建立新頁面
 
 Next.js App Router 使用檔案系統路由：
