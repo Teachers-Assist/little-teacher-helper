@@ -63,11 +63,24 @@ export function calculateSubmissionRate(submitted: number, total: number): numbe
   return Math.round((submitted / total) * 100);
 }
 
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+/**
+ * 合併 CSS 類名
+ */
+type ClassValue = string | number | undefined | null | false | Record<string, unknown>;
 
-export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
+export function cn(...classes: ClassValue[]): string {
+  const out: string[] = [];
+  for (const c of classes) {
+    if (!c) continue;
+    if (typeof c === 'string' || typeof c === 'number') {
+      out.push(String(c));
+    } else {
+      for (const [key, val] of Object.entries(c)) {
+        if (val) out.push(key);
+      }
+    }
+  }
+  return out.join(' ');
 }
 
 /**
