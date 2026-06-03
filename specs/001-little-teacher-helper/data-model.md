@@ -1,6 +1,6 @@
 # Data Model: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-05-29
 
 本文件定義系統的資料模型，基於 Feature Spec 中的 Key Entities。
 
@@ -16,13 +16,13 @@
                            1:N                     │
                             │                      │
                       ┌─────────────┐              │
-                      │    Item     │              │
+                      │    Task     │              │
                       └─────────────┘              │
                             │                      │
-                           N:M (透過 Submission)    │
+                           1:N (透過 Record)        │
                             │                      │
                       ┌─────────────┐              │
-                      │ Submission  │──────────────┘
+                      │   Record    │──────────────┘
                       └─────────────┘
 ```
 
@@ -44,15 +44,11 @@
 
 **關聯**: 一位老師可擁有多個房間 (1:N → Room)
 
-**驗證規則**:
-- `name`: 非空，長度 1-50 字元
-- `email`: 有效電子郵件格式（若提供）
-
 ---
 
 ### 2. Room (房間)
 
-代表一個班級的登記空間。
+代表一個班級的登記空間。一個 QRCode 對應一個房間，小老師掃碼後進入此房間選擇座號與任務。
 
 | 欄位 | 型別 | 約束 | 說明 |
 |------|------|------|------|
@@ -64,98 +60,113 @@
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
-**關聯**: 
+**關聯**:
 - 屬於一位老師 (N:1 → Teacher)
 - 包含多位學生 (1:N → Student)
-- 包含多個登記項目 (1:N → Item)
-
-**驗證規則**:
-- `name`: 非空，長度 1-100 字元
-- `code`: 6 位英數字，自動產生，不重複
+- 包含多個任務 (1:N → Task)
 
 **狀態轉換**:
 ```
-Active (isActive: true) ──[停用]──→ Inactive (isActive: false)
-Inactive ──[重新啟用]──→ Active
+Active ──[停用]──→ Inactive ──[重新啟用]──→ Active
 ```
 
 ---
 
 ### 3. Student (學生)
 
-班級內的學生資料。
+班級內的學生資料。座號是小老師進入系統時的身份選擇依據，建議必填。
 
 | 欄位 | 型別 | 約束 | 說明 |
 |------|------|------|------|
 | id | String | PK, UUID | 唯一識別碼 |
 | name | String | Required, 1-50 chars | 學生姓名 |
-| seatNumber | Int | Optional, 1-99 | 座號（選填） |
+| seatNumber | Int | Required, 1-99 | 座號（身份識別依據，強烈建議不留空） |
 | roomId | String | FK → Room | 所屬房間 |
-| isRemoved | Boolean | Default: false | 是否已移除 |
+| isRemoved | Boolean | Default: false | 是否已移除（soft delete） |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
-**關聯**: 
+**關聯**:
 - 屬於一個房間 (N:1 → Room)
-- 擁有多筆繳交記錄 (1:N → Submission)
+- 擁有多筆登記記錄 (1:N → Record)
 
 **驗證規則**:
-- `name`: 非空，長度 1-50 字元
-- `seatNumber`: 若提供，需為 1-99 之間的整數
-- 同一房間內，`name` + `seatNumber` 組合應唯一
+- 同一房間內，`seatNumber` 唯一
+- `name` 非空，長度 1-50 字元
 
-**Soft Delete**: 使用 `isRemoved` 標記，保留歷史資料
+**Soft Delete**: 使用 `isRemoved` 標記，保留歷史記錄
 
 ---
 
-### 4. Item (登記項目)
+### 4. Task (任務)
 
-需要追蹤繳交狀況的項目。
+老師在房間內建立的登記工作。一個任務對應一種需要追蹤的事項，類型決定登記介面與資料格式。
 
 | 欄位 | 型別 | 約束 | 說明 |
 |------|------|------|------|
 | id | String | PK, UUID | 唯一識別碼 |
-| name | String | Required, 1-100 chars | 項目名稱 |
+| name | String | Required, 1-100 chars | 任務名稱（例：「數學作業」、「校外教學同意書」） |
+| type | Enum | Required | 任務類型：SUBMISSION（繳交與否）/ GRADE（成績數值） |
 | roomId | String | FK → Room | 所屬房間 |
-| dueDate | DateTime | Optional | 截止日期（選填） |
-| isActive | Boolean | Default: true | 是否啟用 |
+| assignedSeatNumber | Int | Optional | 指定負責登記的小老師座號（可為空，可後來再指定） |
+| dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除） |
+| status | Enum | Default: ACTIVE | 任務狀態（見下方說明） |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
-**關聯**: 
+**關聯**:
 - 屬於一個房間 (N:1 → Room)
-- 擁有多筆繳交記錄 (1:N → Submission)
+- 擁有多筆登記記錄 (1:N → Record)
 
-**驗證規則**:
-- `name`: 非空，長度 1-100 字元
-- `dueDate`: 若提供，需為有效日期
+**任務狀態**:
+```typescript
+enum TaskStatus {
+  ACTIVE = 'ACTIVE',                     // 開放登記中
+  HELPER_COMPLETED = 'HELPER_COMPLETED', // 小老師已標記完成，鎖定中
+  CLOSED = 'CLOSED'                      // 老師已結案
+}
+```
+
+**狀態轉換**:
+```
+ACTIVE ──[小老師標記完成]──→ HELPER_COMPLETED ──[老師重新開放]──→ ACTIVE
+ACTIVE ──[截止時間到]──→ 鎖定（status 仍 ACTIVE，但 dueDate 已過）
+ACTIVE / HELPER_COMPLETED ──[老師結案]──→ CLOSED
+```
+
+**鎖定條件**（小老師無法修改記錄）:
+- `status` 為 `HELPER_COMPLETED` 或 `CLOSED`
+- 或 `dueDate` 已過（即使 status 仍為 ACTIVE）
 
 ---
 
-### 5. Submission (繳交記錄)
+### 5. Record (登記記錄)
 
-學生對某項目的繳交狀態。
+學生對某任務的登記結果，以及是誰登記的。
 
 | 欄位 | 型別 | 約束 | 說明 |
 |------|------|------|------|
 | id | String | PK, UUID | 唯一識別碼 |
-| studentId | String | FK → Student | 學生 |
-| itemId | String | FK → Item | 登記項目 |
-| status | Enum | Required | 狀態：SUBMITTED / NOT_SUBMITTED |
-| updatedBy | String | Optional | 更新者標識（小老師裝置 ID） |
-| syncedAt | DateTime | Optional | 同步時間（null 表示待同步） |
+| taskId | String | FK → Task | 所屬任務 |
+| studentId | String | FK → Student | 被登記的學生 |
+| submissionStatus | Enum | Optional | 繳交狀態（SUBMISSION 類型任務使用） |
+| gradeValue | Int | Optional, 0-100 | 成績數值（GRADE 類型任務使用） |
+| recorderSeatNumber | Int | Required | 實際操作登記的小老師座號 |
+| isAssignedRecorder | Boolean | Required | 此次登記者是否為任務指定的小老師 |
+| syncedAt | DateTime | Optional | 同步至伺服器的時間（null 表示待同步） |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
-**關聯**: 
+**關聯**:
+- 屬於一個任務 (N:1 → Task)
 - 屬於一位學生 (N:1 → Student)
-- 屬於一個項目 (N:1 → Item)
 
 **驗證規則**:
-- `studentId` + `itemId` 組合必須唯一
-- `status`: 僅接受 SUBMITTED 或 NOT_SUBMITTED
+- `taskId` + `studentId` 組合唯一（一個學生對一個任務只有一筆記錄）
+- SUBMISSION 類型：`submissionStatus` 必填，`gradeValue` 必須為 null
+- GRADE 類型：`gradeValue` 必填，`submissionStatus` 必須為 null
 
-**狀態值**:
+**繳交狀態值**:
 ```typescript
 enum SubmissionStatus {
   SUBMITTED = 'SUBMITTED',         // 已繳交
@@ -195,7 +206,7 @@ model Room {
   teacher   Teacher   @relation(fields: [teacherId], references: [id])
   teacherId String
   students  Student[]
-  items     Item[]
+  tasks     Task[]
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -205,49 +216,64 @@ model Room {
 }
 
 model Student {
-  id          String       @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  seatNumber  Int?
-  room        Room         @relation(fields: [roomId], references: [id])
+  seatNumber  Int
+  room        Room     @relation(fields: [roomId], references: [id])
   roomId      String
-  submissions Submission[]
-  isRemoved   Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  records     Record[]
+  isRemoved   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@unique([roomId, name, seatNumber])
+  @@unique([roomId, seatNumber])
   @@index([roomId])
 }
 
-model Item {
-  id          String       @id @default(uuid())
-  name        String
-  room        Room         @relation(fields: [roomId], references: [id])
-  roomId      String
-  dueDate     DateTime?
-  submissions Submission[]
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+model Task {
+  id                  String     @id @default(uuid())
+  name                String
+  type                TaskType
+  room                Room       @relation(fields: [roomId], references: [id])
+  roomId              String
+  assignedSeatNumber  Int?
+  dueDate             DateTime?
+  status              TaskStatus @default(ACTIVE)
+  records             Record[]
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   @@index([roomId])
 }
 
-model Submission {
-  id        String           @id @default(uuid())
-  student   Student          @relation(fields: [studentId], references: [id])
-  studentId String
-  item      Item             @relation(fields: [itemId], references: [id])
-  itemId    String
-  status    SubmissionStatus @default(NOT_SUBMITTED)
-  updatedBy String?
-  syncedAt  DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+model Record {
+  id                   String            @id @default(uuid())
+  task                 Task              @relation(fields: [taskId], references: [id])
+  taskId               String
+  student              Student           @relation(fields: [studentId], references: [id])
+  studentId            String
+  submissionStatus     SubmissionStatus?
+  gradeValue           Int?
+  recorderSeatNumber   Int
+  isAssignedRecorder   Boolean
+  syncedAt             DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  @@unique([studentId, itemId])
-  @@index([itemId])
+  @@unique([taskId, studentId])
+  @@index([taskId])
   @@index([studentId])
+}
+
+enum TaskType {
+  SUBMISSION  // 繳交與否
+  GRADE       // 成績數值
+}
+
+enum TaskStatus {
+  ACTIVE
+  HELPER_COMPLETED
+  CLOSED
 }
 
 enum SubmissionStatus {
@@ -272,47 +298,57 @@ interface OfflineData {
       id: string;
       code: string;
       name: string;
-      joinedAt: string;  // ISO timestamp
+      joinedAt: string;       // ISO timestamp
+      seatNumber: number;     // 本次選擇的座號
     };
   };
-  
+
   // 學生名單快取
   students: {
     [roomId: string]: {
       id: string;
       name: string;
-      seatNumber?: number;
+      seatNumber: number;
     }[];
   };
-  
-  // 項目快取
-  items: {
+
+  // 任務快取
+  tasks: {
     [roomId: string]: {
       id: string;
       name: string;
+      type: 'SUBMISSION' | 'GRADE';
+      assignedSeatNumber?: number;
       dueDate?: string;
+      status: 'ACTIVE' | 'HELPER_COMPLETED' | 'CLOSED';
     }[];
   };
-  
-  // 繳交狀態（本機狀態）
-  submissions: {
-    [itemId: string]: {
+
+  // 登記記錄（本機狀態）
+  records: {
+    [taskId: string]: {
       [studentId: string]: {
-        status: 'SUBMITTED' | 'NOT_SUBMITTED';
-        updatedAt: string;  // ISO timestamp
+        submissionStatus?: 'SUBMITTED' | 'NOT_SUBMITTED';
+        gradeValue?: number;
+        recorderSeatNumber: number;
+        isAssignedRecorder: boolean;
+        updatedAt: string;    // ISO timestamp
         synced: boolean;
       };
     };
   };
-  
+
   // 待同步的操作佇列
   syncQueue: {
     id: string;
-    type: 'UPDATE_SUBMISSION';
+    type: 'UPDATE_RECORD';
     payload: {
+      taskId: string;
       studentId: string;
-      itemId: string;
-      status: 'SUBMITTED' | 'NOT_SUBMITTED';
+      submissionStatus?: 'SUBMITTED' | 'NOT_SUBMITTED';
+      gradeValue?: number;
+      recorderSeatNumber: number;
+      isAssignedRecorder: boolean;
     };
     createdAt: string;
     retryCount: number;
@@ -324,27 +360,36 @@ interface OfflineData {
 
 ## Data Lifecycle
 
-### 房間生命週期
+### 任務生命週期
 ```
-建立 → 啟用中 → [停用] → 停用中 → [刪除] → 已刪除（保留記錄）
+建立 (ACTIVE)
+  │
+  ├──[小老師標記完成]──→ HELPER_COMPLETED（鎖定）
+  │                            │
+  │                     [老師重新開放]──→ ACTIVE
+  │
+  ├──[截止時間到]──→ 鎖定（status 仍 ACTIVE，dueDate 已過）
+  │
+  └──[老師結案]──→ CLOSED
 ```
 
-### 繳交記錄生命週期
+### 登記記錄生命週期
 ```
-初始化 (NOT_SUBMITTED) → [勾選] → SUBMITTED → [取消勾選] → NOT_SUBMITTED
-                              ↓
-                        [同步至伺服器]
-                              ↓
-                        synced: true
+初始：無記錄
+  │
+  [小老師登記] → 建立 Record（本機儲存，synced: false）
+  │
+  [網路同步] → syncedAt 填入，synced: true
+  │
+  [修改] → 更新 Record（任務未鎖定時）
 ```
 
 ### 離線同步流程
 ```
-1. 小老師操作 → 更新 localStorage
+1. 小老師操作 → 更新 localStorage records
 2. 加入 syncQueue
-3. 偵測網路 → 有網路時
+3. 偵測網路恢復
 4. 依序處理 syncQueue
-5. 成功 → 移出佇列，標記 synced
-6. 失敗 → 增加 retryCount，下次重試
+5. 成功 → 移出佇列，標記 synced: true，填入 syncedAt
+6. 失敗 → retryCount++，下次重試（最多 3 次）
 ```
-

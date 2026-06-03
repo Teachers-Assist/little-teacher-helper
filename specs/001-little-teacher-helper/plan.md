@@ -5,7 +5,7 @@
 
 ## Summary
 
-建立一個讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式。使用 Next.js 作為全端框架，實現 QRCode 加入房間機制、離線操作支援、以及報表產生功能。系統以平板為主要使用裝置，強調無需登入的便捷體驗。
+建立一個讓小老師幫忙收回條和登記作業繳交狀況與成績的 PWA 應用程式。使用 Next.js 作為全端框架，實現 QRCode 加入房間、座號身份選擇、任務管理、離線操作支援、以及報表產生功能。系統以平板為主要使用裝置，強調無需帳號登入、小老師自選任務、所有操作留有問責記錄。
 
 ## Technical Context
 
@@ -23,6 +23,7 @@
   - 離線優先 (Offline-first)
   - 無需使用者登入（小老師端）
   - 平板觸控友善
+  - 所有 UI 文字 MUST 定義在 `src/messages/zh-TW.ts`，元件內不得硬寫文字字串（見 NFR-001）
 **Scale/Scope**: 
   - MVP: 單一學校，100 間房間，40 學生/房間
   - 預估 4,000 學生記錄
@@ -33,7 +34,7 @@
 
 | Principle | Check | Status |
 |-----------|-------|--------|
-| I. MVP-First | 聚焦核心功能：建立房間、QRCode 加入、登記繳交、報表查看。延後進階功能（匯出格式、多項目管理）| ✅ |
+| I. MVP-First | 聚焦核心功能：建立房間與任務、QRCode 加入、座號身份選擇、繳交與成績登記、報表查看。延後功能：通知機制、公開看板、家長端 | ✅ |
 | II. Occam's Razor | Next.js 單一框架處理前後端，避免分離部署複雜度。SQLite 作為 MVP 資料庫，簡化設置 | ✅ |
 | III. KISS | 簡單的資料模型（5 個實體），扁平的路由結構，localStorage 實現離線暫存 | ✅ |
 | IV. TS Ecosystem | 全程使用 TypeScript，Next.js + Prisma 皆為 TS 原生支援 | ✅ |
@@ -69,23 +70,25 @@ src/
 │   │   │   └── [id]/
 │   │   │       ├── page.tsx  # 房間詳情/報表
 │   │   │       └── qrcode/page.tsx  # QRCode 顯示
-│   │   └── items/
-│   │       └── [roomId]/page.tsx  # 管理登記項目
+│   │   └── tasks/
+│   │       └── [roomId]/page.tsx  # 管理任務（建立、指派小老師、設截止時間）
 │   ├── join/
-│   │   └── [code]/page.tsx   # 小老師掃碼加入頁面
+│   │   └── [code]/page.tsx   # 小老師掃碼加入、選擇座號
 │   ├── helper/               # 小老師端頁面
 │   │   └── [roomId]/
-│   │       ├── page.tsx      # 選擇登記項目
-│   │       └── [itemId]/page.tsx  # 登記介面
+│   │       ├── page.tsx      # 任務清單（含指派標示）
+│   │       └── [taskId]/page.tsx  # 登記介面（繳交勾選 or 成績輸入）
 │   └── api/                  # API Routes
 │       ├── rooms/
 │       │   ├── route.ts      # GET (list), POST (create)
 │       │   └── [id]/
 │       │       ├── route.ts  # GET, PATCH, DELETE
 │       │       └── students/route.ts  # GET, POST
-│       ├── items/
-│       │   └── [roomId]/route.ts  # CRUD 登記項目
-│       ├── submissions/
+│       ├── tasks/
+│       │   └── [roomId]/
+│       │       ├── route.ts        # GET (list), POST (create)
+│       │       └── [taskId]/route.ts  # PATCH (指派/截止/重新開放/標記完成)
+│       ├── records/
 │       │   └── route.ts      # GET, POST, PATCH (含批次同步)
 │       └── sync/
 │           └── route.ts      # 離線資料同步端點
@@ -97,8 +100,10 @@ src/
 │   │   └── StatusBadge.tsx
 │   ├── QRCodeDisplay.tsx     # QRCode 顯示元件
 │   ├── QRScanner.tsx         # QRCode 掃描元件
-│   ├── StudentList.tsx       # 學生列表 (含繳交狀態)
-│   ├── SubmissionForm.tsx    # 登記表單
+│   ├── SeatSelector.tsx      # 座號選擇（含指派提示）
+│   ├── TaskList.tsx          # 任務清單（含指派標示、狀態徽章）
+│   ├── RecordForm.tsx        # 登記表單（繳交勾選 / 成績數字輸入，依任務類型切換）
+│   ├── RecorderBadge.tsx     # 顯示「此次登記紀錄為：[座號]」
 │   ├── ReportView.tsx        # 報表顯示
 │   ├── NetworkStatus.tsx     # 網路狀態指示器
 │   └── SyncIndicator.tsx     # 同步狀態指示器
@@ -114,6 +119,8 @@ src/
 │   ├── useNetworkStatus.ts   # 網路狀態 hook
 │   ├── useOfflineSync.ts     # 離線同步 hook
 │   └── useRoom.ts            # 房間資料 hook
+├── messages/
+│   └── zh-TW.ts              # 所有 UI 文字（提示、警告、錯誤訊息）集中定義
 ├── types/
 │   └── index.ts              # 共用型別定義
 └── styles/
