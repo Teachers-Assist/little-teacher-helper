@@ -1,4 +1,6 @@
-import { OfflineData, OfflineSyncQueueItem, SubmissionStatus, Student, Item } from '@/types';
+import { OfflineData, OfflineRecordEntry, Student, Task } from '@/types';
+
+export type { OfflineRecordEntry };
 
 const STORAGE_KEY = 'little-helper-offline-data';
 
@@ -9,8 +11,8 @@ function createEmptyData(): OfflineData {
   return {
     rooms: {},
     students: {},
-    items: {},
-    submissions: {},
+    tasks: {},
+    records: {},
     syncQueue: [],
   };
 }
@@ -46,15 +48,17 @@ export function saveOfflineData(data: OfflineData): void {
 }
 
 /**
- * 儲存房間資料
+ * 儲存房間資料（含本次選擇的座號）
  */
 export function saveRoom(
   roomId: string,
-  roomData: { id: string; code: string; name: string }
+  roomData: { id: string; code: string; name: string },
+  seatNumber: number
 ): void {
   const data = getOfflineData();
   data.rooms[roomId] = {
     ...roomData,
+    seatNumber,
     joinedAt: new Date().toISOString(),
   };
   saveOfflineData(data);
@@ -86,37 +90,38 @@ export function getStudents(roomId: string): Student[] {
 }
 
 /**
- * 儲存項目列表
+ * 儲存任務列表
  */
-export function saveItems(roomId: string, items: Item[]): void {
+export function saveTasks(roomId: string, tasks: Task[]): void {
   const data = getOfflineData();
-  data.items[roomId] = items;
+  data.tasks[roomId] = tasks;
   saveOfflineData(data);
 }
 
 /**
- * 取得項目列表
+ * 取得任務列表
  */
-export function getItems(roomId: string): Item[] {
+export function getTasks(roomId: string): Task[] {
   const data = getOfflineData();
-  return data.items[roomId] || [];
+  return data.tasks[roomId] || [];
 }
 
 /**
- * 儲存繳交狀態
+ * 寫入一筆登記記錄到本機快取（標記為待同步）。
+ * 僅用於「有登記」的記錄；取消登記請改用 removeRecord。
  */
-export function saveSubmission(
-  itemId: string,
+export function saveRecord(
+  taskId: string,
   studentId: string,
-  status: SubmissionStatus,
+  entry: Omit<OfflineRecordEntry, 'updatedAt' | 'synced'>,
   synced: boolean = false
 ): void {
   const data = getOfflineData();
-  if (!data.submissions[itemId]) {
-    data.submissions[itemId] = {};
+  if (!data.records[taskId]) {
+    data.records[taskId] = {};
   }
-  data.submissions[itemId][studentId] = {
-    status,
+  data.records[taskId][studentId] = {
+    ...entry,
     updatedAt: new Date().toISOString(),
     synced,
   };
@@ -124,73 +129,24 @@ export function saveSubmission(
 }
 
 /**
- * 取得項目的所有繳交狀態
+ * 從本機快取移除一筆登記記錄（取消勾選 / 清空成績 → 回到「沒登記過」）。
  */
-export function getSubmissions(itemId: string) {
+export function removeRecord(taskId: string, studentId: string): void {
   const data = getOfflineData();
-  return data.submissions[itemId] || {};
-}
-
-/**
- * 標記繳交狀態為已同步
- */
-export function markSubmissionSynced(itemId: string, studentId: string): void {
-  const data = getOfflineData();
-  if (data.submissions[itemId]?.[studentId]) {
-    data.submissions[itemId][studentId].synced = true;
+  if (data.records[taskId]?.[studentId]) {
+    delete data.records[taskId][studentId];
     saveOfflineData(data);
   }
 }
 
 /**
- * 取得所有未同步的繳交記錄
+ * 取得某任務在本機的所有登記記錄
  */
-export function getUnsyncedSubmissions(): Array<{
-  itemId: string;
-  studentId: string;
-  status: SubmissionStatus;
-  updatedAt: string;
-}> {
+export function getRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
   const data = getOfflineData();
-  const unsynced: Array<{
-    itemId: string;
-    studentId: string;
-    status: SubmissionStatus;
-    updatedAt: string;
-  }> = [];
-
-  Object.entries(data.submissions).forEach(([itemId, students]) => {
-    Object.entries(students).forEach(([studentId, submission]) => {
-      if (!submission.synced) {
-        unsynced.push({
-          itemId,
-          studentId,
-          status: submission.status,
-          updatedAt: submission.updatedAt,
-        });
-      }
-    });
-  });
-
-  return unsynced;
+  return (data.records[taskId] as { [studentId: string]: OfflineRecordEntry }) || {};
 }
 
-/**
- * 清除特定房間的離線資料
- */
-export function clearRoomData(roomId: string): void {
-  const data = getOfflineData();
-  delete data.rooms[roomId];
-  delete data.students[roomId];
-  delete data.items[roomId];
-  saveOfflineData(data);
-}
-
-/**
- * 清除所有離線資料
- */
-export function clearAllOfflineData(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
-}
-
+// 註：刻意不提供「清除房間 / 清除全部離線資料」函式。
+// 依 vision.md「不可逆操作系統硬性防堵」原則，清掉未同步的登記＝不可逆的資料遺失，
+// spec 也無此需求。若未來需要「換班級」等清理，必須先確保無待同步資料才可進行。

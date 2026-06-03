@@ -205,6 +205,24 @@ export interface RoomJoinResponse {
 }
 
 // ===== Offline Data Structure =====
+
+/**
+ * 一筆登記記錄在本機的快取內容。
+ *
+ * 注意「被登記的學生」不在此型別內——它是 OfflineData.records 的巢狀 key
+ * （`records[taskId][studentId]`，studentId 對應 Student.id），可在 students
+ * 快取中查到該生姓名與座號。
+ * 本型別的 recorderSeatNumber 是「執行登記的小老師座號」，與被登記學生是不同身分。
+ */
+export interface OfflineRecordEntry {
+  submissionStatus?: SubmissionStatus; // 繳交類型；只會是 SUBMITTED
+  gradeValue?: number; // 成績類型
+  recorderSeatNumber: number; // 登記者（小老師）座號，非被登記學生
+  isAssignedRecorder: boolean; // 登記者是否為任務指定的小老師
+  updatedAt: string;
+  synced: boolean;
+}
+
 export interface OfflineData {
   rooms: {
     [roomId: string]: {
@@ -221,16 +239,10 @@ export interface OfflineData {
   tasks: {
     [roomId: string]: Task[];
   };
+  // key 結構：records[taskId][studentId]，studentId 即被登記學生的 Student.id
   records: {
     [taskId: string]: {
-      [studentId: string]: {
-        submissionStatus?: SubmissionStatus;
-        gradeValue?: number;
-        recorderSeatNumber: number;
-        isAssignedRecorder: boolean;
-        updatedAt: string;
-        synced: boolean;
-      };
+      [studentId: string]: OfflineRecordEntry;
     };
   };
   syncQueue: OfflineSyncQueueItem[];

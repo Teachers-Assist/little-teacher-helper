@@ -1,6 +1,4 @@
-import { getOfflineData, saveOfflineData, markSubmissionSynced, getUnsyncedSubmissions } from './storage';
-import { processSyncQueue, syncAll, getQueueSize } from './queue';
-import { SubmissionStatus } from '@/types';
+import { processSyncQueue, getQueueSize } from './queue';
 
 /**
  * 同步狀態
@@ -76,55 +74,17 @@ class OfflineSyncService {
     this.updateStatus({ isSyncing: true, lastError: null });
 
     try {
-      // First, process the sync queue
-      const queueResult = await processSyncQueue();
-
-      // Then, sync any unsynced submissions from storage
-      const unsyncedSubmissions = getUnsyncedSubmissions();
-      let directSyncSuccess = 0;
-      let directSyncFailed = 0;
-
-      if (unsyncedSubmissions.length > 0) {
-        try {
-          const response = await fetch('/api/submissions', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              submissions: unsyncedSubmissions.map((s) => ({
-                studentId: s.studentId,
-                itemId: s.itemId,
-                status: s.status,
-              })),
-            }),
-          });
-
-          if (response.ok) {
-            // Mark all as synced
-            unsyncedSubmissions.forEach((s) => {
-              markSubmissionSynced(s.itemId, s.studentId);
-            });
-            directSyncSuccess = unsyncedSubmissions.length;
-          } else {
-            directSyncFailed = unsyncedSubmissions.length;
-          }
-        } catch (error) {
-          console.error('Direct sync failed:', error);
-          directSyncFailed = unsyncedSubmissions.length;
-        }
-      }
-
-      const totalSuccess = queueResult.success + directSyncSuccess;
-      const totalFailed = queueResult.failed + directSyncFailed;
+      const { success, failed } = await processSyncQueue();
 
       this.updateStatus({
         isSyncing: false,
         lastSyncTime: new Date(),
-        lastError: totalFailed > 0 ? `${totalFailed} 筆同步失敗` : null,
+        lastError: failed > 0 ? `${failed} 筆同步失敗` : null,
       });
 
       this.updatePendingCount();
 
-      return { success: totalSuccess, failed: totalFailed };
+      return { success, failed };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '同步失敗';
       this.updateStatus({
@@ -193,9 +153,7 @@ class OfflineSyncService {
   }
 
   private updatePendingCount(): void {
-    const queueSize = getQueueSize();
-    const unsyncedCount = getUnsyncedSubmissions().length;
-    this.updateStatus({ pendingCount: queueSize + unsyncedCount });
+    this.updateStatus({ pendingCount: getQueueSize() });
   }
 
   private notifyListeners(): void {
