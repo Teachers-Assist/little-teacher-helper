@@ -2,6 +2,7 @@
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
+import { messages } from '@/messages/zh-TW';
 
 interface NetworkStatusProps {
   className?: string;
@@ -29,12 +30,12 @@ export function NetworkStatus({ className, showWhenOnline = false }: NetworkStat
       {isOnline ? (
         <div className="flex items-center justify-center gap-2">
           <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-          <span>已連線</span>
+          <span>{messages.network.online}</span>
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2">
           <span className="h-2 w-2 rounded-full bg-white" />
-          <span>離線模式 - 資料將在連線後同步</span>
+          <span>{messages.network.offlineSync}</span>
         </div>
       )}
     </div>

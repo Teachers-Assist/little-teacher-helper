@@ -144,12 +144,17 @@ ACTIVE / HELPER_COMPLETED ──[老師結案]──→ CLOSED
 
 學生對某任務的登記結果，以及是誰登記的。
 
+> **核心原則：一筆 Record 代表「已登記」。** 系統不為未登記的學生預建空白記錄，
+> 也不儲存「未繳交 / 空成績」這類空值狀態——「未繳交」是畫面從「查無記錄」推導的。
+> 因此繳交類型只會存在 `submissionStatus = SUBMITTED` 的記錄；小老師取消勾選，
+> 或把成績清空，等同於**刪除該筆 Record**，使其回到「沒登記過」。
+
 | 欄位 | 型別 | 約束 | 說明 |
 |------|------|------|------|
 | id | String | PK, UUID | 唯一識別碼 |
 | taskId | String | FK → Task | 所屬任務 |
 | studentId | String | FK → Student | 被登記的學生 |
-| submissionStatus | Enum | Optional | 繳交狀態（SUBMISSION 類型任務使用） |
+| submissionStatus | Enum | Optional | 繳交狀態（SUBMISSION 類型；實際只會是 SUBMITTED） |
 | gradeValue | Int | Optional, 0-100 | 成績數值（GRADE 類型任務使用） |
 | recorderSeatNumber | Int | Required | 實際操作登記的小老師座號 |
 | isAssignedRecorder | Boolean | Required | 此次登記者是否為任務指定的小老師 |
@@ -162,17 +167,22 @@ ACTIVE / HELPER_COMPLETED ──[老師結案]──→ CLOSED
 - 屬於一位學生 (N:1 → Student)
 
 **驗證規則**:
-- `taskId` + `studentId` 組合唯一（一個學生對一個任務只有一筆記錄）
-- SUBMISSION 類型：`submissionStatus` 必填，`gradeValue` 必須為 null
-- GRADE 類型：`gradeValue` 必填，`submissionStatus` 必須為 null
+- `taskId` + `studentId` 組合唯一（一個學生對一個任務最多一筆記錄）
+- SUBMISSION 類型：儲存的 `submissionStatus` 恆為 `SUBMITTED`，`gradeValue` 為 null
+- GRADE 類型：`gradeValue` 為 0-100 整數，`submissionStatus` 為 null
+- 記錄只在「有登記」時存在；下列操作會刪除記錄而非寫入空值：
+  - SUBMISSION：登記輸入為 `NOT_SUBMITTED`（取消勾選）
+  - GRADE：登記輸入清空（空字串 / null）
 
 **繳交狀態值**:
 ```typescript
 enum SubmissionStatus {
-  SUBMITTED = 'SUBMITTED',         // 已繳交
-  NOT_SUBMITTED = 'NOT_SUBMITTED'  // 未繳交
+  SUBMITTED = 'SUBMITTED',         // 已繳交（唯一會被儲存的狀態）
+  NOT_SUBMITTED = 'NOT_SUBMITTED'  // 未繳交：作為「取消登記」的輸入意圖，不會被儲存
 }
 ```
+
+> 統計時「未繳交人數」以 `班級在籍學生總數 − 已繳交記錄數` 推導，不依賴 NOT_SUBMITTED 記錄。
 
 ---
 
@@ -375,13 +385,15 @@ interface OfflineData {
 
 ### 登記記錄生命週期
 ```
-初始：無記錄
+初始：無記錄（＝未登記 / 未繳交）
   │
   [小老師登記] → 建立 Record（本機儲存，synced: false）
   │
   [網路同步] → syncedAt 填入，synced: true
   │
   [修改] → 更新 Record（任務未鎖定時）
+  │
+  [取消勾選 / 清空成績] → 刪除 Record，回到「無記錄」（任務未鎖定時）
 ```
 
 ### 離線同步流程

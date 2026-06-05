@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         _count: {
           select: {
             students: true,
-            items: true,
+            tasks: true,
           },
         },
       },
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         _count: {
           select: {
             students: true,
-            items: true,
+            tasks: true,
           },
         },
       },

@@ -1,15 +1,16 @@
 ﻿'use client';
 
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useSyncStatus } from '@/lib/offline/store';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { messages } from '@/messages/zh-TW';
 
 interface SyncIndicatorProps {
   className?: string;
 }
 
 export function SyncIndicator({ className }: SyncIndicatorProps) {
-  const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useOfflineSync();
+  const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
 
   if (pendingCount === 0 && !isSyncing) {
     return null;
@@ -26,18 +27,18 @@ export function SyncIndicator({ className }: SyncIndicatorProps) {
         <>
           <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
           <span className="text-sm text-slate-600 dark:text-slate-300">
-            同步中...
+            {messages.sync.syncing}
           </span>
         </>
       ) : pendingCount > 0 ? (
         <>
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           <span className="text-sm text-slate-600 dark:text-slate-300">
-            {pendingCount} 筆待同步
+            {messages.sync.pending(pendingCount)}
           </span>
           {isOnline && (
             <Button variant="ghost" size="sm" onClick={sync} className="ml-auto">
-              立即同步
+              {messages.sync.syncNow}
             </Button>
           )}
         </>
@@ -45,7 +46,7 @@ export function SyncIndicator({ className }: SyncIndicatorProps) {
         <>
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           <span className="text-sm text-slate-600 dark:text-slate-300">
-            已同步
+            {messages.sync.synced}
             {lastSyncTime && (
               <span className="text-xs text-slate-400 ml-1">
                 ({lastSyncTime.toLocaleTimeString('zh-TW')})

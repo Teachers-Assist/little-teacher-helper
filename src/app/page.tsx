@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
+import { messages } from '@/messages/zh-TW';
 
 export default function HomePage() {
   return (
@@ -12,8 +13,8 @@ export default function HomePage() {
         <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600">
           <Icon name="lucide:book-open" size={32} className="text-white" />
         </div>
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">小老師助手</h1>
-        <p className="text-slate-500">讓收回條和登記作業變得更簡單</p>
+        <h1 className="mb-2 text-3xl font-bold text-slate-900">{messages.app.name}</h1>
+        <p className="text-slate-500">{messages.landing.tagline}</p>
       </div>
 
       {/* Role Selection */}
@@ -22,10 +23,10 @@ export default function HomePage() {
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
             <Icon name="lucide:graduation-cap" size={24} className="text-primary-600" />
           </div>
-          <h2 className="mb-1.5 text-lg font-semibold text-slate-900">我是老師</h2>
-          <p className="mb-5 text-sm text-slate-500">建立班級房間、管理學生名單、查看繳交報表</p>
+          <h2 className="mb-1.5 text-lg font-semibold text-slate-900">{messages.landing.teacherTitle}</h2>
+          <p className="mb-5 text-sm text-slate-500">{messages.landing.teacherDesc}</p>
           <Link href="/teacher">
-            <Button variant="primary" className="w-full">進入老師面板</Button>
+            <Button variant="primary" className="w-full">{messages.landing.teacherCta}</Button>
           </Link>
         </div>
 
@@ -33,19 +34,19 @@ export default function HomePage() {
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
             <Icon name="lucide:hand" size={24} className="text-emerald-600" />
           </div>
-          <h2 className="mb-1.5 text-lg font-semibold text-slate-900">我是小老師</h2>
-          <p className="mb-5 text-sm text-slate-500">掃描 QRCode 加入房間、幫忙登記繳交狀況</p>
+          <h2 className="mb-1.5 text-lg font-semibold text-slate-900">{messages.landing.helperTitle}</h2>
+          <p className="mb-5 text-sm text-slate-500">{messages.landing.helperDesc}</p>
           <Link href="/join">
-            <Button variant="secondary" className="w-full">掃碼加入房間</Button>
+            <Button variant="secondary" className="w-full">{messages.landing.helperCta}</Button>
           </Link>
         </div>
       </div>
 
       {/* Features */}
       <div className="mt-8 grid w-full max-w-sm grid-cols-3 gap-3 sm:max-w-xl">
-        <FeatureItem name="lucide:zap"         title="快速登記" description="一鍵勾選即時更新" />
-        <FeatureItem name="lucide:wifi-off"    title="離線支援" description="無網路也能使用"   />
-        <FeatureItem name="lucide:bar-chart-2" title="清晰報表" description="一目了然的統計"   />
+        <FeatureItem name="lucide:zap"         title={messages.landing.featureFastTitle}    description={messages.landing.featureFastDesc}    />
+        <FeatureItem name="lucide:wifi-off"    title={messages.landing.featureOfflineTitle} description={messages.landing.featureOfflineDesc} />
+        <FeatureItem name="lucide:bar-chart-2" title={messages.landing.featureReportTitle}  description={messages.landing.featureReportDesc}  />
       </div>
     </div>
   );

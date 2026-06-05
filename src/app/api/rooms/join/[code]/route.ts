@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { messages } from '@/messages/zh-TW';
 
 export async function GET(
   _request: Request,
@@ -24,12 +25,14 @@ export async function GET(
           },
           orderBy: [{ seatNumber: 'asc' }, { name: 'asc' }],
         },
-        items: {
-          where: { isActive: true },
+        tasks: {
           select: {
             id: true,
             name: true,
+            type: true,
+            assignedSeatNumber: true,
             dueDate: true,
+            status: true,
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -37,17 +40,11 @@ export async function GET(
     });
 
     if (!room) {
-      return NextResponse.json(
-        { error: '找不到該房間，請確認代碼是否正確' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: messages.join.roomNotFound }, { status: 404 });
     }
 
     if (!room.isActive) {
-      return NextResponse.json(
-        { error: '該房間已停用' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: messages.join.roomInactive }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -57,7 +54,7 @@ export async function GET(
         code: room.code,
       },
       students: room.students,
-      items: room.items,
+      tasks: room.tasks,
     });
   } catch (error) {
     console.error('Failed to join room:', error);

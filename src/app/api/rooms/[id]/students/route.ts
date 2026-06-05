@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
+import { messages } from '@/messages/zh-TW';
 
 export async function GET(
   request: Request,
@@ -38,41 +40,32 @@ export async function POST(
     const { name, seatNumber } = body;
 
     if (!name || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: '學生名字為必填欄位' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: messages.student.nameRequired }, { status: 400 });
     }
 
     if (name.length > 50) {
-      return NextResponse.json(
-        { error: '學生名字長度不可超過 50 字元' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: messages.student.nameTooLong }, { status: 400 });
     }
 
-    if (seatNumber !== undefined && (seatNumber < 1 || seatNumber > 99)) {
-      return NextResponse.json(
-        { error: '座號必須在 1-99 之間' },
-        { status: 400 }
-      );
+    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) {
+      return NextResponse.json({ error: messages.student.seatRequired }, { status: 400 });
     }
 
     const student = await prisma.student.create({
       data: {
         name: name.trim(),
-        seatNumber: seatNumber || null,
+        seatNumber,
         roomId,
       },
     });
 
     return NextResponse.json(student, { status: 201 });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: messages.student.seatDuplicate }, { status: 409 });
+    }
     console.error('Failed to create student:', error);
-    return NextResponse.json(
-      { error: '新增學生失敗' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: messages.student.createFailed }, { status: 500 });
   }
 }
 

@@ -3,7 +3,7 @@
 /* ─── Design tokens ──────────────────────────────────────────────────────── */
 
 @theme {
-  --font-family-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-noto-sans), 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Primary: School Blue */
   --color-primary-50:  #eff6ff;
@@ -143,6 +143,13 @@
   .badge-dot-info    { @apply bg-primary-500; }
   .badge-dot-neutral { @apply bg-slate-400;   }
 
+  /* ── Seat chip（座號圓底數字） ───────────────────────────────────────── */
+
+  .seat-chip {
+    @apply inline-flex h-7 w-7 flex-shrink-0 items-center justify-center
+           rounded-full border-2 border-black bg-accent-200 text-xs font-bold text-slate-900;
+  }
+
   /* ── Sidebar nav ─────────────────────────────────────────────────────── */
 
   .nav-item {
@@ -278,10 +285,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 觸控目標尺寸 ≥ 44×44px（NFR-002，平板觸控友善） */
 button,
 [role='button'] {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 :focus-visible {

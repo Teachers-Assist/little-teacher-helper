@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { messages } from '@/messages/zh-TW';
 
 interface Room {
   id: string;
@@ -13,12 +14,12 @@ interface Room {
   isActive: boolean;
   _count?: {
     students: number;
-    items: number;
+    tasks: number;
   };
 }
 
 export default function TeacherDashboard() {
-  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [, setTeacherId] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState('');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +84,7 @@ export default function TeacherDashboard() {
           <div className="mb-3 inline-flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary-100">
             <Icon name="lucide:book-open" size={24} className="text-primary-600" />
           </div>
-          <p className="text-sm text-slate-500">載入中...</p>
+          <p className="text-sm text-slate-500">{messages.common.loading}</p>
         </div>
       </div>
     );
@@ -97,20 +98,20 @@ export default function TeacherDashboard() {
             <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:graduation-cap" size={24} className="text-primary-600" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">建立老師帳號</h2>
-            <p className="mt-1 text-sm text-slate-500">請輸入您的名字以開始使用</p>
+            <h2 className="text-xl font-bold text-slate-900">{messages.teacher.createTeacherTitle}</h2>
+            <p className="mt-1 text-sm text-slate-500">{messages.teacher.createTeacherHint}</p>
           </div>
           <form onSubmit={handleCreateTeacher} className="space-y-4">
             <input
               type="text"
               value={newTeacherName}
               onChange={(e) => setNewTeacherName(e.target.value)}
-              placeholder="例如：王老師"
+              placeholder={messages.teacher.teacherNamePlaceholder}
               className="w-full rounded-lg border-2 border-black bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
               maxLength={50}
             />
             <Button type="submit" variant="primary" className="w-full" isLoading={isCreating}>
-              開始使用
+              {messages.teacher.start}
             </Button>
           </form>
         </div>
@@ -123,13 +124,13 @@ export default function TeacherDashboard() {
       {/* Page Header */}
       <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">歡迎回來，{teacherName}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">管理您的班級房間</p>
+          <h1 className="text-xl font-bold text-slate-900">{messages.teacher.welcome(teacherName)}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{messages.teacher.manageRooms}</p>
         </div>
         <Link href="/teacher/rooms/new">
           <Button variant="primary" size="sm">
             <Icon name="lucide:plus" size={16} />
-            建立房間
+            {messages.teacher.createRoom}
           </Button>
         </Link>
       </div>
@@ -141,10 +142,10 @@ export default function TeacherDashboard() {
             <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:school" size={28} className="text-primary-400" />
             </div>
-            <h2 className="mb-1.5 text-base font-semibold text-slate-900">還沒有房間</h2>
-            <p className="mb-5 text-sm text-slate-500">建立您的第一個班級房間，開始使用小老師助手</p>
+            <h2 className="mb-1.5 text-base font-semibold text-slate-900">{messages.teacher.noRoomsTitle}</h2>
+            <p className="mb-5 text-sm text-slate-500">{messages.teacher.noRoomsDesc}</p>
             <Link href="/teacher/rooms/new">
-              <Button variant="primary" size="sm">建立第一個房間</Button>
+              <Button variant="primary" size="sm">{messages.teacher.createFirstRoom}</Button>
             </Link>
           </div>
         ) : (
@@ -157,17 +158,17 @@ export default function TeacherDashboard() {
                       {room.name}
                     </h3>
                     <StatusBadge variant={room.isActive ? 'success' : 'neutral'} dot size="sm">
-                      {room.isActive ? '啟用' : '停用'}
+                      {room.isActive ? messages.teacher.active : messages.teacher.inactive}
                     </StatusBadge>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
                       <Icon name="lucide:users" size={13} />
-                      {room._count?.students || 0} 位學生
+                      {messages.teacher.studentsUnit(room._count?.students || 0)}
                     </span>
                     <span className="flex items-center gap-1">
                       <Icon name="lucide:clipboard-list" size={13} />
-                      {room._count?.items || 0} 個項目
+                      {messages.teacher.tasksUnit(room._count?.tasks || 0)}
                     </span>
                   </div>
                   <div className="mt-3 inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1">

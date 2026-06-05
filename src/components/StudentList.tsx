@@ -4,6 +4,7 @@ import { useState, memo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { cn } from '@/lib/utils';
+import { messages } from '@/messages/zh-TW';
 
 interface Student {
   id: string;
@@ -44,7 +45,7 @@ const StudentItem = memo(function StudentItem({
       onClick={() => onToggle(student.id)}
       disabled={isReadOnly}
       aria-pressed={isSubmitted}
-      aria-label={`${student.name} - ${isSubmitted ? '已繳交' : '未繳交'}，點擊${isSubmitted ? '取消' : '標記'}繳交`}
+      aria-label={messages.record.toggleAria(student.name, isSubmitted)}
       className={cn(
         'flex items-center gap-3 rounded-xl p-4 text-left transition-all min-h-[56px]',
         isReadOnly ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]',
@@ -65,10 +66,7 @@ const StudentItem = memo(function StudentItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {student.seatNumber && (
-            <span 
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-600 text-xs font-medium"
-              aria-label={`座號 ${student.seatNumber}`}
-            >
+            <span className="seat-chip" aria-label={messages.record.seatAria(student.seatNumber)}>
               {student.seatNumber}
             </span>
           )}
@@ -120,7 +118,7 @@ function StudentListComponent({
     return (
       <div className="flex flex-col items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 p-8">
         <div className="mb-2 text-4xl">👥</div>
-        <p className="text-slate-600 dark:text-slate-300">尚未新增學生</p>
+        <p className="text-slate-600 dark:text-slate-300">{messages.record.rosterEmpty}</p>
       </div>
     );
   }
@@ -130,13 +128,13 @@ function StudentListComponent({
       {/* Summary Header */}
       {showSubmissionStatus && (
         <div className="flex items-center justify-between rounded-xl bg-slate-100 dark:bg-slate-700 p-4">
-          <span className="font-medium text-slate-900 dark:text-white">繳交狀況</span>
+          <span className="font-medium text-slate-900 dark:text-white">{messages.record.statusHeader}</span>
           <div className="flex items-center gap-3">
             <StatusBadge variant="success">
-              ✓ {submittedCount} 已繳
+              ✓ {messages.record.submittedCount(submittedCount)}
             </StatusBadge>
             <StatusBadge variant="danger">
-              ✗ {totalCount - submittedCount} 未繳
+              ✗ {messages.record.notSubmittedCount(totalCount - submittedCount)}
             </StatusBadge>
           </div>
         </div>
@@ -146,7 +144,7 @@ function StudentListComponent({
       <div 
         className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
         role="group"
-        aria-label="學生繳交狀況列表"
+        aria-label={messages.record.listAria}
       >
         {students.map((student) => (
           <StudentItem

@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 
 interface SyncOperation {
   id: string;
-  type: 'UPDATE_SUBMISSION';
+  type: 'UPDATE_RECORD';
   payload: {
+    taskId: string;
     studentId: string;
-    itemId: string;
-    status: 'SUBMITTED' | 'NOT_SUBMITTED';
+    submissionStatus?: 'SUBMITTED' | 'NOT_SUBMITTED';
+    gradeValue?: number;
+    recorderSeatNumber: number;
   };
   timestamp: string;
 }
@@ -15,121 +18,102 @@ interface SyncOperation {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { deviceId, operations } = body as {
+    const { operations } = body as {
       deviceId?: string;
       operations: SyncOperation[];
     };
 
     if (!operations || !Array.isArray(operations) || operations.length === 0) {
-      return NextResponse.json(
-        { error: '請提供要同步的操作' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: '請提供要同步的操作' }, { status: 400 });
     }
 
-    const syncedIds: string[] = [];
-    const conflicts: Array<{
-      operationId: string;
-      reason: string;
-    }> = [];
+    // 一次撈出涉及任務，供類型驗證與鎖定判斷
+    const taskIds = [...new Set(operations.map((op) => op.payload?.taskId).filter(Boolean))];
+    const tasks = await prisma.task.findMany({ where: { id: { in: taskIds } } });
+    const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
-    // Process each operation
+    const syncedIds: string[] = [];
+    const conflicts: Array<{ operationId: string; reason: string }> = [];
+
     for (const operation of operations) {
-      if (operation.type !== 'UPDATE_SUBMISSION') {
-        conflicts.push({
-          operationId: operation.id,
-          reason: '不支援的操作類型',
-        });
+      if (operation.type !== 'UPDATE_RECORD') {
+        conflicts.push({ operationId: operation.id, reason: '不支援的操作類型' });
+        continue;
+      }
+
+      const { taskId, studentId, recorderSeatNumber } = operation.payload;
+      const task = taskMap.get(taskId);
+
+      if (!task) {
+        conflicts.push({ operationId: operation.id, reason: '找不到該任務' });
+        continue;
+      }
+      if (getTaskLockReason(task) !== null) {
+        conflicts.push({ operationId: operation.id, reason: '任務已鎖定，無法登記' });
+        continue;
+      }
+
+      const mutation = resolveRecordMutation(task.type, operation.payload);
+      if (!mutation.ok) {
+        conflicts.push({ operationId: operation.id, reason: mutation.error });
         continue;
       }
 
       try {
-        // Check if the submission exists
-        const existing = await prisma.submission.findUnique({
-          where: {
-            studentId_itemId: {
-              studentId: operation.payload.studentId,
-              itemId: operation.payload.itemId,
-            },
-          },
-        });
-
-        // If exists and was updated more recently on server, it's a conflict
-        if (
-          existing &&
-          existing.updatedAt > new Date(operation.timestamp)
-        ) {
-          // Server version is newer - still apply client change for LWW
-          // but note the conflict
+        if (mutation.action === 'delete') {
+          // 取消勾選 / 清空成績 → 刪除記錄
+          await prisma.record.deleteMany({ where: { taskId, studentId } });
+          syncedIds.push(operation.id);
+          continue;
         }
 
-        // Upsert the submission
-        await prisma.submission.upsert({
-          where: {
-            studentId_itemId: {
-              studentId: operation.payload.studentId,
-              itemId: operation.payload.itemId,
-            },
-          },
+        const isAssignedRecorder = computeIsAssignedRecorder(
+          task.assignedSeatNumber,
+          recorderSeatNumber
+        );
+
+        await prisma.record.upsert({
+          where: { taskId_studentId: { taskId, studentId } },
           update: {
-            status: operation.payload.status,
+            ...mutation.data,
+            recorderSeatNumber,
+            isAssignedRecorder,
             syncedAt: new Date(),
-            updatedBy: deviceId || null,
           },
           create: {
-            studentId: operation.payload.studentId,
-            itemId: operation.payload.itemId,
-            status: operation.payload.status,
+            taskId,
+            studentId,
+            ...mutation.data,
+            recorderSeatNumber,
+            isAssignedRecorder,
             syncedAt: new Date(),
-            updatedBy: deviceId || null,
           },
         });
 
         syncedIds.push(operation.id);
       } catch (error) {
         console.error('Failed to sync operation:', operation.id, error);
-        conflicts.push({
-          operationId: operation.id,
-          reason: '同步失敗',
-        });
+        conflicts.push({ operationId: operation.id, reason: '同步失敗' });
       }
     }
 
     if (conflicts.length > 0 && syncedIds.length > 0) {
-      // Partial success
       return NextResponse.json(
-        {
-          synced: syncedIds.length,
-          operationIds: syncedIds,
-          conflicts,
-        },
+        { synced: syncedIds.length, operationIds: syncedIds, conflicts },
         { status: 207 }
-      ); // Multi-Status
+      );
     }
 
     if (conflicts.length > 0) {
-      // All failed
       return NextResponse.json(
-        {
-          synced: 0,
-          operationIds: [],
-          conflicts,
-        },
+        { synced: 0, operationIds: [], conflicts },
         { status: 409 }
       );
     }
 
-    // All success
-    return NextResponse.json({
-      synced: syncedIds.length,
-      operationIds: syncedIds,
-    });
+    return NextResponse.json({ synced: syncedIds.length, operationIds: syncedIds });
   } catch (error) {
     console.error('Sync failed:', error);
-    return NextResponse.json(
-      { error: '同步失敗' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '同步失敗' }, { status: 500 });
   }
 }
-

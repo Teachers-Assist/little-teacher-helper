@@ -1,5 +1,17 @@
 // 基於 data-model.md 的型別定義
 
+// ===== Enums (SQLite 以 String 儲存，TS 層做型別約束) =====
+export enum TaskType {
+  SUBMISSION = 'SUBMISSION', // 繳交與否
+  GRADE = 'GRADE', // 成績數值
+}
+
+export enum TaskStatus {
+  ACTIVE = 'ACTIVE', // 開放登記中
+  HELPER_COMPLETED = 'HELPER_COMPLETED', // 小老師已標記完成，鎖定中
+  CLOSED = 'CLOSED', // 老師已結案
+}
+
 export enum SubmissionStatus {
   SUBMITTED = 'SUBMITTED',
   NOT_SUBMITTED = 'NOT_SUBMITTED',
@@ -33,10 +45,10 @@ export interface Room {
 export interface RoomWithDetails extends Room {
   teacher?: Teacher;
   studentCount?: number;
-  itemCount?: number;
+  taskCount?: number;
   _count?: {
     students: number;
-    items: number;
+    tasks: number;
   };
 }
 
@@ -54,7 +66,7 @@ export interface UpdateRoomInput {
 export interface Student {
   id: string;
   name: string;
-  seatNumber?: number | null;
+  seatNumber: number;
   roomId: string;
   isRemoved: boolean;
   createdAt: Date;
@@ -63,7 +75,7 @@ export interface Student {
 
 export interface CreateStudentInput {
   name: string;
-  seatNumber?: number;
+  seatNumber: number;
 }
 
 export interface BatchCreateStudentsInput {
@@ -75,65 +87,81 @@ export interface UpdateStudentInput {
   seatNumber?: number;
 }
 
-// ===== Item =====
-export interface Item {
+// ===== Task =====
+export interface Task {
   id: string;
   name: string;
+  type: TaskType;
   roomId: string;
+  assignedSeatNumber?: number | null;
   dueDate?: Date | null;
-  isActive: boolean;
+  status: TaskStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ItemWithStats extends Item {
+export interface TaskWithStats extends Task {
+  recordedCount?: number;
+  totalCount?: number;
+  // 繳交類型統計
   submittedCount?: number;
   notSubmittedCount?: number;
-  totalCount?: number;
 }
 
-export interface CreateItemInput {
+export interface CreateTaskInput {
   name: string;
+  type: TaskType;
+  assignedSeatNumber?: number;
   dueDate?: Date;
 }
 
-export interface UpdateItemInput {
+export interface UpdateTaskInput {
   name?: string;
-  dueDate?: Date;
-  isActive?: boolean;
+  assignedSeatNumber?: number | null;
+  dueDate?: Date | null;
+  status?: TaskStatus;
 }
 
-// ===== Submission =====
-export interface Submission {
+// ===== Record (登記記錄) =====
+export interface Record {
   id: string;
+  taskId: string;
   studentId: string;
-  itemId: string;
-  status: SubmissionStatus;
-  updatedBy?: string | null;
+  submissionStatus?: SubmissionStatus | null;
+  gradeValue?: number | null;
+  recorderSeatNumber: number;
+  isAssignedRecorder: boolean;
   syncedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface SubmissionWithStudent extends Submission {
+export interface RecordWithStudent extends Record {
   student: Student;
 }
 
-export interface UpdateSubmissionInput {
+/**
+ * 登記一筆記錄的輸入。
+ * SUBMISSION 類型填 submissionStatus；GRADE 類型填 gradeValue。
+ * isAssignedRecorder 由伺服器端依 task.assignedSeatNumber 計算，不由前端帶入。
+ */
+export interface UpdateRecordInput {
+  taskId: string;
   studentId: string;
-  itemId: string;
-  status: SubmissionStatus;
+  submissionStatus?: SubmissionStatus;
+  gradeValue?: number;
+  recorderSeatNumber: number;
 }
 
-export interface BatchUpdateSubmissionsInput {
-  submissions: UpdateSubmissionInput[];
+export interface BatchUpdateRecordsInput {
+  records: UpdateRecordInput[];
 }
 
 // ===== Sync =====
 export interface SyncOperation {
   id: string;
-  type: 'UPDATE_SUBMISSION';
-  payload: UpdateSubmissionInput;
+  type: 'UPDATE_RECORD';
+  payload: UpdateRecordInput;
   timestamp: string;
 }
 
@@ -149,13 +177,18 @@ export interface SyncResponse {
 
 // ===== Report =====
 export interface Report {
-  item: Item;
+  task: Task;
+  roomName: string;
   summary: {
     total: number;
+    recorded: number;
+    // 繳交類型
     submitted: number;
     notSubmitted: number;
     submissionRate: number;
   };
+  records: RecordWithStudent[];
+  // 繳交類型用
   submittedStudents: Student[];
   notSubmittedStudents: Student[];
 }
@@ -168,10 +201,28 @@ export interface RoomJoinResponse {
     code: string;
   };
   students: Student[];
-  items: Item[];
+  tasks: Task[];
 }
 
 // ===== Offline Data Structure =====
+
+/**
+ * 一筆登記記錄在本機的快取內容。
+ *
+ * 注意「被登記的學生」不在此型別內——它是 OfflineData.records 的巢狀 key
+ * （`records[taskId][studentId]`，studentId 對應 Student.id），可在 students
+ * 快取中查到該生姓名與座號。
+ * 本型別的 recorderSeatNumber 是「執行登記的小老師座號」，與被登記學生是不同身分。
+ */
+export interface OfflineRecordEntry {
+  submissionStatus?: SubmissionStatus; // 繳交類型；只會是 SUBMITTED
+  gradeValue?: number; // 成績類型
+  recorderSeatNumber: number; // 登記者（小老師）座號，非被登記學生
+  isAssignedRecorder: boolean; // 登記者是否為任務指定的小老師
+  updatedAt: string;
+  synced: boolean;
+}
+
 export interface OfflineData {
   rooms: {
     [roomId: string]: {
@@ -179,21 +230,19 @@ export interface OfflineData {
       code: string;
       name: string;
       joinedAt: string;
+      seatNumber: number; // 本次選擇的座號
     };
   };
   students: {
     [roomId: string]: Student[];
   };
-  items: {
-    [roomId: string]: Item[];
+  tasks: {
+    [roomId: string]: Task[];
   };
-  submissions: {
-    [itemId: string]: {
-      [studentId: string]: {
-        status: SubmissionStatus;
-        updatedAt: string;
-        synced: boolean;
-      };
+  // key 結構：records[taskId][studentId]，studentId 即被登記學生的 Student.id
+  records: {
+    [taskId: string]: {
+      [studentId: string]: OfflineRecordEntry;
     };
   };
   syncQueue: OfflineSyncQueueItem[];
@@ -201,8 +250,8 @@ export interface OfflineData {
 
 export interface OfflineSyncQueueItem {
   id: string;
-  type: 'UPDATE_SUBMISSION';
-  payload: UpdateSubmissionInput;
+  type: 'UPDATE_RECORD';
+  payload: UpdateRecordInput;
   createdAt: string;
   retryCount: number;
 }
@@ -220,4 +269,3 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
-

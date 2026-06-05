@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { generateQRCodeDataURL, generateRoomJoinURL } from '@/lib/qrcode';
 import { Button } from '@/components/ui/Button';
+import { messages } from '@/messages/zh-TW';
 
 interface QRCodeDisplayProps {
   roomCode: string;
@@ -32,7 +33,7 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
         setQrCodeUrl(dataUrl);
       } catch (err) {
         console.error('Failed to generate QR code:', err);
-        setError('無法產生 QRCode');
+        setError(messages.qr.generateFailed);
       } finally {
         setIsLoading(false);
       }
@@ -44,18 +45,18 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode);
-      alert('代碼已複製到剪貼簿！');
+      alert(messages.qr.codeCopied);
     } catch {
-      alert('複製失敗，請手動複製');
+      alert(messages.qr.copyFailed);
     }
   };
 
   const handleCopyUrl = async () => {
     try {
       await navigator.clipboard.writeText(joinUrl);
-      alert('連結已複製到剪貼簿！');
+      alert(messages.qr.urlCopied);
     } catch {
-      alert('複製失敗，請手動複製');
+      alert(messages.qr.copyFailed);
     }
   };
 
@@ -63,7 +64,7 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500" />
-        <p className="text-slate-600 dark:text-slate-300">產生 QRCode 中...</p>
+        <p className="text-slate-600 dark:text-slate-300">{messages.qr.generating}</p>
       </div>
     );
   }
@@ -109,17 +110,17 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
       {/* Action Buttons */}
       <div className="mt-4 flex flex-wrap justify-center gap-3">
         <Button variant="outline" size="sm" onClick={handleCopyCode}>
-          📋 複製代碼
+          📋 {messages.qr.copyCode}
         </Button>
         <Button variant="outline" size="sm" onClick={handleCopyUrl}>
-          🔗 複製連結
+          🔗 {messages.qr.copyUrl}
         </Button>
       </div>
 
       {/* Instructions */}
       <div className="mt-6 max-w-sm text-center">
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          讓小老師用手機掃描此 QRCode，或輸入上方代碼即可加入房間
+          {messages.qr.instruction}
         </p>
       </div>
     </div>

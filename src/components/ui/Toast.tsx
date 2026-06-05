@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { messages } from '@/messages/zh-TW';
 
 interface Toast {
   id: string;
@@ -138,7 +139,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       <button
         onClick={() => onRemove(toast.id)}
         className="ml-2 rounded-full p-1 hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-        aria-label="關閉通知"
+        aria-label={messages.toast.close}
       >
         ✕
       </button>

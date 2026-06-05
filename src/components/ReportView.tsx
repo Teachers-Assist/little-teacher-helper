@@ -1,196 +1,234 @@
-﻿'use client';
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Student, Task, TaskType, SubmissionStatus } from '@/types';
+import { generateTextReport, printReport, copyToClipboard, ReportData } from '@/lib/report';
+import { formatDateTime } from '@/lib/utils';
+import { messages } from '@/messages/zh-TW';
 
-interface Student {
-  id: string;
-  name: string;
-  seatNumber?: number | null;
-}
-
-interface Report {
-  item: {
-    id: string;
-    name: string;
-    dueDate?: string | null;
-  };
-  summary: {
-    total: number;
-    submitted: number;
-    notSubmitted: number;
-    submissionRate: number;
-  };
-  submittedStudents: Student[];
-  notSubmittedStudents: Student[];
+interface RecordRow {
+  studentId: string;
+  submissionStatus?: SubmissionStatus | null;
+  gradeValue?: number | null;
 }
 
 interface ReportViewProps {
-  itemId: string;
+  task: Task;
+  roomName: string;
+  students: Student[];
 }
 
-export function ReportView({ itemId }: ReportViewProps) {
-  const [report, setReport] = useState<Report | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ReportView({ task, roomName, students }: ReportViewProps) {
+  const [records, setRecords] = useState<RecordRow[] | null>(null);
+  const [error, setError] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [loadedTaskId, setLoadedTaskId] = useState(task.id);
+
+  // Reset to loading state when switching tasks (React's recommended
+  // "adjust state during render" pattern, instead of setState inside an effect).
+  if (loadedTaskId !== task.id) {
+    setLoadedTaskId(task.id);
+    setRecords(null);
+    setError(false);
+  }
 
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/items/${itemId}/report`);
-        if (response.ok) {
-          setReport(await response.json());
-        } else {
-          setError('無法載入報表');
-        }
-      } catch (err) {
-        console.error('Failed to fetch report:', err);
-        setError('載入報表失敗');
-      } finally {
-        setIsLoading(false);
-      }
+    let active = true;
+    fetch(`/api/records?taskId=${task.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('failed');
+        return res.json();
+      })
+      .then((data: RecordRow[]) => {
+        if (active) setRecords(data);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      });
+    return () => {
+      active = false;
     };
+  }, [task.id]);
 
-    fetchReport();
-  }, [itemId]);
+  const report: ReportData | null = useMemo(() => {
+    if (!records) return null;
+    const isGrade = task.type === TaskType.GRADE;
+    const byId = new Map(records.map((r) => [r.studentId, r]));
+    const rows = [...students]
+      .sort((a, b) => a.seatNumber - b.seatNumber)
+      .map((s) => {
+        const rec = byId.get(s.id);
+        const done = isGrade ? rec?.gradeValue != null : rec?.submissionStatus === SubmissionStatus.SUBMITTED;
+        const result = isGrade
+          ? rec?.gradeValue != null
+            ? String(rec.gradeValue)
+            : messages.report.notRecorded
+          : done
+            ? messages.report.resultSubmitted
+            : messages.report.resultNotSubmitted;
+        return { seatNumber: s.seatNumber, name: s.name, result, done };
+      });
+    return {
+      taskName: task.name,
+      className: roomName,
+      type: isGrade ? 'GRADE' : 'SUBMISSION',
+      generatedAt: messages.report.generatedAt(formatDateTime(new Date())),
+      total: rows.length,
+      recorded: rows.filter((r) => r.done).length,
+      rows,
+    };
+  }, [records, students, task.name, task.type, roomName]);
 
-  const handleCopyText = async () => {
-    try {
-      const response = await fetch(`/api/items/${itemId}/report?format=text`);
-      const text = await response.text();
-      await navigator.clipboard.writeText(text);
-      alert('已複製到剪貼簿！');
-    } catch {
-      alert('複製失敗');
-    }
-  };
+  const handleCopy = useCallback(async () => {
+    if (!report) return;
+    const ok = await copyToClipboard(generateTextReport(report));
+    setNotice(ok ? messages.report.copied : messages.report.copyFailed);
+    setTimeout(() => setNotice(''), 2000);
+  }, [report]);
 
-  const handlePrint = () => {
-    window.open(`/api/items/${itemId}/report?format=print`, '_blank');
-  };
-
-  if (isLoading) {
+  if (error) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <div className="mb-4 text-4xl animate-pulse">📊</div>
-          <p className="text-slate-600 dark:text-slate-300">載入報表中...</p>
-        </CardContent>
-      </Card>
+      <div className="card-sm py-8 text-center">
+        <Icon name="lucide:frown" size={36} className="mx-auto mb-2 text-slate-300" />
+        <p className="text-sm text-slate-500">{messages.report.loadFailed}</p>
+      </div>
     );
   }
 
-  if (error || !report) {
+  if (!report) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <div className="mb-4 text-4xl">😕</div>
-          <p className="text-slate-600 dark:text-slate-300">{error || '無法載入報表'}</p>
-        </CardContent>
-      </Card>
+      <div className="card-sm py-8 text-center">
+        <div className="loading-icon mx-auto mb-3 h-10 w-10">
+          <Icon name="lucide:bar-chart-2" size={20} className="text-primary-600" />
+        </div>
+        <p className="text-sm text-slate-500">{messages.report.loading}</p>
+      </div>
     );
   }
+
+  const isGrade = report.type === 'GRADE';
+  const notDone = report.rows.filter((r) => !r.done);
+  const done = report.rows.filter((r) => r.done);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{report.item.name}</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopyText}>
-              📋 複製文字
-            </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint}>
-              🖨️ 列印
-            </Button>
+    <div className="card-sm space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold text-slate-900">{task.name}</h3>
+          <StatusBadge variant={isGrade ? 'info' : 'neutral'} size="sm">
+            {isGrade ? messages.task.typeGrade : messages.task.typeSubmission}
+          </StatusBadge>
+        </div>
+        <div className="flex items-center gap-2">
+          {notice && <span className="text-xs font-medium text-emerald-600">{notice}</span>}
+          <Button variant="outline" size="sm" onClick={handleCopy}>
+            <Icon name="lucide:copy" size={14} />
+            {messages.report.copyText}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => printReport(report)}>
+            <Icon name="lucide:printer" size={14} />
+            {messages.report.print}
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary */}
+      {isGrade ? (
+        <div className="rounded-xl border-2 border-black bg-slate-50 p-4 text-center">
+          <div className="text-3xl font-bold text-slate-900">
+            {report.recorded}/{report.total}
+          </div>
+          <div className="text-sm text-slate-600">{messages.report.recorded(report.recorded, report.total)}</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border-2 border-black bg-green-100 p-3 text-center">
+            <div className="text-2xl font-bold text-green-700">{done.length}</div>
+            <div className="text-xs text-green-800">{messages.report.submitted}</div>
+          </div>
+          <div className="rounded-xl border-2 border-black bg-red-100 p-3 text-center">
+            <div className="text-2xl font-bold text-red-700">{notDone.length}</div>
+            <div className="text-xs text-red-800">{messages.report.notSubmitted}</div>
+          </div>
+          <div className="rounded-xl border-2 border-black bg-slate-100 p-3 text-center">
+            <div className="text-2xl font-bold text-slate-900">
+              {report.total > 0 ? Math.round((done.length / report.total) * 100) : 0}%
+            </div>
+            <div className="text-xs text-slate-600">{messages.report.submissionRate}</div>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-4 text-center">
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-              {report.summary.submitted}
+      )}
+
+      {/* Grade list */}
+      {isGrade && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          {report.rows.map((r) => (
+            <div
+              key={r.seatNumber}
+              className="flex items-center justify-between rounded-lg border-2 border-black bg-white px-3 py-2 text-sm"
+            >
+              <span className="flex items-center gap-1.5 truncate">
+                <span className="seat-chip">{r.seatNumber}</span>
+                <span className="truncate text-slate-700">{r.name}</span>
+              </span>
+              <span className={r.done ? 'font-bold text-slate-900' : 'text-xs text-slate-400'}>{r.result}</span>
             </div>
-            <div className="text-sm text-emerald-700 dark:text-emerald-300">已繳交</div>
-          </div>
-          <div className="rounded-xl bg-red-50 dark:bg-red-900/20 p-4 text-center">
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {report.summary.notSubmitted}
-            </div>
-            <div className="text-sm text-red-700 dark:text-red-300">未繳交</div>
-          </div>
-          <div className="rounded-xl bg-slate-100 dark:bg-slate-700 p-4 text-center">
-            <div className="text-3xl font-bold text-slate-900 dark:text-white">
-              {report.summary.submissionRate}%
-            </div>
-            <div className="text-sm text-slate-600 dark:text-slate-300">繳交率</div>
-          </div>
+          ))}
         </div>
+      )}
 
-        {/* Not Submitted List */}
-        {report.notSubmittedStudents.length > 0 && (
-          <div>
-            <h3 className="mb-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-              <StatusBadge variant="danger">未繳交</StatusBadge>
-              <span>({report.notSubmittedStudents.length} 人)</span>
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {report.notSubmittedStudents.map((student) => (
-                <div
-                  key={student.id}
-                  className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm"
-                >
-                  {student.seatNumber && (
-                    <span className="mr-1 text-red-400">{student.seatNumber}號</span>
-                  )}
-                  <span className="text-red-700 dark:text-red-300">{student.name}</span>
-                </div>
-              ))}
+      {/* Submission lists */}
+      {!isGrade && (
+        <div className="space-y-4">
+          {notDone.length > 0 && (
+            <ReportNameGrid title={messages.report.notSubmitted} variant="danger" rows={notDone} />
+          )}
+          {done.length > 0 && (
+            <ReportNameGrid title={messages.report.submitted} variant="success" rows={done} />
+          )}
+          {notDone.length === 0 && report.total > 0 && (
+            <div className="rounded-xl border-2 border-black bg-green-100 p-5 text-center">
+              <div className="mb-1 text-3xl">🎉</div>
+              <p className="font-bold text-green-800">{messages.report.allSubmitted}</p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Submitted List */}
-        {report.submittedStudents.length > 0 && (
-          <div>
-            <h3 className="mb-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-              <StatusBadge variant="success">已繳交</StatusBadge>
-              <span>({report.submittedStudents.length} 人)</span>
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {report.submittedStudents.map((student) => (
-                <div
-                  key={student.id}
-                  className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-sm"
-                >
-                  {student.seatNumber && (
-                    <span className="mr-1 text-emerald-400">{student.seatNumber}號</span>
-                  )}
-                  <span className="text-emerald-700 dark:text-emerald-300">{student.name}</span>
-                </div>
-              ))}
-            </div>
+function ReportNameGrid({
+  title,
+  variant,
+  rows,
+}: {
+  title: string;
+  variant: 'success' | 'danger';
+  rows: { seatNumber: number; name: string }[];
+}) {
+  return (
+    <div>
+      <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900">
+        <StatusBadge variant={variant} size="sm">{title}</StatusBadge>
+        <span className="text-slate-500">
+          ({rows.length} {messages.report.unitPerson})
+        </span>
+      </h4>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+        {rows.map((r) => (
+          <div key={r.seatNumber} className="flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-2 text-sm">
+            <span className="seat-chip">{r.seatNumber}</span>
+            <span className="truncate text-slate-700">{r.name}</span>
           </div>
-        )}
-
-        {/* All Submitted */}
-        {report.notSubmittedStudents.length === 0 && report.summary.total > 0 && (
-          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-6 text-center">
-            <div className="text-4xl mb-2">🎉</div>
-            <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-              全班已繳交完成！
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export default ReportView;
-

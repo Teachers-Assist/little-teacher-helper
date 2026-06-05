@@ -1,34 +1,27 @@
-import { OfflineSyncQueueItem, SubmissionStatus, UpdateSubmissionInput } from '@/types';
-import { getOfflineData, saveOfflineData } from './storage';
+import { SubmissionStatus, UpdateRecordInput } from '@/types';
+import { computeIsAssignedRecorder, resolveRecordMutation } from '@/lib/task';
+import { getOfflineData, saveOfflineData, saveRecord, removeRecord } from './storage';
 
 const MAX_RETRY_COUNT = 3;
 
-/**
- * 產生 UUID
- */
 function generateUUID(): string {
   return crypto.randomUUID();
 }
 
 /**
- * 新增操作到同步佇列
+ * 新增操作到同步佇列（同一 task+student 只保留最新一筆）
  */
-export function addToSyncQueue(
-  type: 'UPDATE_SUBMISSION',
-  payload: UpdateSubmissionInput
-): void {
+export function addToSyncQueue(type: 'UPDATE_RECORD', payload: UpdateRecordInput): void {
   const data = getOfflineData();
-  
-  // Check if there's already a pending operation for this submission
+
   const existingIndex = data.syncQueue.findIndex(
     (op) =>
       op.type === type &&
-      op.payload.studentId === payload.studentId &&
-      op.payload.itemId === payload.itemId
+      op.payload.taskId === payload.taskId &&
+      op.payload.studentId === payload.studentId
   );
 
   if (existingIndex >= 0) {
-    // Update existing operation
     data.syncQueue[existingIndex] = {
       ...data.syncQueue[existingIndex],
       payload,
@@ -36,7 +29,6 @@ export function addToSyncQueue(
       retryCount: 0,
     };
   } else {
-    // Add new operation
     data.syncQueue.push({
       id: generateUUID(),
       type,
@@ -50,108 +42,69 @@ export function addToSyncQueue(
 }
 
 /**
- * 取得待同步的操作
+ * 登記一筆記錄：同步更新本機快取（依類型決定寫入或刪除）並加入待同步佇列。
+ * UI 層只需呼叫此函式，無須分別處理快取與佇列。
  */
-export function getPendingOperations(): OfflineSyncQueueItem[] {
-  const data = getOfflineData();
-  return data.syncQueue.filter((op) => op.retryCount < MAX_RETRY_COUNT);
-}
+export function queueRecordUpdate(params: {
+  task: { id: string; type: string; assignedSeatNumber?: number | null };
+  studentId: string;
+  recorderSeatNumber: number;
+  submissionStatus?: SubmissionStatus;
+  gradeValue?: number | null;
+}): { ok: boolean; error?: string } {
+  const { task, studentId, recorderSeatNumber, submissionStatus, gradeValue } = params;
 
-/**
- * 移除已完成的操作
- */
-export function removeFromSyncQueue(operationId: string): void {
-  const data = getOfflineData();
-  data.syncQueue = data.syncQueue.filter((op) => op.id !== operationId);
-  saveOfflineData(data);
-}
-
-/**
- * 增加操作的重試次數
- */
-export function incrementRetryCount(operationId: string): void {
-  const data = getOfflineData();
-  const operation = data.syncQueue.find((op) => op.id === operationId);
-  if (operation) {
-    operation.retryCount++;
-    saveOfflineData(data);
+  const mutation = resolveRecordMutation(task.type, { submissionStatus, gradeValue });
+  if (!mutation.ok) {
+    return { ok: false, error: mutation.error };
   }
+
+  if (mutation.action === 'delete') {
+    removeRecord(task.id, studentId);
+  } else {
+    saveRecord(task.id, studentId, {
+      submissionStatus: mutation.data.submissionStatus ?? undefined,
+      gradeValue: mutation.data.gradeValue ?? undefined,
+      recorderSeatNumber,
+      isAssignedRecorder: computeIsAssignedRecorder(task.assignedSeatNumber, recorderSeatNumber),
+    });
+  }
+
+  addToSyncQueue('UPDATE_RECORD', {
+    taskId: task.id,
+    studentId,
+    submissionStatus,
+    gradeValue: gradeValue ?? undefined,
+    recorderSeatNumber,
+  });
+
+  return { ok: true };
 }
 
 /**
- * 取得佇列大小
+ * 待同步操作筆數
  */
 export function getQueueSize(): number {
-  const data = getOfflineData();
-  return data.syncQueue.length;
+  return getOfflineData().syncQueue.length;
 }
 
 /**
- * 清空同步佇列
+ * 批次同步整個佇列：一次送往 /api/sync，再用單次 localStorage 讀寫收尾——
+ * 成功的記錄標記 synced 並移出佇列，其餘 retryCount +1（超過上限即停止重試）。
  */
-export function clearSyncQueue(): void {
-  const data = getOfflineData();
-  data.syncQueue = [];
-  saveOfflineData(data);
-}
-
-/**
- * 批次處理同步佇列
- */
-export async function processSyncQueue(): Promise<{
-  success: number;
-  failed: number;
-}> {
-  const operations = getPendingOperations();
-  let success = 0;
-  let failed = 0;
-
-  for (const operation of operations) {
-    try {
-      const response = await fetch('/api/submissions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          submissions: [operation.payload],
-        }),
-      });
-
-      if (response.ok) {
-        removeFromSyncQueue(operation.id);
-        success++;
-      } else {
-        incrementRetryCount(operation.id);
-        failed++;
-      }
-    } catch (error) {
-      console.error('Sync operation failed:', error);
-      incrementRetryCount(operation.id);
-      failed++;
-    }
-  }
-
-  return { success, failed };
-}
-
-/**
- * 批次同步所有待處理的操作
- */
-export async function syncAll(): Promise<{
-  success: number;
-  failed: number;
-}> {
-  const operations = getPendingOperations();
-  
-  if (operations.length === 0) {
+export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
+  const pending = getOfflineData().syncQueue.filter((op) => op.retryCount < MAX_RETRY_COUNT);
+  if (pending.length === 0) {
     return { success: 0, failed: 0 };
   }
 
+  const syncedIds = new Set<string>();
   try {
     const response = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        operations: operations.map((op) => ({
+        operations: pending.map((op) => ({
           id: op.id,
           type: op.type,
           payload: op.payload,
@@ -159,26 +112,25 @@ export async function syncAll(): Promise<{
         })),
       }),
     });
-
     if (response.ok) {
       const result = await response.json();
-      // Remove synced operations
-      result.operationIds?.forEach((id: string) => {
-        removeFromSyncQueue(id);
-      });
-      return {
-        success: result.synced || 0,
-        failed: operations.length - (result.synced || 0),
-      };
-    } else {
-      // Increment retry count for all operations
-      operations.forEach((op) => incrementRetryCount(op.id));
-      return { success: 0, failed: operations.length };
+      (result.operationIds as string[] | undefined)?.forEach((id) => syncedIds.add(id));
     }
   } catch (error) {
-    console.error('Batch sync failed:', error);
-    operations.forEach((op) => incrementRetryCount(op.id));
-    return { success: 0, failed: operations.length };
+    console.error('Sync failed:', error);
   }
-}
 
+  const data = getOfflineData();
+  for (const op of data.syncQueue) {
+    if (syncedIds.has(op.id)) {
+      const entry = data.records[op.payload.taskId]?.[op.payload.studentId];
+      if (entry) entry.synced = true; // delete 類操作已無快取記錄，略過
+    } else if (pending.some((p) => p.id === op.id)) {
+      op.retryCount++; // 只對本次嘗試過、卻沒成功的操作累加重試
+    }
+  }
+  data.syncQueue = data.syncQueue.filter((op) => !syncedIds.has(op.id));
+  saveOfflineData(data);
+
+  return { success: syncedIds.size, failed: pending.length - syncedIds.size };
+}
