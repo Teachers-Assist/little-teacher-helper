@@ -1,6 +1,6 @@
 'use client';
 
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface SeatStudent {
   id: string;
@@ -18,6 +18,7 @@ interface SeatSelectorProps {
  * 座號是登記者身分依據，系統會記錄是誰做的登記。
  */
 export function SeatSelector({ students, onSelect }: SeatSelectorProps) {
+  const messages = useMessages();
   const sorted = [...students].sort((a, b) => a.seatNumber - b.seatNumber);
 
   return (

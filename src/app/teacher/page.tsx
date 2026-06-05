@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Room {
   id: string;
@@ -19,6 +19,7 @@ interface Room {
 }
 
 export default function TeacherDashboard() {
+  const messages = useMessages();
   const [, setTeacherId] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState('');
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -98,7 +99,9 @@ export default function TeacherDashboard() {
             <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:graduation-cap" size={24} className="text-primary-600" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{messages.teacher.createTeacherTitle}</h2>
+            <h2 className="text-xl font-bold text-slate-900">
+              {messages.teacher.createTeacherTitle}
+            </h2>
             <p className="mt-1 text-sm text-slate-500">{messages.teacher.createTeacherHint}</p>
           </div>
           <form onSubmit={handleCreateTeacher} className="space-y-4">
@@ -124,7 +127,9 @@ export default function TeacherDashboard() {
       {/* Page Header */}
       <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{messages.teacher.welcome(teacherName)}</h1>
+          <h1 className="text-xl font-bold text-slate-900">
+            {messages.teacher.welcome(teacherName)}
+          </h1>
           <p className="mt-0.5 text-sm text-slate-500">{messages.teacher.manageRooms}</p>
         </div>
         <Link href="/teacher/rooms/new">
@@ -142,10 +147,14 @@ export default function TeacherDashboard() {
             <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:school" size={28} className="text-primary-400" />
             </div>
-            <h2 className="mb-1.5 text-base font-semibold text-slate-900">{messages.teacher.noRoomsTitle}</h2>
+            <h2 className="mb-1.5 text-base font-semibold text-slate-900">
+              {messages.teacher.noRoomsTitle}
+            </h2>
             <p className="mb-5 text-sm text-slate-500">{messages.teacher.noRoomsDesc}</p>
             <Link href="/teacher/rooms/new">
-              <Button variant="primary" size="sm">{messages.teacher.createFirstRoom}</Button>
+              <Button variant="primary" size="sm">
+                {messages.teacher.createFirstRoom}
+              </Button>
             </Link>
           </div>
         ) : (

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { messages } from '@/messages/zh-TW';
+import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
   _request: Request,
@@ -40,11 +40,11 @@ export async function GET(
     });
 
     if (!room) {
-      return NextResponse.json({ error: messages.join.roomNotFound }, { status: 404 });
+      return NextResponse.json({ error: ERROR_CODES.ROOM_NOT_FOUND }, { status: 404 });
     }
 
     if (!room.isActive) {
-      return NextResponse.json({ error: messages.join.roomInactive }, { status: 404 });
+      return NextResponse.json({ error: ERROR_CODES.ROOM_INACTIVE }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -58,10 +58,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to join room:', error);
-    return NextResponse.json(
-      { error: '加入房間失敗' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }
 

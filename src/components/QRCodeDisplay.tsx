@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { generateQRCodeDataURL, generateRoomJoinURL } from '@/lib/qrcode';
 import { Button } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface QRCodeDisplayProps {
   roomCode: string;
@@ -12,6 +12,7 @@ interface QRCodeDisplayProps {
 }
 
 export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayProps) {
+  const messages = useMessages();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +41,7 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
     };
 
     generateQR();
-  }, [joinUrl, size]);
+  }, [joinUrl, size, messages]);
 
   const handleCopyCode = async () => {
     try {
@@ -96,9 +97,7 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
       {/* Room Info */}
       <div className="mt-6 text-center">
         {roomName && (
-          <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">
-            {roomName}
-          </h3>
+          <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">{roomName}</h3>
         )}
         <div className="mb-4 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 px-6 py-3">
           <span className="font-mono text-3xl font-bold tracking-widest text-slate-900 dark:text-white">
@@ -119,11 +118,8 @@ export function QRCodeDisplay({ roomCode, roomName, size = 256 }: QRCodeDisplayP
 
       {/* Instructions */}
       <div className="mt-6 max-w-sm text-center">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          {messages.qr.instruction}
-        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{messages.qr.instruction}</p>
       </div>
     </div>
   );
 }
-

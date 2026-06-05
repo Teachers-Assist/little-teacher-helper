@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 export default function NewRoomPage() {
+  const messages = useMessages();
   const [roomName, setRoomName] = useState('');
   const [studentNames, setStudentNames] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -105,12 +106,17 @@ export default function NewRoomPage() {
 
             {/* Student Names */}
             <div>
-              <label htmlFor="studentNames" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="studentNames"
+                className="mb-1.5 block text-sm font-medium text-slate-700"
+              >
                 {messages.teacher.rosterOptional}
               </label>
               <p className="mb-2 text-xs text-slate-400">
                 {messages.teacher.rosterHint}
-                <code className="ml-1 rounded bg-slate-100 px-1 py-0.5">{messages.teacher.rosterExample}</code>
+                <code className="ml-1 rounded bg-slate-100 px-1 py-0.5">
+                  {messages.teacher.rosterExample}
+                </code>
               </p>
               <textarea
                 id="studentNames"
@@ -122,14 +128,15 @@ export default function NewRoomPage() {
               />
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                {error}
-              </div>
-            )}
+            {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
             <div className="flex gap-3">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => router.back()}
+              >
                 {messages.common.cancel}
               </Button>
               <Button type="submit" variant="primary" className="flex-1" isLoading={isLoading}>

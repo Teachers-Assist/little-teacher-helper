@@ -4,7 +4,7 @@ import { useState, memo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Student {
   id: string;
@@ -40,6 +40,7 @@ const StudentItem = memo(function StudentItem({
   showSubmissionStatus,
   onToggle,
 }: StudentItemProps) {
+  const messages = useMessages();
   return (
     <button
       onClick={() => onToggle(student.id)}
@@ -83,7 +84,9 @@ const StudentItem = memo(function StudentItem({
         </div>
       </div>
       {showSubmissionStatus && (
-        <span className="text-lg" aria-hidden="true">{isSubmitted ? '✓' : ''}</span>
+        <span className="text-lg" aria-hidden="true">
+          {isSubmitted ? '✓' : ''}
+        </span>
       )}
     </button>
   );
@@ -96,20 +99,24 @@ function StudentListComponent({
   isReadOnly = false,
   showSubmissionStatus = true,
 }: StudentListProps) {
+  const messages = useMessages();
   const [localSubmissions, setLocalSubmissions] = useState<SubmissionState>(submissions);
 
-  const handleToggle = useCallback((studentId: string) => {
-    if (isReadOnly) return;
+  const handleToggle = useCallback(
+    (studentId: string) => {
+      if (isReadOnly) return;
 
-    setLocalSubmissions((prev) => {
-      const newValue = !prev[studentId];
-      onSubmissionChange?.(studentId, newValue);
-      return {
-        ...prev,
-        [studentId]: newValue,
-      };
-    });
-  }, [isReadOnly, onSubmissionChange]);
+      setLocalSubmissions((prev) => {
+        const newValue = !prev[studentId];
+        onSubmissionChange?.(studentId, newValue);
+        return {
+          ...prev,
+          [studentId]: newValue,
+        };
+      });
+    },
+    [isReadOnly, onSubmissionChange]
+  );
 
   const submittedCount = Object.values(localSubmissions).filter(Boolean).length;
   const totalCount = students.length;
@@ -128,7 +135,9 @@ function StudentListComponent({
       {/* Summary Header */}
       {showSubmissionStatus && (
         <div className="flex items-center justify-between rounded-xl bg-slate-100 dark:bg-slate-700 p-4">
-          <span className="font-medium text-slate-900 dark:text-white">{messages.record.statusHeader}</span>
+          <span className="font-medium text-slate-900 dark:text-white">
+            {messages.record.statusHeader}
+          </span>
           <div className="flex items-center gap-3">
             <StatusBadge variant="success">
               ✓ {messages.record.submittedCount(submittedCount)}
@@ -141,7 +150,7 @@ function StudentListComponent({
       )}
 
       {/* Student Grid */}
-      <div 
+      <div
         className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
         role="group"
         aria-label={messages.record.listAria}
@@ -162,4 +171,3 @@ function StudentListComponent({
 }
 
 export const StudentList = memo(StudentListComponent);
-

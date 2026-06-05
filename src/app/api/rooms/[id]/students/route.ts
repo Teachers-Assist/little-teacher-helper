@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
-import { messages } from '@/messages/zh-TW';
+import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
   request: Request,
@@ -23,10 +23,7 @@ export async function GET(
     return NextResponse.json(students);
   } catch (error) {
     console.error('Failed to fetch students:', error);
-    return NextResponse.json(
-      { error: '取得學生列表失敗' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }
 
@@ -40,15 +37,15 @@ export async function POST(
     const { name, seatNumber } = body;
 
     if (!name || name.trim().length === 0) {
-      return NextResponse.json({ error: messages.student.nameRequired }, { status: 400 });
+      return NextResponse.json({ error: ERROR_CODES.STUDENT_NAME_REQUIRED }, { status: 400 });
     }
 
     if (name.length > 50) {
-      return NextResponse.json({ error: messages.student.nameTooLong }, { status: 400 });
+      return NextResponse.json({ error: ERROR_CODES.STUDENT_NAME_TOO_LONG }, { status: 400 });
     }
 
     if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) {
-      return NextResponse.json({ error: messages.student.seatRequired }, { status: 400 });
+      return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_REQUIRED }, { status: 400 });
     }
 
     const student = await prisma.student.create({
@@ -62,10 +59,10 @@ export async function POST(
     return NextResponse.json(student, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json({ error: messages.student.seatDuplicate }, { status: 409 });
+      return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_DUPLICATE }, { status: 409 });
     }
     console.error('Failed to create student:', error);
-    return NextResponse.json({ error: messages.student.createFailed }, { status: 500 });
+    return NextResponse.json({ error: ERROR_CODES.STUDENT_CREATE_FAILED }, { status: 500 });
   }
 }
 

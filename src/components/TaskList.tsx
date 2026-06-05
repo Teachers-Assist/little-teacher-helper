@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Task, TaskType, TaskStatus } from '@/types';
 import { getTaskLockReason } from '@/lib/task';
 import { formatDate } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface TaskListProps {
   roomId: string;
@@ -19,6 +19,7 @@ interface TaskListProps {
  * 小老師端任務清單：指定給自己的任務特別標示，其餘正常顯示（spec US5 #4）。
  */
 export function TaskList({ roomId, tasks, mySeatNumber }: TaskListProps) {
+  const messages = useMessages();
   if (tasks.length === 0) {
     return (
       <div className="empty-state">

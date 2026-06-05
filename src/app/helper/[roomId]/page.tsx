@@ -11,10 +11,11 @@ import { Task } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { getRoom, saveTasks, saveStudents } from '@/lib/offline/storage';
 import { useOfflineRoom, useOfflineTasks } from '@/lib/offline/store';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 export default function HelperRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
+  const messages = useMessages();
   // 單一真相：房間與任務直接讀自離線 store，寫入後畫面自動更新（不再各持 useState 副本）
   const room = useOfflineRoom(roomId);
   const tasks = useOfflineTasks(roomId);

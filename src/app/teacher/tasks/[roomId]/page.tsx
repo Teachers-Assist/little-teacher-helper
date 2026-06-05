@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Student, Task, TaskType, TaskStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Room {
   id: string;
@@ -23,6 +23,7 @@ type PendingAction =
 
 export default function TaskManagementPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
+  const messages = useMessages();
   const [room, setRoom] = useState<Room | null>(null);
   const [tasks, setTasks] = useState<TaskWithCount[]>([]);
   const [students, setStudents] = useState<Student[]>([]);

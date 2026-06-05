@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { SeatSelector } from '@/components/SeatSelector';
 import { Student, Task } from '@/types';
 import { saveRoom, saveStudents, saveTasks } from '@/lib/offline/storage';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
+import { resolveError } from '@/i18n/resolveError';
 
 interface RoomJoinData {
   room: { id: string; name: string; code: string };
@@ -18,6 +19,7 @@ interface RoomJoinData {
 
 export default function JoinCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
+  const messages = useMessages();
   const [data, setData] = useState<RoomJoinData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +31,7 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
         const response = await fetch(`/api/rooms/join/${code.toUpperCase()}`);
         const result = await response.json();
         if (!response.ok) {
-          setError(result.error || messages.join.joinFailed);
+          setError(result.error ? resolveError(messages, result.error) : messages.join.joinFailed);
           return;
         }
         setData(result);
@@ -41,7 +43,7 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
       }
     };
     joinRoom();
-  }, [code]);
+  }, [code, messages]);
 
   const handleSelectSeat = (student: { seatNumber: number }) => {
     if (!data) return;
