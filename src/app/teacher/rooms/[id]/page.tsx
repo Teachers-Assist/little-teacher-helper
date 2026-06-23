@@ -9,7 +9,8 @@ import { StudentList } from '@/components/StudentList';
 import { ReportView } from '@/components/ReportView';
 import { Student, Task, TaskType, TaskStatus } from '@/types';
 import { cn, formatDate } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
+import { resolveError } from '@/i18n/resolveError';
 
 interface Room {
   id: string;
@@ -23,6 +24,7 @@ type TaskWithCount = Task & { _count?: { records: number } };
 
 export default function RoomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const messages = useMessages();
   const [room, setRoom] = useState<Room | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [tasks, setTasks] = useState<TaskWithCount[]>([]);
@@ -79,7 +81,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         setNewStudentSeat('');
       } else {
         const data = await response.json();
-        setAddError(data.error || messages.common.error);
+        setAddError(resolveError(messages, data.error));
       }
     } catch (error) {
       console.error('Failed to add student:', error);
@@ -108,7 +110,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         <div className="text-center">
           <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
           <p className="mb-3 text-slate-600">{messages.room.notFoundTitle}</p>
-          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">{messages.nav.dashboard}</Link>
+          <Link href="/teacher" className="text-sm text-primary-600 hover:text-primary-700">
+            {messages.nav.dashboard}
+          </Link>
         </div>
       </div>
     );
@@ -117,15 +121,28 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   const tabs = [
-    { id: 'students', label: messages.teacher.tabStudents, icon: 'lucide:users', count: students.length },
-    { id: 'tasks', label: messages.teacher.tabTasks, icon: 'lucide:clipboard-list', count: tasks.length },
+    {
+      id: 'students',
+      label: messages.teacher.tabStudents,
+      icon: 'lucide:users',
+      count: students.length,
+    },
+    {
+      id: 'tasks',
+      label: messages.teacher.tabTasks,
+      icon: 'lucide:clipboard-list',
+      count: tasks.length,
+    },
     { id: 'report', label: messages.teacher.tabReport, icon: 'lucide:bar-chart-2', count: null },
   ] as const;
 
   return (
     <>
       <div className="page-header">
-        <Link href="/teacher" className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600">
+        <Link
+          href="/teacher"
+          className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600"
+        >
           <Icon name="lucide:arrow-left" size={14} />
           {messages.teacher.backToDashboard}
         </Link>
@@ -152,15 +169,20 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={cn('flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors', {
-                'border-b-2 border-primary-600 text-primary-700': activeTab === tab.id,
-                'text-slate-500 hover:text-slate-900': activeTab !== tab.id,
-              })}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors',
+                {
+                  'border-b-2 border-primary-600 text-primary-700': activeTab === tab.id,
+                  'text-slate-500 hover:text-slate-900': activeTab !== tab.id,
+                }
+              )}
             >
               <Icon name={tab.icon} size={14} />
               {tab.label}
               {tab.count !== null && (
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{tab.count}</span>
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                  {tab.count}
+                </span>
               )}
             </button>
           ))}
@@ -174,7 +196,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-slate-400">{messages.teacher.roomCodeLabel}</p>
-                  <p className="font-mono text-xl font-bold tracking-widest text-slate-900">{room.code}</p>
+                  <p className="font-mono text-xl font-bold tracking-widest text-slate-900">
+                    {room.code}
+                  </p>
                 </div>
                 <div className="flex gap-4">
                   <div>
@@ -214,7 +238,13 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                     />
                   </div>
                   {addError && <p className="text-xs font-medium text-red-600">{addError}</p>}
-                  <Button type="submit" variant="primary" size="sm" className="w-full" isLoading={isAddingStudent}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    className="w-full"
+                    isLoading={isAddingStudent}
+                  >
                     {messages.teacher.add}
                   </Button>
                 </form>
@@ -243,7 +273,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                   className="input"
                 >
                   {tasks.map((task) => (
-                    <option key={task.id} value={task.id}>{task.name}</option>
+                    <option key={task.id} value={task.id}>
+                      {task.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -264,33 +296,58 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                 <h3 className="card-title">{messages.teacher.taskListTitle}</h3>
                 {tasks.length === 0 ? (
                   <div className="py-10 text-center">
-                    <Icon name="lucide:clipboard-list" size={36} className="mx-auto mb-2 text-slate-200" />
+                    <Icon
+                      name="lucide:clipboard-list"
+                      size={36}
+                      className="mx-auto mb-2 text-slate-200"
+                    />
                     <p className="text-sm text-slate-500">{messages.teacher.noTasks}</p>
                     <p className="mt-1 text-xs text-slate-400">{messages.teacher.noTasksHint}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {tasks.map((task) => (
-                      <div key={task.id} className="flex items-center justify-between rounded-lg border-2 border-black bg-white px-4 py-3">
+                      <div
+                        key={task.id}
+                        className="flex items-center justify-between rounded-lg border-2 border-black bg-white px-4 py-3"
+                      >
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-900">{task.name}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-400">
-                            <span>{messages.teacher.recorded(task._count?.records ?? 0, students.length)}</span>
+                            <span>
+                              {messages.teacher.recorded(
+                                task._count?.records ?? 0,
+                                students.length
+                              )}
+                            </span>
                             {task.assignedSeatNumber != null && (
-                              <span>{messages.teacher.assignedSeatLabel(task.assignedSeatNumber)}</span>
+                              <span>
+                                {messages.teacher.assignedSeatLabel(task.assignedSeatNumber)}
+                              </span>
                             )}
-                            {task.dueDate && <span>{messages.task.dueLabel(formatDate(task.dueDate))}</span>}
+                            {task.dueDate && (
+                              <span>{messages.task.dueLabel(formatDate(task.dueDate))}</span>
+                            )}
                           </div>
                         </div>
                         <div className="ml-3 flex flex-shrink-0 items-center gap-1.5">
-                          <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">
-                            {task.type === TaskType.GRADE ? messages.task.typeGrade : messages.task.typeSubmission}
+                          <StatusBadge
+                            variant={task.type === TaskType.GRADE ? 'info' : 'neutral'}
+                            size="sm"
+                          >
+                            {task.type === TaskType.GRADE
+                              ? messages.task.typeGrade
+                              : messages.task.typeSubmission}
                           </StatusBadge>
                           {task.status === TaskStatus.HELPER_COMPLETED && (
-                            <StatusBadge variant="success" size="sm">{messages.task.statusHelperCompleted}</StatusBadge>
+                            <StatusBadge variant="success" size="sm">
+                              {messages.task.statusHelperCompleted}
+                            </StatusBadge>
                           )}
                           {task.status === TaskStatus.CLOSED && (
-                            <StatusBadge variant="neutral" size="sm">{messages.task.statusClosed}</StatusBadge>
+                            <StatusBadge variant="neutral" size="sm">
+                              {messages.task.statusClosed}
+                            </StatusBadge>
                           )}
                         </div>
                       </div>
@@ -304,7 +361,11 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
               <>
                 {tasks.length === 0 ? (
                   <div className="card-sm py-10 text-center">
-                    <Icon name="lucide:bar-chart-2" size={36} className="mx-auto mb-2 text-slate-200" />
+                    <Icon
+                      name="lucide:bar-chart-2"
+                      size={36}
+                      className="mx-auto mb-2 text-slate-200"
+                    />
                     <p className="text-sm text-slate-500">{messages.teacher.noTasks}</p>
                   </div>
                 ) : selectedTask ? (

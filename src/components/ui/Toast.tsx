@@ -2,7 +2,7 @@
 
 import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Toast {
   id: string;
@@ -73,9 +73,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
   );
 
   return (
-    <ToastContext.Provider
-      value={{ toasts, addToast, removeToast, success, error, warning, info }}
-    >
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, success, error, warning, info }}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
@@ -103,6 +101,7 @@ interface ToastItemProps {
 }
 
 function ToastItem({ toast, onRemove }: ToastItemProps) {
+  const messages = useMessages();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -148,4 +147,3 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
 }
 
 export default ToastProvider;
-

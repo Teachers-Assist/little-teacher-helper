@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { QRScanner } from '@/components/QRScanner';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 export default function JoinPage() {
+  const messages = useMessages();
   const [roomCode, setRoomCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,7 +58,12 @@ export default function JoinPage() {
           {showScanner ? (
             <div>
               <QRScanner onScan={handleScan} onError={(err) => setError(err)} />
-              <Button variant="outline" className="mt-3 w-full" size="sm" onClick={() => setShowScanner(false)}>
+              <Button
+                variant="outline"
+                className="mt-3 w-full"
+                size="sm"
+                onClick={() => setShowScanner(false)}
+              >
                 {messages.qr.cancelScan}
               </Button>
             </div>
@@ -103,11 +109,7 @@ export default function JoinPage() {
               />
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600">
-                {error}
-              </div>
-            )}
+            {error && <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</div>}
 
             <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
               {messages.join.joinButton}

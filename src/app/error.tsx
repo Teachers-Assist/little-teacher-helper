@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -10,6 +10,7 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
+  const messages = useMessages();
   useEffect(() => {
     // Log the error to an error reporting service
     console.error('Application error:', error);
@@ -19,7 +20,9 @@ export default function Error({ error, reset }: ErrorProps) {
     <div className="flex min-h-screen flex-col items-center justify-center p-6">
       <div className="text-center">
         <div className="mb-4 text-8xl">😵</div>
-        <h1 className="mb-2 text-4xl font-bold text-slate-900 dark:text-white">{messages.errorPage.errorTitle}</h1>
+        <h1 className="mb-2 text-4xl font-bold text-slate-900 dark:text-white">
+          {messages.errorPage.errorTitle}
+        </h1>
         <h2 className="mb-4 text-xl font-semibold text-slate-700 dark:text-slate-300">
           {messages.errorPage.errorHeading}
         </h2>
@@ -43,4 +46,3 @@ export default function Error({ error, reset }: ErrorProps) {
     </div>
   );
 }
-

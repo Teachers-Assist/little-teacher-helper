@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
+import { SettingsMenu } from '@/components/SettingsMenu';
 
 // Read teacherName from localStorage as an external store (SSR-safe).
 const emptySubscribe = (): (() => void) => () => {};
@@ -33,6 +34,7 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
 }
 
 export function TeacherSidebar() {
+  const messages = useMessages();
   const pathname = usePathname();
   const teacherName = useSyncExternalStore(emptySubscribe, getTeacherName, getServerTeacherName);
 
@@ -60,17 +62,12 @@ export function TeacherSidebar() {
           label={messages.nav.dashboard}
           active={isDashboard}
         />
-        <NavItem
-          href="/teacher"
-          icon="lucide:school"
-          label={messages.nav.rooms}
-          active={isRooms}
-        />
+        <NavItem href="/teacher" icon="lucide:school" label={messages.nav.rooms} active={isRooms} />
       </nav>
 
       {/* Bottom */}
       <div className="space-y-0.5 border-t-2 border-black px-2 py-3">
-        <NavItem href="#" icon="lucide:settings" label={messages.nav.settings} active={false} />
+        <SettingsMenu variant="sidebar" />
         {teacherName && (
           <div className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100">

@@ -1,4 +1,8 @@
-import { messages } from '@/messages/zh-TW';
+import type { Messages } from '@/messages';
+
+// 字典中 report 的部分。呼叫端傳入當下語言的版本，
+// 讓這個模組保持純粹、與語言無關。
+type ReportMessages = Messages['report'];
 
 export interface ReportRow {
   seatNumber: number;
@@ -17,13 +21,11 @@ export interface ReportData {
   rows: ReportRow[]; // 全班，依座號排序
 }
 
-const m = messages.report;
-
 /**
  * 純文字報表（FR-010）：含任務名稱、日期、未完成登記名單。
  * 適合貼到通訊軟體。
  */
-export function generateTextReport(data: ReportData): string {
+export function generateTextReport(data: ReportData, m: ReportMessages): string {
   const lines: string[] = [];
   lines.push(`【${data.taskName}】${data.className}`);
   lines.push(data.generatedAt);
@@ -75,7 +77,7 @@ function escapeHtml(s: string): string {
  * 可列印報表（FR-009）：用瀏覽器原生列印（window.print）。
  * 內容含任務名稱、班級名稱、日期、已登記/總人數、每位學生姓名與結果。
  */
-export function printReport(data: ReportData): void {
+export function printReport(data: ReportData, m: ReportMessages): void {
   const rowsHtml = data.rows
     .map(
       (r) => `<tr class="${r.done ? '' : 'undone'}">

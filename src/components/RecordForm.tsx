@@ -10,7 +10,7 @@ import { RecorderBadge } from '@/components/RecorderBadge';
 import { Student, Task, TaskType, SubmissionStatus } from '@/types';
 import { GRADE_MAX, GRADE_MIN } from '@/lib/task';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 /** 每位學生目前的登記值（無記錄＝未登記） */
 export interface RecordValueMap {
@@ -38,6 +38,7 @@ export function RecordForm({
   onChangeGrade,
   onMarkComplete,
 }: RecordFormProps) {
+  const messages = useMessages();
   const isGrade = task.type === TaskType.GRADE;
   const locked = lockReason !== null;
   const [hasRecorded, setHasRecorded] = useState(false);
@@ -196,6 +197,7 @@ function GradeRow({
   disabled: boolean;
   onChange: (grade: number | null) => void;
 }) {
+  const messages = useMessages();
   const [text, setText] = useState(value != null ? String(value) : '');
   const [error, setError] = useState('');
 

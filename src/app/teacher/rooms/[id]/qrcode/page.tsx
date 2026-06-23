@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { QRCodeDisplay } from '@/components/QRCodeDisplay';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Room {
   id: string;
@@ -15,6 +15,7 @@ interface Room {
 
 export default function QRCodePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const messages = useMessages();
   const [room, setRoom] = useState<Room | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

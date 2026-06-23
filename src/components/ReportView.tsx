@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Student, Task, TaskType, SubmissionStatus } from '@/types';
 import { generateTextReport, printReport, copyToClipboard, ReportData } from '@/lib/report';
 import { formatDateTime } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface RecordRow {
   studentId: string;
@@ -22,6 +22,7 @@ interface ReportViewProps {
 }
 
 export function ReportView({ task, roomName, students }: ReportViewProps) {
+  const messages = useMessages();
   const [records, setRecords] = useState<RecordRow[] | null>(null);
   const [error, setError] = useState(false);
   const [notice, setNotice] = useState('');
@@ -61,7 +62,9 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
       .sort((a, b) => a.seatNumber - b.seatNumber)
       .map((s) => {
         const rec = byId.get(s.id);
-        const done = isGrade ? rec?.gradeValue != null : rec?.submissionStatus === SubmissionStatus.SUBMITTED;
+        const done = isGrade
+          ? rec?.gradeValue != null
+          : rec?.submissionStatus === SubmissionStatus.SUBMITTED;
         const result = isGrade
           ? rec?.gradeValue != null
             ? String(rec.gradeValue)
@@ -80,14 +83,14 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
       recorded: rows.filter((r) => r.done).length,
       rows,
     };
-  }, [records, students, task.name, task.type, roomName]);
+  }, [records, students, task.name, task.type, roomName, messages]);
 
   const handleCopy = useCallback(async () => {
     if (!report) return;
-    const ok = await copyToClipboard(generateTextReport(report));
+    const ok = await copyToClipboard(generateTextReport(report, messages.report));
     setNotice(ok ? messages.report.copied : messages.report.copyFailed);
     setTimeout(() => setNotice(''), 2000);
-  }, [report]);
+  }, [report, messages]);
 
   if (error) {
     return (
@@ -129,7 +132,7 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
             <Icon name="lucide:copy" size={14} />
             {messages.report.copyText}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => printReport(report)}>
+          <Button variant="outline" size="sm" onClick={() => printReport(report, messages.report)}>
             <Icon name="lucide:printer" size={14} />
             {messages.report.print}
           </Button>
@@ -142,7 +145,9 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
           <div className="text-3xl font-bold text-slate-900">
             {report.recorded}/{report.total}
           </div>
-          <div className="text-sm text-slate-600">{messages.report.recorded(report.recorded, report.total)}</div>
+          <div className="text-sm text-slate-600">
+            {messages.report.recorded(report.recorded, report.total)}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
@@ -175,7 +180,9 @@ export function ReportView({ task, roomName, students }: ReportViewProps) {
                 <span className="seat-chip">{r.seatNumber}</span>
                 <span className="truncate text-slate-700">{r.name}</span>
               </span>
-              <span className={r.done ? 'font-bold text-slate-900' : 'text-xs text-slate-400'}>{r.result}</span>
+              <span className={r.done ? 'font-bold text-slate-900' : 'text-xs text-slate-400'}>
+                {r.result}
+              </span>
             </div>
           ))}
         </div>
@@ -211,17 +218,23 @@ function ReportNameGrid({
   variant: 'success' | 'danger';
   rows: { seatNumber: number; name: string }[];
 }) {
+  const messages = useMessages();
   return (
     <div>
       <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900">
-        <StatusBadge variant={variant} size="sm">{title}</StatusBadge>
+        <StatusBadge variant={variant} size="sm">
+          {title}
+        </StatusBadge>
         <span className="text-slate-500">
           ({rows.length} {messages.report.unitPerson})
         </span>
       </h4>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {rows.map((r) => (
-          <div key={r.seatNumber} className="flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-2 text-sm">
+          <div
+            key={r.seatNumber}
+            className="flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-2 text-sm"
+          >
             <span className="seat-chip">{r.seatNumber}</span>
             <span className="truncate text-slate-700">{r.name}</span>
           </div>

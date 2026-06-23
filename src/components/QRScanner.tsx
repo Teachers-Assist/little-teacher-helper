@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { Button } from '@/components/ui/Button';
 import { parseRoomCodeFromURL } from '@/lib/qrcode';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface QRScannerProps {
   onScan: (code: string) => void;
@@ -12,6 +12,7 @@ interface QRScannerProps {
 }
 
 export function QRScanner({ onScan, onError }: QRScannerProps) {
+  const messages = useMessages();
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
@@ -91,16 +92,8 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
         </div>
       ) : (
         <div className="w-full">
-          <div
-            id="qr-reader"
-            ref={containerRef}
-            className="rounded-xl overflow-hidden"
-          />
-          <Button
-            variant="outline"
-            onClick={stopScanning}
-            className="mt-4 w-full"
-          >
+          <div id="qr-reader" ref={containerRef} className="rounded-xl overflow-hidden" />
+          <Button variant="outline" onClick={stopScanning} className="mt-4 w-full">
             {messages.qr.stopScan}
           </Button>
         </div>
@@ -116,4 +109,3 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
 }
 
 export default QRScanner;
-

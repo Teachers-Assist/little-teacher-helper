@@ -3,13 +3,14 @@
 import { useSyncStatus } from '@/lib/offline/store';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface SyncIndicatorProps {
   className?: string;
 }
 
 export function SyncIndicator({ className }: SyncIndicatorProps) {
+  const messages = useMessages();
   const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
 
   if (pendingCount === 0 && !isSyncing) {

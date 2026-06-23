@@ -2,7 +2,7 @@
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface NetworkStatusProps {
   className?: string;
@@ -10,6 +10,7 @@ interface NetworkStatusProps {
 }
 
 export function NetworkStatus({ className, showWhenOnline = false }: NetworkStatusProps) {
+  const messages = useMessages();
   const { isOnline } = useNetworkStatus();
 
   // Don't show when online unless explicitly requested
@@ -21,9 +22,7 @@ export function NetworkStatus({ className, showWhenOnline = false }: NetworkStat
     <div
       className={cn(
         'fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm rounded-xl px-4 py-3 text-center shadow-lg transition-all',
-        isOnline
-          ? 'bg-emerald-500 text-white'
-          : 'bg-amber-500 text-white',
+        isOnline ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white',
         className
       )}
     >
@@ -43,4 +42,3 @@ export function NetworkStatus({ className, showWhenOnline = false }: NetworkStat
 }
 
 export default NetworkStatus;
-

@@ -14,7 +14,7 @@ import { queueRecordUpdate } from '@/lib/offline/queue';
 import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface RecordApiItem {
   studentId: string;
@@ -39,6 +39,7 @@ export default function RecordPage({
   params: Promise<{ roomId: string; taskId: string }>;
 }) {
   const { roomId, taskId } = use(params);
+  const messages = useMessages();
   // 單一真相：座號、任務、學生、登記值全部讀自離線 store；登記寫入後畫面自動更新
   const room = useOfflineRoom(roomId);
   const task = useOfflineTask(roomId, taskId);

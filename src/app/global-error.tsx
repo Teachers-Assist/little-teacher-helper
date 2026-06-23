@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import { Button } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { getMessages } from '@/messages';
+import { defaultLocale } from '@/i18n/config';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -9,8 +10,11 @@ interface GlobalErrorProps {
 }
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
+  // global-error 會取代 root layout，因此位於 MessagesProvider 之外，
+  // 這裡退回使用預設語言。
+  const messages = getMessages(defaultLocale);
   return (
-    <html lang="zh-TW">
+    <html lang={defaultLocale}>
       <body className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 dark:from-slate-900 dark:to-slate-800">
         <div className="flex min-h-screen flex-col items-center justify-center p-6">
           <div className="text-center">

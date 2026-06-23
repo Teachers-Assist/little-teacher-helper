@@ -1,8 +1,10 @@
 ﻿import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { getLocale } from '@/i18n/locale';
+import { getMessages } from '@/messages';
 
-export default function NotFound() {
+export default async function NotFound() {
+  const messages = getMessages(await getLocale());
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6">
       <div className="text-center">

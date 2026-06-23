@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Button, ButtonProps } from '@/components/ui/Button';
-import { messages } from '@/messages/zh-TW';
+import { useMessages } from '@/i18n/MessagesProvider';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -23,12 +23,15 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = messages.common.confirm,
-  cancelLabel = messages.common.cancel,
+  confirmLabel,
+  cancelLabel,
   confirmVariant = 'primary',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const messages = useMessages();
+  const confirmText = confirmLabel ?? messages.common.confirm;
+  const cancelText = cancelLabel ?? messages.common.cancel;
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -59,10 +62,10 @@ export function ConfirmDialog({
         <p className="mb-5 text-sm text-slate-600">{message}</p>
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onCancel}>
-            {cancelLabel}
+            {cancelText}
           </Button>
           <Button ref={confirmRef} variant={confirmVariant} className="flex-1" onClick={onConfirm}>
-            {confirmLabel}
+            {confirmText}
           </Button>
         </div>
       </div>
