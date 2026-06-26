@@ -42,17 +42,25 @@
 
 ## Project Structure
 
-### Documentation (this feature)
+### Documentation
+
+通用文件（vision.md、ui-spec.md、open-questions.md、quickstart.md）位於 `specs/` 外層，跨所有 feature 共用。
+本 feature 專屬文件留在本資料夾。
 
 ```text
-specs/001-little-teacher-helper/
-├── plan.md              # 本檔案
-├── research.md          # Phase 0: 技術研究
-├── data-model.md        # Phase 1: 資料模型
-├── quickstart.md        # Phase 1: 快速開始指南
-├── contracts/           # Phase 1: API 合約
-│   └── openapi.yaml
-└── tasks.md             # Phase 2: 任務分解 (由 /speckit.tasks 建立)
+specs/
+├── vision.md                       # 產品願景，跨 feature 共用
+├── ui-spec.md                      # UI 視覺規範，跨 feature 共用
+├── data-model.md                   # 資料模型，跨 feature 共用（單一事實來源）
+├── open-questions.md               # 待解決問題清單，跨 feature 共用
+├── quickstart.md                   # 開發環境快速開始指南
+└── 001-little-teacher-helper/
+    ├── plan.md                     # 本檔案
+    ├── research.md                 # Phase 0: 技術研究
+    ├── contracts/                  # Phase 1: API 合約
+    │   └── openapi.yaml
+    ├── spec.md                     # Feature spec
+    └── tasks.md                    # Phase 2: 任務分解
 ```
 
 ### Source Code (repository root)
