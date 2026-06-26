@@ -1,6 +1,6 @@
 # Data Model: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-05-29
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-06-25（002 增量：Task.isArchived）
 
 本文件定義系統的資料模型，基於 Feature Spec 中的 Key Entities。
 
@@ -111,12 +111,15 @@ Active ──[停用]──→ Inactive ──[重新啟用]──→ Active
 | assignedSeatNumber | Int | Optional | 指定負責登記的小老師座號（可為空，可後來再指定） |
 | dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除） |
 | status | Enum | Default: ACTIVE | 任務狀態（見下方說明） |
+| isArchived | Boolean | Default: false | 是否已封存（soft archive，002 引入；封存後主清單不顯示，但歷史登記記錄保留；與 status 欄位獨立） |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
 **關聯**:
 - 屬於一個房間 (N:1 → Room)
 - 擁有多筆登記記錄 (1:N → Record)
+
+**Soft Archive**: 使用 `isArchived` 標記（002 feature 引入）。`isArchived` 與 `status` 互相獨立 —— 例：一個 `status = ACTIVE` 且 `isArchived = true` 的任務代表「老師暫時封存了一個進行中的任務」，可隨時還原（`isArchived = false`）。
 
 **任務狀態**:
 ```typescript
@@ -249,11 +252,13 @@ model Task {
   assignedSeatNumber  Int?
   dueDate             DateTime?
   status              TaskStatus @default(ACTIVE)
+  isArchived          Boolean    @default(false)
   records             Record[]
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
   @@index([roomId])
+  @@index([isArchived])
 }
 
 model Record {
@@ -322,7 +327,7 @@ interface OfflineData {
     }[];
   };
 
-  // 任務快取
+  // 任務快取（小老師端僅快取 isArchived=false 的任務；封存任務不會推到本機）
   tasks: {
     [roomId: string]: {
       id: string;
@@ -372,16 +377,28 @@ interface OfflineData {
 
 ### 任務生命週期
 ```
-建立 (ACTIVE)
+建立 (ACTIVE, isArchived=false)
   │
   ├──[小老師標記完成]──→ HELPER_COMPLETED（鎖定）
   │                            │
   │                     [老師重新開放]──→ ACTIVE
   │
-  ├──[截止時間到]──→ 鎖定（status 仍 ACTIVE，dueDate 已過）
+  ├──[截止時間到]──→ 鎖定（status 仍 ACTIVE，dueDate 已過；老師端徽章顯示「已截止」）
   │
-  └──[老師結案]──→ CLOSED
+  ├──[老師結案]──→ CLOSED
+  │                            │
+  │                     [老師重新開放]──→ ACTIVE（若 dueDate 過往則先要求重設）
+  │
+  └──[老師封存]──→ isArchived=true（與 status 獨立；主清單不顯示）
+                              │
+                       [老師還原]──→ isArchived=false
 ```
+
+**封存與 status 的關係**（002 引入）：
+- `isArchived` 是 soft archive flag，與 status 流轉**完全獨立**
+- 任意 status（ACTIVE / HELPER_COMPLETED / CLOSED）的任務都可以被封存
+- 封存後該任務不在主任務清單顯示、不在班級狀況 tab 列入統計，但歷史 Record 保留
+- 還原（unarchive）後恢復原 status，可繼續操作
 
 ### 登記記錄生命週期
 ```

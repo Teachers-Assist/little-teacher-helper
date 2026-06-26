@@ -33,9 +33,12 @@ export const messages = {
     appName: '小老師助手',
     sectionGeneral: '一般',
     dashboard: '儀表板',
-    rooms: '班級',
+    rooms: '班級', // DEPRECATED（002 US8）：偽按鈕，待程式移除
     settings: '設定',
     language: '語言',
+    // 002 US8：新增「我的班級」可展開清單
+    myClasses: '我的班級',
+    expandClasses: '展開班級清單',
   },
 
   // 首頁
@@ -65,7 +68,13 @@ export const messages = {
     startScan: '開始掃描',
     stopScan: '停止掃描',
     cancelScan: '取消掃描',
-    invalid: '這個 QRCode 不對，請掃描老師給你的班級 QRCode',
+    invalid: '這個 QRCode 不對，請掃描老師給你的班級 QRCode', // DEPRECATED：由 codeNotOurs 取代（003 US1）
+    // 003 US1：兒童語氣錯誤訊息
+    codeNotOurs: '這個 QR Code 好像不是老師給的喔，再試一次吧',
+    permissionDenied: '你沒允許我看到相機，去找老師幫你打開吧。你也可以在下面直接打班級代碼',
+    cameraUnsupported: '這台裝置的相機不能用喔，下面直接打字也可以',
+    failureUpgrade: '試了好幾次都沒成功，去找老師看看吧',
+    noNetwork: '現在沒有網路喔，先去找一個有 WiFi 的地方再試試',
     orManual: '或手動輸入',
     roomCode: '班級代碼',
     codePlaceholder: '例如：ABC123',
@@ -123,9 +132,11 @@ export const messages = {
     studentsCount: (n: number) => `${n} 位學生`,
     tasksCount: (n: number) => `${n} 個任務`,
     joinButton: '加入班級',
-    // 後端會回給使用者看的錯誤
-    roomNotFound: '找不到這個班級，代碼有輸入對嗎？請再確認一次',
-    roomInactive: '這個班級進不去，請去問老師',
+    // 後端會回給使用者看的錯誤（003 US1 改為兒童語氣）
+    roomNotFound: '找不到這個班級耶 🔍 是不是少打了一個字？或是大小寫不一樣？',
+    roomInactive: '這個班級老師暫時關起來了，問問老師怎麼回事吧',
+    // 003 US2：自我聲明印章
+    identityStamp: (seat: number, name: string) => `我是 ${seat} 號 ${name}`,
   },
 
   // 學生相關的後端錯誤（會在老師端顯示給使用者）
@@ -191,12 +202,20 @@ export const messages = {
     numberOnly: '這裡只能填數字',
     gradeRange: '成績必須在 0-100 之間',
     saveFailed: '沒存到！可能是網路斷掉了。別擔心，你的資料還在 — 連上網路後再試試看！',
+    // 003 US3：登記者 badge（常駐顯示）
+    recorderLabel: '登記者：',
+    assignedHint: '你是老師指定的登記者！',
+    notAssignedHint: '你不是被指定的小老師>_<',
   },
 
   room: {
     notFoundTitle: '找不到這個班級',
     rejoin: '重新進入',
     leave: '離開班級',
+    // 003 US4：換座號彈窗
+    changeSeatTitle: '想換座號嗎？',
+    changeSeatMessage: '需要重新進入班級喔',
+    changeSeatConfirm: '重新進入',
   },
 
   // 報表
@@ -302,6 +321,72 @@ export const messages = {
     closeConfirm: '結案後此任務將不再開放登記。',
     deleteTitle: '刪除任務',
     deleteConfirm: '刪除後該任務的所有登記記錄都會一併移除，且無法復原。',
+
+    // ─── 002 新增：任務表單（inline 模式切換）─────────────────
+    taskForm: {
+      editing: (name: string) => `正在編輯：${name}`,
+      cancelEdit: '取消編輯',
+      dueDatePastError: '截止日不能為過去',
+      dueDateExpiredHint: (date: string) => `原截止日 ${date} 已過，請重設或留空`,
+    },
+
+    // ─── 002 新增：任務列項操作 / 徽章 ─────────────────────────
+    taskList: {
+      archive: '封存',
+      archivedDrawer: '已封存任務',
+      extendDue: '延長截止',
+      badgeInProgress: '進行中',
+      badgeDueExpired: '已截止',
+      badgeHelperCompleted: '小老師已標記完成',
+      badgeClosed: '已結案',
+    },
+
+    // ─── 002 新增：學生管理 ───────────────────────────────────
+    studentList: {
+      removed: '已移除',
+      removedDrawer: '已移除學生',
+      import: '上傳 Excel',
+      importTemplate: '下載範本',
+      importSuccess: (count: number) => `成功匯入 ${count} 位學生`,
+      importConflict: '匯入有衝突，請修正後重試',
+    },
+
+    // ─── 002 新增：班級狀況 tab（取代原報表 tab）──────────────
+    classStatus: {
+      tab: '班級狀況',
+      empty: '目前沒有需要注意的事',
+      statTotal: '總任務數',
+      statInProgress: '進行中',
+      statAnomalies: '有異常',
+      statArchived: '已封存',
+    },
+
+    // ─── 002 新增：任務細節頁 ─────────────────────────────────
+    taskDetail: {
+      unrecorded: '未登記',
+      backToTasks: '回任務 tab 編輯',
+    },
+
+    // ─── 002 新增：QRCode modal ───────────────────────────────
+    qrcode: {
+      showButton: '顯示 QRCode',
+      fullscreen: '進入全螢幕',
+      copySuccess: '已複製到剪貼簿',
+      copyFailed: '複製失敗，請手動選取',
+    },
+
+    // ─── 002 新增：Dashboard 雙視角 ───────────────────────────
+    dashboard: {
+      byClass: '按班級檢視',
+      byTask: '按任務檢視',
+      searchPlaceholder: '🔍 搜尋任務名稱',
+      noInProgressTasks: '還沒有進行中的任務喔',
+      createFirstClass: '來建立第一個班級吧',
+      lastActivityMinutesAgo: (n: number) => `${n} 分鐘前`,
+      lastActivityHoursAgo: (n: number) => `${n} 小時前`,
+      lastActivityToday: '今天',
+      lastActivityYesterday: '昨天',
+    },
   },
 } as const;
 

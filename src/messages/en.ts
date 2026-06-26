@@ -33,9 +33,12 @@ export const messages = {
     appName: 'Little Teacher Helper',
     sectionGeneral: 'General',
     dashboard: 'Dashboard',
-    rooms: 'Classes',
+    rooms: 'Classes', // DEPRECATED (002 US8): dead button, pending code removal
     settings: 'Settings',
     language: 'Language',
+    // 002 US8: new "My Classes" expandable list
+    myClasses: 'My Classes',
+    expandClasses: 'Expand class list',
   },
 
   // Home page
@@ -66,7 +69,13 @@ export const messages = {
     startScan: 'Start Scanning',
     stopScan: 'Stop Scanning',
     cancelScan: 'Cancel',
-    invalid: "Hmm, that QR code doesn't look right! Please scan the class QR code your teacher gave you.",
+    invalid: "Hmm, that QR code doesn't look right! Please scan the class QR code your teacher gave you.", // DEPRECATED: replaced by codeNotOurs (003 US1)
+    // 003 US1: child-friendly error messages
+    codeNotOurs: "That QR code doesn't look like one from your teacher. Try again?",
+    permissionDenied: "You haven't allowed camera access yet. Ask your teacher for help — or just type the class code below.",
+    cameraUnsupported: "The camera doesn't work on this device. You can type the code below instead.",
+    failureUpgrade: "Not working after a few tries. Time to ask your teacher.",
+    noNetwork: 'No internet right now. Try again where you can find WiFi.',
     orManual: 'Or type it in',
     roomCode: 'Class Code',
     codePlaceholder: 'e.g. ABC123',
@@ -127,9 +136,11 @@ export const messages = {
     studentsCount: (n: number) => `${n} student${n === 1 ? '' : 's'}`,
     tasksCount: (n: number) => `${n} task${n === 1 ? '' : 's'}`,
     joinButton: 'Join Class',
-    // Errors returned from the backend
-    roomNotFound: "Can't find this class. Did you type the code right? Please check and try again.",
-    roomInactive: "This class isn't open right now. Ask your teacher about it!",
+    // Errors returned from the backend (003 US1: child-friendly tone)
+    roomNotFound: "Can't find that class. Missing a letter? Wrong case?",
+    roomInactive: 'Your teacher closed this class for now. Ask them what happened.',
+    // 003 US2: identity stamp
+    identityStamp: (seat: number, name: string) => `I'm No. ${seat}, ${name}`,
   },
 
   // Backend validation errors — displayed in the teacher interface
@@ -200,6 +211,10 @@ export const messages = {
     gradeRange: 'Score must be between 0 and 100',
     saveFailed:
       "Couldn't save! The internet might have cut out. Don't worry — your data is still here. Try again when you're back online.",
+    // 003 US3: recorder badge (always visible)
+    recorderLabel: 'Recorded by: ',
+    assignedHint: "You're the recorder for this task!",
+    notAssignedHint: "You're not the assigned recorder >_<",
   },
 
   // Student-facing — room/class state
@@ -207,6 +222,10 @@ export const messages = {
     notFoundTitle: "Can't find this class",
     rejoin: 'Rejoin',
     leave: 'Leave Class',
+    // 003 US4: change-seat dialog
+    changeSeatTitle: 'Want to change seats?',
+    changeSeatMessage: "You'll need to enter the class again",
+    changeSeatConfirm: 'Re-enter',
   },
 
   // Teacher-facing — reports
@@ -312,6 +331,72 @@ export const messages = {
     closeConfirm: 'Closing this task will stop all further recording.',
     deleteTitle: 'Delete Task',
     deleteConfirm: 'Deleting this task will permanently remove all its records and cannot be undone.',
+
+    // ─── 002 new: task form (inline mode switching) ────────────
+    taskForm: {
+      editing: (name: string) => `Editing: ${name}`,
+      cancelEdit: 'Cancel Edit',
+      dueDatePastError: 'Due date cannot be in the past',
+      dueDateExpiredHint: (date: string) => `Original due date ${date} has passed. Please reset or leave blank.`,
+    },
+
+    // ─── 002 new: task list actions / badges ───────────────────
+    taskList: {
+      archive: 'Archive',
+      archivedDrawer: 'Archived Tasks',
+      extendDue: 'Extend Due Date',
+      badgeInProgress: 'In Progress',
+      badgeDueExpired: 'Past Due',
+      badgeHelperCompleted: 'Marked Complete',
+      badgeClosed: 'Closed',
+    },
+
+    // ─── 002 new: student management ───────────────────────────
+    studentList: {
+      removed: 'Removed',
+      removedDrawer: 'Removed Students',
+      import: 'Upload Excel',
+      importTemplate: 'Download Template',
+      importSuccess: (count: number) => `Imported ${count} student${count === 1 ? '' : 's'}`,
+      importConflict: 'Import has conflicts. Please fix and retry.',
+    },
+
+    // ─── 002 new: class status tab (replaces Report tab) ───────
+    classStatus: {
+      tab: 'Class Status',
+      empty: 'Nothing to attend to right now',
+      statTotal: 'Total Tasks',
+      statInProgress: 'In Progress',
+      statAnomalies: 'Anomalies',
+      statArchived: 'Archived',
+    },
+
+    // ─── 002 new: task detail page ─────────────────────────────
+    taskDetail: {
+      unrecorded: 'Not Recorded',
+      backToTasks: 'Back to Tasks tab to edit',
+    },
+
+    // ─── 002 new: QR code modal ────────────────────────────────
+    qrcode: {
+      showButton: 'Show QR Code',
+      fullscreen: 'Enter Fullscreen',
+      copySuccess: 'Copied to clipboard',
+      copyFailed: 'Copy failed. Please select manually.',
+    },
+
+    // ─── 002 new: dashboard dual-view ──────────────────────────
+    dashboard: {
+      byClass: 'By Class',
+      byTask: 'By Task',
+      searchPlaceholder: '🔍 Search task name',
+      noInProgressTasks: 'No tasks in progress yet',
+      createFirstClass: 'Create your first class',
+      lastActivityMinutesAgo: (n: number) => `${n} min${n === 1 ? '' : 's'} ago`,
+      lastActivityHoursAgo: (n: number) => `${n} hour${n === 1 ? '' : 's'} ago`,
+      lastActivityToday: 'Today',
+      lastActivityYesterday: 'Yesterday',
+    },
   },
 } as const;
 
