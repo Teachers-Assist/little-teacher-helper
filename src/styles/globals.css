@@ -184,7 +184,8 @@
 
 .sidebar-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* app shell：視窗不捲動，捲動發生在內層 */
 }
 
 .app-sidebar {
@@ -204,7 +205,9 @@
 .app-main {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fffbeb;
 }
 
@@ -212,20 +215,41 @@
   padding: 1.25rem 1.75rem;
   background: #ffffff;
   border-bottom: 3px solid #000;
+  flex-shrink: 0;
 }
 
 .page-body {
   padding: 1.5rem 1.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto; /* 內容捲動發生在這裡，不是整個視窗 */
+}
+
+/* 班級詳情頁：固定班級資訊 + tabs，只讓列表內部捲動（lg 以上） */
+@media (min-width: 1024px) {
+  .room-detail-body {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 768px) {
-  .app-sidebar {
+  .app-sidebar:not(.app-sidebar--drawer) {
     display: none;
   }
   .page-header,
   .page-body {
     padding: 1rem;
   }
+}
+
+/* 手機抽屜模式的側欄（002 US8 / FR-061）：在固定定位的抽屜容器內呈現 */
+.app-sidebar--drawer {
+  position: static;
+  height: 100%;
+  display: flex;
+  box-shadow: 4px 0 0 rgba(0, 0, 0, 0.1);
 }
 
 /* ─── Classic Layout (helper / join pages) ───────────────────────────────── */

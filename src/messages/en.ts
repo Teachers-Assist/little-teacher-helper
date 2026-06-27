@@ -20,6 +20,8 @@ export const messages = {
     back: 'Back',
     retry: 'Try Again',
     backHome: 'Back to Home',
+    edit: (name: string) => `Edit ${name}`,
+    remove: (name: string) => `Remove ${name}`,
   },
 
   // App metadata (browser tab, PWA)
@@ -39,6 +41,7 @@ export const messages = {
     // 002 US8: new "My Classes" expandable list
     myClasses: 'My Classes',
     expandClasses: 'Expand class list',
+    noClassYet: 'No classes yet',
   },
 
   // Home page
@@ -90,9 +93,6 @@ export const messages = {
     urlCopied: 'Link copied to clipboard',
     copyFailed: 'Copy failed. Please copy it manually.',
     instruction: 'Have your student helper scan this QR code, or enter the code above to join the class.',
-    pageTitle: (room: string) => `QR Code — ${room}`,
-    printQrcode: 'Print QR Code',
-    backToRoom: 'Back to Class',
   },
 
   // Network / sync status — student-facing
@@ -344,6 +344,9 @@ export const messages = {
     taskList: {
       archive: 'Archive',
       archivedDrawer: 'Archived Tasks',
+      archiveConfirmTitle: 'Archive Task',
+      archiveConfirmMessage: (name: string) =>
+        `Archive "${name}"? Past records are kept and you can restore from "Archived Tasks".`,
       extendDue: 'Extend Due Date',
       badgeInProgress: 'In Progress',
       badgeDueExpired: 'Past Due',
@@ -354,27 +357,71 @@ export const messages = {
     // ─── 002 new: student management ───────────────────────────
     studentList: {
       removed: 'Removed',
+      removedSuffix: ' (removed)',
       removedDrawer: 'Removed Students',
+      removedEmpty: 'No removed students',
+      restore: 'Restore',
       import: 'Upload Excel',
       importTemplate: 'Download Template',
+      importTitle: 'Bulk Import Students',
+      importHint: 'Download the template, fill in seat numbers and names, then upload to import the whole class at once.',
+      importing: 'Parsing...',
       importSuccess: (count: number) => `Imported ${count} student${count === 1 ? '' : 's'}`,
       importConflict: 'Import has conflicts. Please fix and retry.',
+      importConflictTitle: 'Cannot import. Please fix the following and re-upload:',
+      removeConfirmTitle: 'Remove Student',
+      removeConfirmMessage: (name: string) =>
+        `Remove "${name}"? Past records are kept and you can restore from "Removed Students".`,
+      importErrors: {
+        rowLabel: (n: number) => `Row ${n}`,
+        fileEmpty: 'The file is empty — no data found',
+        fileParseFailed: 'Could not read the file. Please make sure it is a valid .xlsx file.',
+        missingColumnSeat: 'Column "座號" (Seat) not found',
+        missingColumnName: 'Column "姓名" (Name) not found',
+        noRows: 'No student rows found in the file',
+        tooMany: 'Up to 100 students can be imported at once',
+        seatNotNumber: 'Seat number must be a number',
+        seatOutOfRange: 'Seat number must be between 1 and 99',
+        nameRequired: 'Name cannot be blank',
+        nameTooLong: 'Name cannot exceed 50 characters',
+        seatDupInFile: 'Duplicate seat number within the file',
+        nameDupInFile: 'Duplicate name within the file',
+        seatDupExisting: 'Seat number already used by an existing student',
+        nameDupExisting: 'Name already used by an existing student',
+      },
     },
 
     // ─── 002 new: class status tab (replaces Report tab) ───────
     classStatus: {
       tab: 'Class Status',
       empty: 'Nothing to attend to right now',
+      alertsTitle: 'Needs Attention',
       statTotal: 'Total Tasks',
       statInProgress: 'In Progress',
       statAnomalies: 'Anomalies',
       statArchived: 'Archived',
+      anomalyAssignedSeatIdle: (seat: number) =>
+        `Assigned seat ${seat} has not recorded for over 24 hours`,
+      anomalyNoRecordsNearDue: 'Due soon, but no records yet',
     },
 
     // ─── 002 new: task detail page ─────────────────────────────
     taskDetail: {
       unrecorded: 'Not Recorded',
       backToTasks: 'Back to Tasks tab to edit',
+      registrationList: 'Registration Details',
+      unrecordedList: 'Not Recorded',
+      recordedBy: (seat: number) => `By seat ${seat}`,
+      noRecordsYet: 'No records yet',
+      allRecorded: 'Everyone has been recorded!',
+      infoType: 'Type',
+      infoAssigned: 'Assigned Helper',
+      infoDue: 'Due',
+      infoStatus: 'Status',
+      infoArchived: 'Archived',
+      noDue: 'No due date',
+      notAssigned: 'Unassigned',
+      assignedRemoved: (seat: number) => `Assigned seat ${seat} (student removed)`,
     },
 
     // ─── 002 new: QR code modal ────────────────────────────────
@@ -392,9 +439,14 @@ export const messages = {
       searchPlaceholder: '🔍 Search task name',
       noInProgressTasks: 'No tasks in progress yet',
       createFirstClass: 'Create your first class',
+      statRoomCount: 'Classes',
+      statInProgressTasks: 'In Progress',
+      statAnomalies: 'Anomalies',
+      inProgressUnit: (n: number) => `${n} in progress`,
+      recordedRatio: (done: number, total: number) => `Recorded ${done}/${total}`,
       lastActivityMinutesAgo: (n: number) => `${n} min${n === 1 ? '' : 's'} ago`,
       lastActivityHoursAgo: (n: number) => `${n} hour${n === 1 ? '' : 's'} ago`,
-      lastActivityToday: 'Today',
+      lastActivityToday: 'Just now',
       lastActivityYesterday: 'Yesterday',
     },
   },
