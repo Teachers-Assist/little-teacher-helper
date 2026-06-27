@@ -10,11 +10,13 @@ export async function GET(
     const { roomId } = await params;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // 可選：依狀態過濾
+    const includeArchived = searchParams.get('includeArchived') === 'true'; // 002 US3
 
     const tasks = await prisma.task.findMany({
       where: {
         roomId,
         ...(status ? { status } : {}),
+        ...(includeArchived ? {} : { isArchived: false }),
       },
       include: {
         _count: { select: { records: true } },

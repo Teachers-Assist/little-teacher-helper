@@ -58,6 +58,7 @@ model Task {
   assignedSeatNumber Int? // 指定登記的小老師座號，可空、可事後補
   dueDate            DateTime? // 截止時間，到期後鎖定（老師可手動解除）
   status             String   @default("ACTIVE") // ACTIVE | HELPER_COMPLETED | CLOSED
+  isArchived         Boolean  @default(false) // 老師封存任務（soft archive），與 status 獨立
   records            Record[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

@@ -49,13 +49,14 @@ export async function PATCH(
   try {
     const { taskId } = await params;
     const body = await request.json();
-    const { name, assignedSeatNumber, dueDate, status } = body;
+    const { name, assignedSeatNumber, dueDate, status, isArchived } = body;
 
     const updateData: {
       name?: string;
       assignedSeatNumber?: number | null;
       dueDate?: Date | null;
       status?: string;
+      isArchived?: boolean;
     } = {};
 
     if (name !== undefined) {
@@ -91,6 +92,14 @@ export async function PATCH(
         );
       }
       updateData.status = status;
+    }
+
+    // 002 US3：軟封存（isArchived=true 封存 / false 還原），與 status 獨立
+    if (isArchived !== undefined) {
+      if (typeof isArchived !== 'boolean') {
+        return NextResponse.json({ error: 'isArchived 必須為布林值' }, { status: 400 });
+      }
+      updateData.isArchived = isArchived;
     }
 
     const task = await prisma.task.update({

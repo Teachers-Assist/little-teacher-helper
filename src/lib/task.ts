@@ -25,6 +25,39 @@ export function getTaskLockReason(task: TaskLike): 'COMPLETED' | 'DUE_PASSED' | 
   return null;
 }
 
+// ===== 002 US3：老師端任務列項的徽章與操作派生 =====
+
+export type TaskBadge = 'IN_PROGRESS' | 'DUE_EXPIRED' | 'HELPER_COMPLETED' | 'CLOSED';
+export type TaskAction = 'close' | 'extendDue' | 'reopen';
+
+export interface TaskDisplayState {
+  badge: TaskBadge;
+  /** ACTIVE 但截止時間已過。徽章由 (status, dueDate) 派生，不修改 status 本身（FR-041）。 */
+  isDueExpired: boolean;
+  actions: TaskAction[];
+}
+
+/**
+ * 依 (status, dueDate, now) 派生老師端任務列項的徽章與操作按鈕（FR-041 / FR-042）。
+ * 老師端列項與 TaskForm 共用此邏輯，確保畫面一致。status 欄位本身不因截止而改變。
+ */
+export function getTaskDisplayState(task: TaskLike, now: number = Date.now()): TaskDisplayState {
+  const isDueExpired = !!task.dueDate && new Date(task.dueDate).getTime() < now;
+
+  if (task.status === TaskStatus.HELPER_COMPLETED) {
+    return { badge: 'HELPER_COMPLETED', isDueExpired, actions: ['reopen', 'close'] };
+  }
+  if (task.status === TaskStatus.CLOSED) {
+    // CLOSED 的「重新開放」行為依 dueDate 分流（FR-043 / FR-044），由 UI 判斷
+    return { badge: 'CLOSED', isDueExpired, actions: ['reopen'] };
+  }
+  // ACTIVE
+  if (isDueExpired) {
+    return { badge: 'DUE_EXPIRED', isDueExpired: true, actions: ['extendDue', 'close'] };
+  }
+  return { badge: 'IN_PROGRESS', isDueExpired: false, actions: ['close'] };
+}
+
 /** 登記者是否為任務指定的小老師（任務未指定時恆為 false）。 */
 export function computeIsAssignedRecorder(
   assignedSeatNumber: number | null | undefined,

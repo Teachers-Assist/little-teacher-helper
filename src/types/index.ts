@@ -96,6 +96,7 @@ export interface Task {
   assignedSeatNumber?: number | null;
   dueDate?: Date | null;
   status: TaskStatus;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
