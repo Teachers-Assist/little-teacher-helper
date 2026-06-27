@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -48,7 +48,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   const [students, setStudents] = useState<Student[]>([]);
   const [tasks, setTasks] = useState<TaskWithCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'tasks' | 'report'>('students');
+  // US8 反饋：班級狀況為預設首見視角（老師先看需要注意的事）
+  const [activeTab, setActiveTab] = useState<'students' | 'tasks' | 'report'>('report');
+  const formColRef = useRef<HTMLDivElement>(null);
 
   // US2 學生編輯 / 移除 / 已移除抽屜
   const [editingStudent, setEditingStudent] = useState<EditingStudent | null>(null);
@@ -117,6 +119,16 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   }, []);
 
   const seatOptions = useMemo(() => students.map((s) => s.seatNumber), [students]);
+
+  // 反饋 #2：點編輯後捲動到表單，讓老師察覺編輯位置（手機尤其重要）。
+  // 用 requestAnimationFrame 確保表單已進入編輯模式（高度可能改變）後再捲動。
+  useEffect(() => {
+    if (!editingStudent && !editingTask) return;
+    const t = setTimeout(() => {
+      formColRef.current?.scrollIntoView({ block: 'start' });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [editingStudent, editingTask]);
 
   // US4：開啟班級狀況 tab 時載入 monitoring（每次開啟都重新抓最新狀態）
   useEffect(() => {
@@ -315,9 +327,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const tabs = [
+    { id: 'report', label: messages.teacher.classStatus.tab, icon: 'lucide:activity', count: null },
     { id: 'students', label: messages.teacher.tabStudents, icon: 'lucide:users', count: students.length },
     { id: 'tasks', label: messages.teacher.tabTasks, icon: 'lucide:clipboard-list', count: tasks.length },
-    { id: 'report', label: messages.teacher.classStatus.tab, icon: 'lucide:activity', count: null },
   ] as const;
 
   const badgeMeta: Record<TaskBadge, { variant: StatusBadgeVariant; label: string }> = {
@@ -392,8 +404,11 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
         {activeTab !== 'report' && (
         <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
-          {/* Sidebar */}
-          <div className="space-y-3 lg:w-1/3 lg:min-h-0 lg:shrink-0 lg:overflow-y-auto">
+          {/* 表單欄（反饋 #2/#3）：較大、置於右側（手機在下方），編輯時捲動至此 */}
+          <div
+            ref={formColRef}
+            className="order-2 space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto"
+          >
             {activeTab === 'students' && (
               <>
                 <div className="card-sm">
@@ -433,8 +448,8 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
           </div>
 
-          {/* Main */}
-          <div className="flex flex-col lg:min-h-0 lg:flex-1">
+          {/* 列表欄（反饋 #3）：較小、置於左側（手機在上方） */}
+          <div className="order-1 flex flex-col lg:w-2/5 lg:shrink-0 lg:min-h-0">
             {activeTab === 'students' && (
               <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
                 <div className="mb-3 flex shrink-0 items-center justify-between">
@@ -485,14 +500,15 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                             editingTask?.id === task.id && 'ring-2 ring-primary-400'
                           )}
                         >
-                          <div className="flex items-start justify-between gap-3">
+                          {/* 反饋 #1：整個卡片上半部可點進任務細節 */}
+                          <Link
+                            href={`/teacher/tasks/${id}/${task.id}`}
+                            className="group flex items-start justify-between gap-3"
+                          >
                             <div className="min-w-0">
-                              <Link
-                                href={`/teacher/tasks/${id}/${task.id}`}
-                                className="text-sm font-bold text-slate-900 hover:text-primary-700 hover:underline"
-                              >
+                              <p className="text-sm font-bold text-slate-900 group-hover:text-primary-700 group-hover:underline">
                                 {task.name}
-                              </Link>
+                              </p>
                               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-400">
                                 <span>
                                   {messages.teacher.recorded(task._count?.records ?? 0, students.length)}
@@ -515,7 +531,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                                 {badge.label}
                               </StatusBadge>
                             </div>
-                          </div>
+                          </Link>
 
                           {/* 操作區：依 (status, dueDate) 派生 */}
                           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2.5">

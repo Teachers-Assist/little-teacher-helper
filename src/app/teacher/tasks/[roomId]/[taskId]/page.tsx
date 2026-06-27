@@ -94,28 +94,19 @@ export default function TaskDetailPage({
   return (
     <>
       <div className="page-header">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">{task.name}</h1>
-            <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">
-              {task.type === TaskType.GRADE ? messages.task.typeGrade : messages.task.typeSubmission}
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-900">{task.name}</h1>
+          <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">
+            {task.type === TaskType.GRADE ? messages.task.typeGrade : messages.task.typeSubmission}
+          </StatusBadge>
+          <StatusBadge variant={badge.variant} size="sm">
+            {badge.label}
+          </StatusBadge>
+          {task.isArchived && (
+            <StatusBadge variant="neutral" size="sm">
+              {messages.teacher.taskDetail.infoArchived}
             </StatusBadge>
-            <StatusBadge variant={badge.variant} size="sm">
-              {badge.label}
-            </StatusBadge>
-            {task.isArchived && (
-              <StatusBadge variant="neutral" size="sm">
-                {messages.teacher.taskDetail.infoArchived}
-              </StatusBadge>
-            )}
-          </div>
-          <Link
-            href={`/teacher/rooms/${roomId}?tab=tasks`}
-            className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
-          >
-            <Icon name="lucide:pencil" size={14} />
-            {messages.teacher.taskDetail.backToTasks}
-          </Link>
+          )}
         </div>
       </div>
 

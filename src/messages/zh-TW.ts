@@ -397,7 +397,6 @@ export const messages = {
     // ─── 002 新增：任務細節頁 ─────────────────────────────────
     taskDetail: {
       unrecorded: '未登記',
-      backToTasks: '回任務 tab 編輯',
       registrationList: '登記明細',
       unrecordedList: '未登記學生',
       recordedBy: (seat: number) => `登記者 ${seat} 號`,

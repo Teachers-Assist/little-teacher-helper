@@ -408,7 +408,6 @@ export const messages = {
     // ─── 002 new: task detail page ─────────────────────────────
     taskDetail: {
       unrecorded: 'Not Recorded',
-      backToTasks: 'Back to Tasks tab to edit',
       registrationList: 'Registration Details',
       unrecordedList: 'Not Recorded',
       recordedBy: (seat: number) => `By seat ${seat}`,
