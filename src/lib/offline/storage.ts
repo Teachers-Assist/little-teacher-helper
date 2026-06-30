@@ -260,6 +260,19 @@ export function cacheSyncedRecords(
   saveOfflineData(data);
 }
 
-// 註：刻意不提供「清除房間 / 清除全部離線資料」函式。
-// 依 vision.md「不可逆操作系統硬性防堵」原則，清掉未同步的登記＝不可逆的資料遺失，
-// spec 也無此需求。若未來需要「換班級」等清理，必須先確保無待同步資料才可進行。
+/**
+ * 換座號用：清掉「身份 / 名單 / 任務」本機快取，讓使用者重新從 /join 入場
+ * （003 US4 / FR-075）。
+ *
+ * 刻意**保留 records 與 syncQueue** —— 未同步的登記是不可逆資料，不可因換座號而遺失
+ * （守 vision.md「不可逆操作不破壞資料」原則）。未送出的登記仍掛在佇列裡，連線後照常
+ * 上傳，且保留原 recorderSeatNumber（問責不丟）。同一台裝置換座號後可繼續累積登記；
+ * 對同一 task+student 再次登記則沿用既有去重邏輯更新該筆，不覆蓋他人尚未上傳的登記。
+ */
+export function clearRoom(roomId: string): void {
+  const data = getOfflineData();
+  delete data.rooms[roomId];
+  delete data.students[roomId];
+  delete data.tasks[roomId];
+  saveOfflineData(data);
+}

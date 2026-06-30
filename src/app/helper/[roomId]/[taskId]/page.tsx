@@ -2,14 +2,16 @@
 
 import { useState, useEffect, use, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { RecordForm, RecordValueMap } from '@/components/RecordForm';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task, TaskStatus, SubmissionStatus, OfflineRecordEntry } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { saveTask, saveStudents, cacheSyncedRecords } from '@/lib/offline/storage';
+import { saveTask, saveStudents, cacheSyncedRecords, clearRoom } from '@/lib/offline/storage';
 import { queueRecordUpdate } from '@/lib/offline/queue';
 import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
@@ -40,13 +42,21 @@ export default function RecordPage({
 }) {
   const { roomId, taskId } = use(params);
   const messages = useMessages();
+  const router = useRouter();
   // 單一真相：座號、任務、學生、登記值全部讀自離線 store；登記寫入後畫面自動更新
   const room = useOfflineRoom(roomId);
   const task = useOfflineTask(roomId, taskId);
   const students = useOfflineStudents(roomId);
   const records = useOfflineRecords(taskId);
   const [isLoading, setIsLoading] = useState(true);
+  const [changeSeatOpen, setChangeSeatOpen] = useState(false);
   const { isOnline } = useNetworkStatus();
+
+  // 換座號：清掉本機房間/座號/名單/任務快取（保留未同步登記）後回 /join 重新入場（FR-075）
+  const handleChangeSeat = useCallback(() => {
+    clearRoom(roomId);
+    router.push('/join');
+  }, [roomId, router]);
 
   const seatNumber = room?.seatNumber ?? null;
   const values = useMemo(() => valuesFromRecords(records), [records]);
@@ -166,10 +176,20 @@ export default function RecordPage({
           }
           onChangeGrade={(studentId, grade) => persist(studentId, { gradeValue: grade })}
           onMarkComplete={handleMarkComplete}
+          onChangeSeat={() => setChangeSeatOpen(true)}
         />
 
         <NetworkStatus />
       </div>
+
+      <ConfirmDialog
+        open={changeSeatOpen}
+        title={messages.room.changeSeatTitle}
+        message={messages.room.changeSeatMessage}
+        confirmLabel={messages.room.changeSeatConfirm}
+        onConfirm={handleChangeSeat}
+        onCancel={() => setChangeSeatOpen(false)}
+      />
     </div>
   );
 }
