@@ -37,7 +37,6 @@ export interface Room {
   code: string;
   name: string;
   teacherId: string;
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,7 +58,6 @@ export interface CreateRoomInput {
 
 export interface UpdateRoomInput {
   name?: string;
-  isActive?: boolean;
 }
 
 // ===== Student =====

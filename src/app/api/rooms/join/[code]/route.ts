@@ -15,7 +15,6 @@ export async function GET(
         id: true,
         name: true,
         code: true,
-        isActive: true,
         students: {
           where: { isRemoved: false },
           select: {
@@ -41,10 +40,6 @@ export async function GET(
 
     if (!room) {
       return NextResponse.json({ error: ERROR_CODES.ROOM_NOT_FOUND }, { status: 404 });
-    }
-
-    if (!room.isActive) {
-      return NextResponse.json({ error: ERROR_CODES.ROOM_INACTIVE }, { status: 404 });
     }
 
     return NextResponse.json({

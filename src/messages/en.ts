@@ -150,7 +150,6 @@ export const messages = {
     joinButton: 'Join Class',
     // Errors returned from the backend (003 US1: child-friendly tone)
     roomNotFound: "Can't find that class. Missing a letter? Wrong case?",
-    roomInactive: 'Your teacher closed this class for now. Ask them what happened.',
     // 003 US2: identity stamp
     identityStamp: (seat: number, name: string) => `I'm No. ${seat}, ${name}`,
   },
@@ -288,8 +287,6 @@ export const messages = {
     backToDashboard: 'Back to Dashboard',
 
     // Class details
-    active: 'Active',
-    inactive: 'Inactive',
     showQrcode: 'Show QR Code',
     tabStudents: 'Students',
     tabTasks: 'Tasks',

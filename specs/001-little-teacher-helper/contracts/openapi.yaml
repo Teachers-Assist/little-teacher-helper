@@ -182,7 +182,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RoomJoinResponse'
         '404':
-          description: 房間不存在或已停用
+          description: 房間不存在
           content:
             application/json:
               schema:
@@ -527,8 +527,6 @@ components:
           pattern: '^[A-Z0-9]{6}$'
         name:
           type: string
-        isActive:
-          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -593,8 +591,6 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-        isActive:
-          type: boolean
 
     # ===== Student =====
     Student:

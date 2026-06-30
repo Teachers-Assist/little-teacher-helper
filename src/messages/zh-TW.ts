@@ -135,7 +135,6 @@ export const messages = {
     joinButton: '加入班級',
     // 後端會回給使用者看的錯誤（003 US1 改為兒童語氣）
     roomNotFound: '找不到這個班級耶 🔍 是不是少打了一個字？或是大小寫不一樣？',
-    roomInactive: '這個班級老師暫時關起來了，問問老師怎麼回事吧',
     // 003 US2：自我聲明印章
     identityStamp: (seat: number, name: string) => `我是 ${seat} 號 ${name}`,
   },
@@ -266,8 +265,6 @@ export const messages = {
     backToDashboard: '返回儀表板',
 
     // 班級詳情
-    active: '啟用中',
-    inactive: '已停用',
     showQrcode: '顯示 QRCode',
     tabStudents: '學生',
     tabTasks: '任務',

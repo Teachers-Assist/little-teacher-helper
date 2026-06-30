@@ -26,7 +26,6 @@ model Room {
   teacherId String
   students  Student[]
   tasks     Task[]
-  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

@@ -26,7 +26,6 @@ interface Room {
   id: string;
   name: string;
   code: string;
-  isActive: boolean;
 }
 
 type TaskWithCount = Task & { _count?: { records: number } };
@@ -354,12 +353,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     <>
       <div className="page-header">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
-            <StatusBadge variant={room.isActive ? 'success' : 'neutral'} dot size="sm">
-              {room.isActive ? messages.teacher.active : messages.teacher.inactive}
-            </StatusBadge>
-          </div>
+          <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
           <Button variant="outline" size="sm" onClick={openQr}>
             <Icon name="lucide:qr-code" size={15} />
             {messages.teacher.qrcode.showButton}

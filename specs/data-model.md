@@ -56,7 +56,6 @@
 | code | String | Unique, 6 chars | QRCode 用的短碼 (Base36) |
 | name | String | Required, 1-100 chars | 班級名稱 |
 | teacherId | String | FK → Teacher | 所屬老師 |
-| isActive | Boolean | Default: true | 是否啟用 |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
@@ -65,10 +64,7 @@
 - 包含多位學生 (1:N → Student)
 - 包含多個任務 (1:N → Task)
 
-**狀態轉換**:
-```
-Active ──[停用]──→ Inactive ──[重新啟用]──→ Active
-```
+> **房間沒有「啟用 / 停用」狀態**：原 `isActive` 欄位與 Active/Inactive lifecycle 已於 2026-06-28 移除。老師實務上的「關閉」需求由**任務層級**（`status=CLOSED` + `isArchived`）涵蓋；沒有任何 feature 定義「老師停用整個班級」的入口，故移除此孤兒欄位（含 join 流程的 isActive 檢查）。
 
 ---
 
@@ -220,7 +216,6 @@ model Room {
   teacherId String
   students  Student[]
   tasks     Task[]
-  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
