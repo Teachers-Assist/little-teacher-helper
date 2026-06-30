@@ -250,6 +250,48 @@ const USED_ICONS = [
 
 ---
 
+## 進場儀式 / 自我聲明印章 / 兒童語氣文案規範（003 新增，對應 vision 第 4、7 節）
+
+小老師端的進場與身份體驗有別於一般 CRUD 畫面，下列規範補足「儀式感」與「承諾裝置」的視覺要求。決定相關畫面做法時依此，避免削弱問責設計或讓兒童在同學面前卡住。
+
+### 進場過場（`JoinTransition`）
+
+1. `/join/[code]` 是**過場頁**不是狀態頁：歡迎畫面 1.5–2 秒**自動**進入選座號，**MUST NOT** 提供「跳過 / 進入」按鈕（避免下意識點過、失去儀式感）。
+2. **班級名稱是畫面最大、最醒目的元素**（字級需大於歡迎語）；icon 用慶祝符號（`lucide:party-popper`）。
+3. 計時器在 `useEffect` 卸載時 MUST cleanup，避免中途離開後重入卡住（Edge Case）。
+
+### 自我聲明印章（`IdentityStamp`）
+
+1. 選座號後 MUST 全螢幕亮出「我是 [座號] 號 [姓名]」停 1.5 秒，對應 vision 第 7 節「承諾裝置」—— 用視覺事實讓自我聲明具有問責重量。
+2. **點擊不可跳過**（停滿才自動進入），元件不接 `onClick`。
+3. 回饋：輕量短促音效（≤ 0.3 秒、< 30KB，置於 `public/sounds/stamp.mp3`，以 `try/catch` 包裹、autoplay 失敗 silent）+ haptic 短震（`useHaptic`，不支援時 noop）。裝置靜音時不播音效、haptic 仍觸發。
+
+### 登記者身份 badge（`RecorderBadge`）
+
+1. 「登記者：[座號]」大型 badge MUST **常駐**於學生名單外框正上方（承諾裝置在每次登記時持續可見），**不可**作為附屬資訊或僅在登記後才出現。
+2. 依三種指派狀態分流視覺，三態皆顯示 badge、差別在強度 / 星星 / 小行字：
+   - **受指定**：強調色（`bg-accent-200`）+ `lucide:star` + 進場 fade-in（**僅播 1 次**，非持續閃爍）+ 小行字「你是老師指定的登記者！」
+   - **未指定（他人受指定）**：灰藍系（`bg-slate-100`，**非警告色**，不用紅黃）+ 小行字「你不是被指定的小老師>\_<」
+   - **沒指定任何人**：中性純黑邊白底 + **無**小行字
+3. 點 badge 觸發換座號流程（彈窗 → 重新進入 `/join`）；換座號是顯式行為（重新入場），不就地切換。
+4. 登記頁 header **不**再放座號 badge；學生名單頂部**不**放「N 已繳 / N 未繳」統計（催繳是老師 / 家長責任，違反角色分工）。
+
+### 動畫規範（NFR-008）
+
+- 進場 / 印章動畫 MUST 以 `transform` / `opacity` 實作以維持 60fps；keyframes 定義於 `globals.css`（`pop-in` / `stamp-in` / `fade-in`）。
+- 動畫**克制**（vision「不把學生當小孩對待」）：星星 fade-in 僅 1 次、音效短促、不要每個操作都閃光發聲。
+- MUST 尊重 `prefers-reduced-motion`（已於 `globals.css` 將動畫時長縮到接近 0）。
+
+### 兒童語氣文案規範
+
+- 所有 user-facing 文字 MUST 走 i18n（NFR-001），不硬寫進元件；學生面向文字用兒童語氣。
+- 錯誤 / 限制發生時，提示要**指向概念與下一步出路**，不只是「再試一次」。子原則「**不讓學生在不知道下一步的狀況下卡住**」具體應用：
+  - 相機 / 瀏覽器不支援 → 自動把焦點切到下方輸入框
+  - 連續失敗 3 次以上 → 升級為「去找老師」（不再讓他繼續試）
+  - 拒絕相機權限 → 同時鋪「找老師」與「也可以直接打字」兩條路
+
+---
+
 ## 檔案位置索引
 
 | 用途 | 路徑 |
@@ -262,3 +304,6 @@ const USED_ICONS = [
 | Card 元件 | `src/components/ui/Card.tsx` |
 | Teacher 側邊欄 | `src/components/layout/TeacherSidebar.tsx` |
 | Teacher layout | `src/app/teacher/layout.tsx` |
+| 進場過場 / 自我聲明印章（003） | `src/components/JoinTransition.tsx`、`src/components/IdentityStamp.tsx` |
+| 登記者身份 badge（003） | `src/components/RecorderBadge.tsx` |
+| 失敗計數 / haptic hook（003） | `src/hooks/useFailureCounter.ts`、`src/hooks/useHaptic.ts` |

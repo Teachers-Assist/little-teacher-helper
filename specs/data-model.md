@@ -417,3 +417,6 @@ interface OfflineData {
 5. 成功 → 移出佇列，標記 synced: true，填入 syncedAt
 6. 失敗 → retryCount++，下次重試（最多 3 次）
 ```
+
+**換座號（clearRoom）對離線資料的影響**（003 US4 引入）：
+小老師換座號（`clearRoom(roomId)`）時，只清掉 `rooms` / `students` / `tasks` 三類本機快取讓使用者重新從 `/join` 入場；**`records` 與 `syncQueue` 刻意保留**。理由：未同步的登記是不可逆資料，不可因換座號而遺失（守 vision「不可逆操作不破壞資料」）。未送出的登記仍掛在佇列裡、連線後照常上傳，並保留原 `recorderSeatNumber`（問責不丟）。同一台裝置換座號後可繼續累積登記；對同一 `taskId + studentId` 再次登記則沿用既有去重邏輯更新該筆。
