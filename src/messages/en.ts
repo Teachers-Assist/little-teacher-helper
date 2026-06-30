@@ -167,9 +167,6 @@ export const messages = {
     selectSeatHint: 'Choose YOUR seat number — the app will remember that YOU did this recording!',
     emptyRoster: "Your teacher hasn't set up the student list yet. Go ask your teacher!",
     seatLabel: (seat: number) => `Seat ${seat}`,
-    isAssigned: "You're the one picked for this task — awesome, let's go!",
-    notAssigned: "You weren't assigned to this task, but you can still go ahead and record it",
-    recordedAs: (seat: number) => `This recording will be saved as: Seat ${seat}`,
   },
 
   // Student-facing — task list and task states
@@ -204,13 +201,10 @@ export const messages = {
   record: {
     rosterTitle: 'Student List',
     rosterEmpty: 'No students in the list yet',
-    statusHeader: 'Submission Status',
     listAria: 'Student submission status list',
     seatAria: (n: number) => `Seat ${n}`,
     toggleAria: (name: string, submitted: boolean) =>
       `${name}, ${submitted ? 'submitted' : 'not submitted'}`,
-    submittedCount: (n: number) => `${n} submitted`,
-    notSubmittedCount: (n: number) => `${n} not in`,
     progress: (percent: number) => `${percent}% done`,
     gradePlaceholder: 'Score',
     numberOnly: 'Numbers only here!',

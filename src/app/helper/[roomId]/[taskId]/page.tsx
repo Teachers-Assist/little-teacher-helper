@@ -146,10 +146,7 @@ export default function RecordPage({
             <Icon name="lucide:arrow-left" size={13} />
             {messages.task.listTitle}
           </Link>
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-900">{task.name}</h1>
-            <span className="badge badge-info">{messages.identity.seatLabel(seatNumber)}</span>
-          </div>
+          <h1 className="text-lg font-bold text-slate-900">{task.name}</h1>
         </div>
       </div>
 

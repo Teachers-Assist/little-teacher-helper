@@ -153,9 +153,6 @@ export const messages = {
     selectSeatHint: '選你自己的座號，系統會記錄是「你」做了這次登記',
     emptyRoster: '老師還沒有把學生名單建好，去找老師喔',
     seatLabel: (seat: number) => `${seat} 號`,
-    isAssigned: '這次就是指定你！來吧，開始登記！',
-    notAssigned: '這個任務不是指定給你的，不過你還是可以繼續登記。有問題記得去找老師',
-    recordedAs: (seat: number) => `這次的登記記錄為：${seat} 號`,
   },
 
   task: {
@@ -186,12 +183,9 @@ export const messages = {
   record: {
     rosterTitle: '學生名單',
     rosterEmpty: '名單裡還沒有學生',
-    statusHeader: '繳交狀況',
     listAria: '學生繳交狀況列表',
     seatAria: (n: number) => `座號 ${n}`,
     toggleAria: (name: string, submitted: boolean) => `${name}，${submitted ? '已繳交' : '未繳交'}`,
-    submittedCount: (n: number) => `${n} 已繳`,
-    notSubmittedCount: (n: number) => `${n} 未繳`,
     progress: (percent: number) => `完成度 ${percent}%`,
     gradePlaceholder: '分數',
     numberOnly: '這裡只能填數字',

@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { RecorderBadge } from '@/components/RecorderBadge';
+import { RecorderBadge, AssignmentState } from '@/components/RecorderBadge';
 import { Student, Task, TaskType, SubmissionStatus } from '@/types';
 import { GRADE_MAX, GRADE_MIN } from '@/lib/task';
 import { cn } from '@/lib/utils';
@@ -26,6 +25,8 @@ interface RecordFormProps {
   onToggleSubmission: (studentId: string, submitted: boolean) => void;
   onChangeGrade: (studentId: string, grade: number | null) => void;
   onMarkComplete: () => void;
+  /** 點「登記者：」badge 觸發換座號流程（US4） */
+  onChangeSeat?: () => void;
 }
 
 export function RecordForm({
@@ -37,40 +38,25 @@ export function RecordForm({
   onToggleSubmission,
   onChangeGrade,
   onMarkComplete,
+  onChangeSeat,
 }: RecordFormProps) {
   const messages = useMessages();
   const isGrade = task.type === TaskType.GRADE;
   const locked = lockReason !== null;
-  const [hasRecorded, setHasRecorded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const sorted = [...students].sort((a, b) => a.seatNumber - b.seatNumber);
 
-  // 指派提示（三種情況，spec US2 #3-5）
-  const assignmentNote =
+  // 登記者身份視覺：三種指派狀態（FR-071）
+  const assignmentState: AssignmentState =
     task.assignedSeatNumber == null
-      ? null
+      ? 'noAssignment'
       : task.assignedSeatNumber === mySeatNumber
-        ? { variant: 'success' as const, text: messages.identity.isAssigned }
-        : { variant: 'warning' as const, text: messages.identity.notAssigned };
-
-  const recordedCount = Object.keys(values).length;
+        ? 'assigned'
+        : 'notAssigned';
 
   return (
     <div className="space-y-3">
-      {/* 指派提示 */}
-      {assignmentNote && (
-        <div
-          className={cn(
-            'flex items-center gap-2 rounded-xl border-2 border-black p-3 text-sm font-medium',
-            assignmentNote.variant === 'success' ? 'bg-green-100 text-green-900' : 'bg-accent-100 text-slate-900'
-          )}
-        >
-          <Icon name="lucide:user-check" size={16} />
-          {assignmentNote.text}
-        </div>
-      )}
-
       {/* 鎖定唯讀提示（截止逾期 vs 已標記完成，兩種文案） */}
       {locked && (
         <div className="flex items-center gap-2 rounded-xl border-2 border-black bg-red-100 p-3 text-sm font-medium text-red-900">
@@ -79,27 +65,13 @@ export function RecordForm({
         </div>
       )}
 
-      {/* 登記者標示 */}
-      {hasRecorded && !locked && (
-        <div>
-          <RecorderBadge seatNumber={mySeatNumber} />
-        </div>
-      )}
+      {/* 登記者身份 badge（常駐，名單外框正上方）— 承諾裝置持續可見（FR-070/071） */}
+      <RecorderBadge seatNumber={mySeatNumber} assignmentState={assignmentState} onClick={onChangeSeat} />
 
       {/* 名單 */}
       <div className="card-sm">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3">
           <h3 className="text-sm font-bold text-slate-700">{messages.record.rosterTitle}</h3>
-          {!isGrade && (
-            <div className="flex items-center gap-1.5">
-              <StatusBadge variant="success" size="sm">
-                {messages.record.submittedCount(recordedCount)}
-              </StatusBadge>
-              <StatusBadge variant="danger" size="sm">
-                {messages.record.notSubmittedCount(students.length - recordedCount)}
-              </StatusBadge>
-            </div>
-          )}
         </div>
 
         <div className="grid gap-2">
@@ -110,10 +82,7 @@ export function RecordForm({
                 student={student}
                 value={values[student.id]?.gradeValue}
                 disabled={locked}
-                onChange={(grade) => {
-                  onChangeGrade(student.id, grade);
-                  setHasRecorded(true);
-                }}
+                onChange={(grade) => onChangeGrade(student.id, grade)}
               />
             ) : (
               <SubmissionRow
@@ -121,10 +90,7 @@ export function RecordForm({
                 student={student}
                 submitted={values[student.id]?.submissionStatus === SubmissionStatus.SUBMITTED}
                 disabled={locked}
-                onToggle={(submitted) => {
-                  onToggleSubmission(student.id, submitted);
-                  setHasRecorded(true);
-                }}
+                onToggle={(submitted) => onToggleSubmission(student.id, submitted)}
               />
             )
           )}
