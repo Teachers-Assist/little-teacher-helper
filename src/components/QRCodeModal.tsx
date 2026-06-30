@@ -88,7 +88,7 @@ export function QRCodeModal({ roomCode, roomName, open, onClose }: QRCodeModalPr
       aria-label={roomName}
     >
       <div
-        className="flex max-h-full w-full max-w-xl flex-col items-center overflow-y-auto rounded-2xl bg-white p-8 text-center"
+        className="flex max-h-full w-full max-w-xl flex-col items-center rounded-2xl bg-white p-6 text-center"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -100,32 +100,32 @@ export function QRCodeModal({ roomCode, roomName, open, onClose }: QRCodeModalPr
           <Icon name="lucide:x" size={22} />
         </button>
 
-        <h2 className="mb-6 text-3xl font-bold text-slate-900">{roomName}</h2>
+        <h2 className="mb-4 shrink-0 text-2xl font-bold text-slate-900">{roomName}</h2>
 
-        <div className="rounded-2xl border-2 border-black bg-white p-3">
-          {qrUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={qrUrl}
-              alt={`QR Code ${roomCode}`}
-              width={480}
-              height={480}
-              className="h-auto w-full max-w-[480px]"
-            />
-          ) : (
-            <div className="flex h-[480px] w-[480px] max-w-full items-center justify-center">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500" />
-            </div>
-          )}
-        </div>
+        {/* QR：等比方形，依「可用寬度」與「視窗剩餘高度」雙重夾住縮放，
+            確保整體（含下方按鈕）不需捲動；不依賴 flex 高度解析。 */}
+        {qrUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={qrUrl}
+            alt={`QR Code ${roomCode}`}
+            width={480}
+            height={480}
+            className="h-auto w-auto max-h-[min(480px,calc(100dvh-280px))] max-w-[min(480px,100%)] rounded-2xl border-2 border-black bg-white object-contain p-3"
+          />
+        ) : (
+          <div className="flex aspect-square w-full max-w-[480px] items-center justify-center rounded-2xl border-2 border-black bg-white">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500" />
+          </div>
+        )}
 
-        <div className="mt-6 inline-flex items-center rounded-xl bg-slate-100 px-8 py-4">
-          <span className="font-mono text-4xl font-bold tracking-[0.3em] text-slate-900">
+        <div className="mt-4 inline-flex shrink-0 items-center rounded-xl bg-slate-100 px-6 py-3">
+          <span className="font-mono text-3xl font-bold tracking-[0.3em] text-slate-900">
             {roomCode}
           </span>
         </div>
 
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mt-4 flex shrink-0 flex-wrap justify-center gap-2">
           <Button variant="primary" size="sm" onClick={handleFullscreen}>
             <Icon name="lucide:maximize" size={15} />
             {messages.teacher.qrcode.fullscreen}

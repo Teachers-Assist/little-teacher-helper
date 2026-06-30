@@ -66,6 +66,16 @@
 .card-title   卡片內標題（text-sm font-semibold text-slate-700 mb-3）
 ```
 
+### 統計小卡
+
+```
+.stat-tile        容器：大數字 + 圖示標籤，水平排列省垂直空間（比 card-sm 矮）
+.stat-tile-value  數值（text-xl → sm:text-2xl、font-bold；顏色由 tone 控制）
+.stat-tile-label  標籤（text-xs、slate-500 次要文字 + 圖示）
+```
+
+> 對應 `<StatTile>` 元件，供 Dashboard（`DashboardStats`）與班級狀況（`MonitoringStats`）統計列共用。
+
 ### 表單輸入
 
 ```
@@ -87,6 +97,7 @@
 ```
 .nav-item        未選中狀態
 .nav-item-active 選中狀態（搭配 .nav-item 使用）
+.nav-subitem     子層導覽（「我的班級」展開的班級清單；較 nav-item 小一號、slate-700 font-medium）
 ```
 
 ### 頁面文字
@@ -94,6 +105,7 @@
 ```
 .page-title    主標題（text-xl font-bold text-slate-900）
 .page-subtitle 副標題（text-sm text-slate-500 mt-0.5）
+.link-back     返回連結（小型 icon + 文字，hover 轉主色；margin 等間距留在 JSX）
 ```
 
 ### 特殊狀態容器
@@ -202,6 +214,7 @@ const USED_ICONS = [
 | `<Card>` | `variant`, `size` | variant: `default/elevated/bordered` |
 | `<CardHeader>` `<CardTitle>` `<CardContent>` `<CardFooter>` | — | Card 子元件 |
 | `<StatusBadge>` | `variant`, `dot`, `size` | 同 badge-* 色系 |
+| `<StatTile>` | `label`, `value`, `icon`, `tone` | 統計小卡，視覺在 `.stat-tile*` |
 | `<Icon>` | `name`, `size`, `className` | 見圖示系統章節 |
 
 ---

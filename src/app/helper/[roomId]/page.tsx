@@ -79,7 +79,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
     <div className="min-h-screen bg-amber-50 pb-24">
       <div className="lp-header">
         <div className="lp-body-narrow" style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
-          <Link href="/join" className="mb-1.5 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600">
+          <Link href="/join" className="mb-1.5 link-back">
             <Icon name="lucide:arrow-left" size={13} />
             {messages.room.leave}
           </Link>

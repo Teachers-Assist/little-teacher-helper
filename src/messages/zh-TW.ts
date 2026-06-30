@@ -42,6 +42,7 @@ export const messages = {
     myClasses: '我的班級',
     expandClasses: '展開班級清單',
     noClassYet: '還沒建立班級喔',
+    tasks: '任務列表',
   },
 
   // 首頁
@@ -332,6 +333,7 @@ export const messages = {
 
     // ─── 002 新增：任務列項操作 / 徽章 ─────────────────────────
     taskList: {
+      edit: '編輯',
       archive: '封存',
       archivedDrawer: '已封存任務',
       archiveConfirmTitle: '封存任務',

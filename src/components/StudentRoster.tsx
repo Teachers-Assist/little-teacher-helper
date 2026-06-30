@@ -45,7 +45,7 @@ function StudentRosterComponent({ students, onEdit, onRemove, editingId }: Stude
         <li
           key={student.id}
           className={cn(
-            'flex items-center gap-3 rounded-lg border-2 border-black bg-white px-3 py-2.5',
+            'flex items-center gap-3 rounded-lg border-2 border-black bg-white px-3 py-1.5',
             editingId === student.id && 'ring-2 ring-primary-400'
           )}
         >

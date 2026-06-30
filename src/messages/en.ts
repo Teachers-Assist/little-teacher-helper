@@ -14,7 +14,8 @@ export const messages = {
     offlineHint: 'No internet — data saved on this device and will upload when reconnected',
     pendingSync: 'Pending upload',
     error: 'Something went wrong. Please try again.',
-    networkError: "Can't connect to the internet. Your data is safe on this device — try again when you're back online.",
+    networkError:
+      "Can't connect to the internet. Your data is safe on this device — try again when you're back online.",
     confirm: 'Confirm',
     cancel: 'Cancel',
     back: 'Back',
@@ -27,7 +28,8 @@ export const messages = {
   // App metadata (browser tab, PWA)
   app: {
     name: 'Little Teacher Helper',
-    description: 'A PWA app that lets student helpers collect forms and record assignment submissions',
+    description:
+      'A PWA app that lets student helpers collect forms and record assignment submissions',
   },
 
   // Sidebar navigation
@@ -42,6 +44,7 @@ export const messages = {
     myClasses: 'My Classes',
     expandClasses: 'Expand class list',
     noClassYet: 'No classes yet',
+    tasks: 'Tasks',
   },
 
   // Home page
@@ -51,7 +54,8 @@ export const messages = {
     teacherDesc: 'Create classes, manage student lists, and view submission reports',
     teacherCta: 'Go to Teacher Panel',
     helperTitle: "I'm a Student Helper",
-    helperDesc: "Scan your teacher's QR code to join your class and help record who's turned in their work",
+    helperDesc:
+      "Scan your teacher's QR code to join your class and help record who's turned in their work",
     helperCta: 'Scan QR Code to Join',
     featureFastTitle: 'Fast Recording',
     featureFastDesc: 'One tap updates instantly',
@@ -72,18 +76,22 @@ export const messages = {
     startScan: 'Start Scanning',
     stopScan: 'Stop Scanning',
     cancelScan: 'Cancel',
-    invalid: "Hmm, that QR code doesn't look right! Please scan the class QR code your teacher gave you.", // DEPRECATED: replaced by codeNotOurs (003 US1)
+    invalid:
+      "Hmm, that QR code doesn't look right! Please scan the class QR code your teacher gave you.", // DEPRECATED: replaced by codeNotOurs (003 US1)
     // 003 US1: child-friendly error messages
     codeNotOurs: "That QR code doesn't look like one from your teacher. Try again?",
-    permissionDenied: "You haven't allowed camera access yet. Ask your teacher for help — or just type the class code below.",
-    cameraUnsupported: "The camera doesn't work on this device. You can type the code below instead.",
-    failureUpgrade: "Not working after a few tries. Time to ask your teacher.",
+    permissionDenied:
+      "You haven't allowed camera access yet. Ask your teacher for help — or just type the class code below.",
+    cameraUnsupported:
+      "The camera doesn't work on this device. You can type the code below instead.",
+    failureUpgrade: 'Not working after a few tries. Time to ask your teacher.',
     noNetwork: 'No internet right now. Try again where you can find WiFi.',
     orManual: 'Or type it in',
     roomCode: 'Class Code',
     codePlaceholder: 'e.g. ABC123',
     emptyCode: "Oops! You haven't typed in a class code yet.",
-    joinFailedRetry: "Couldn't join the class. Did you type the code right? Check it and try again!",
+    joinFailedRetry:
+      "Couldn't join the class. Did you type the code right? Check it and try again!",
     // --- Teacher-facing (display / share) ---
     generating: 'Generating QR code...',
     generateFailed: 'Failed to generate QR code',
@@ -92,7 +100,8 @@ export const messages = {
     codeCopied: 'Code copied to clipboard',
     urlCopied: 'Link copied to clipboard',
     copyFailed: 'Copy failed. Please copy it manually.',
-    instruction: 'Have your student helper scan this QR code, or enter the code above to join the class.',
+    instruction:
+      'Have your student helper scan this QR code, or enter the code above to join the class.',
   },
 
   // Network / sync status — student-facing
@@ -114,15 +123,18 @@ export const messages = {
   // Error / not found pages
   errorPage: {
     notFoundTitle: 'Page Not Found',
-    notFoundDesc: 'The page you were looking for may have been removed, renamed, or is temporarily unavailable.',
+    notFoundDesc:
+      'The page you were looking for may have been removed, renamed, or is temporarily unavailable.',
     teacherEntry: 'Teacher Portal',
     helperEntry: 'Student Helper Portal',
     errorTitle: 'Something Went Wrong',
     errorHeading: 'Something went wrong',
-    errorDesc: 'Sorry, the app ran into a problem. Please try reloading the page or come back later.',
+    errorDesc:
+      'Sorry, the app ran into a problem. Please try reloading the page or come back later.',
     globalTitle: 'Critical Error',
     globalHeading: 'A critical error occurred',
-    globalDesc: 'Sorry, an unrecoverable error has occurred. Please reload the page or contact technical support.',
+    globalDesc:
+      'Sorry, an unrecoverable error has occurred. Please reload the page or contact technical support.',
   },
 
   // Student-facing — joining a class
@@ -190,7 +202,7 @@ export const messages = {
     completedNote: 'Marked: Recording Complete',
     // Two read-only lock states
     lockedCompleted:
-      "You already marked this done! If you need to make changes, ask your teacher to reopen it.",
+      'You already marked this done! If you need to make changes, ask your teacher to reopen it.',
     lockedDuePassed:
       "The due date has passed, so this task is now locked. Data has a deadline — once it's over, it can't be changed anymore. If you still need to record something, go find your teacher!",
   },
@@ -202,7 +214,8 @@ export const messages = {
     statusHeader: 'Submission Status',
     listAria: 'Student submission status list',
     seatAria: (n: number) => `Seat ${n}`,
-    toggleAria: (name: string, submitted: boolean) => `${name}, ${submitted ? 'submitted' : 'not submitted'}`,
+    toggleAria: (name: string, submitted: boolean) =>
+      `${name}, ${submitted ? 'submitted' : 'not submitted'}`,
     submittedCount: (n: number) => `${n} submitted`,
     notSubmittedCount: (n: number) => `${n} not in`,
     progress: (percent: number) => `${percent}% done`,
@@ -330,18 +343,21 @@ export const messages = {
     closeTitle: 'Close Task',
     closeConfirm: 'Closing this task will stop all further recording.',
     deleteTitle: 'Delete Task',
-    deleteConfirm: 'Deleting this task will permanently remove all its records and cannot be undone.',
+    deleteConfirm:
+      'Deleting this task will permanently remove all its records and cannot be undone.',
 
     // ─── 002 new: task form (inline mode switching) ────────────
     taskForm: {
       editing: (name: string) => `Editing: ${name}`,
       cancelEdit: 'Cancel Edit',
       dueDatePastError: 'Due date cannot be in the past',
-      dueDateExpiredHint: (date: string) => `Original due date ${date} has passed. Please reset or leave blank.`,
+      dueDateExpiredHint: (date: string) =>
+        `Original due date ${date} has passed. Please reset or leave blank.`,
     },
 
     // ─── 002 new: task list actions / badges ───────────────────
     taskList: {
+      edit: 'Edit',
       archive: 'Archive',
       archivedDrawer: 'Archived Tasks',
       archiveConfirmTitle: 'Archive Task',
@@ -364,7 +380,8 @@ export const messages = {
       import: 'Upload Excel',
       importTemplate: 'Download Template',
       importTitle: 'Bulk Import Students',
-      importHint: 'Download the template, fill in seat numbers and names, then upload to import the whole class at once.',
+      importHint:
+        'Download the template, fill in seat numbers and names, then upload to import the whole class at once.',
       importing: 'Parsing...',
       importSuccess: (count: number) => `Imported ${count} student${count === 1 ? '' : 's'}`,
       importConflict: 'Import has conflicts. Please fix and retry.',

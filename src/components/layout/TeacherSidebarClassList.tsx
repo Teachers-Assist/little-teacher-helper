@@ -80,7 +80,7 @@ export function TeacherSidebarClassList({ onNavigate }: TeacherSidebarClassListP
                 key={room.id}
                 href={`/teacher/rooms/${room.id}`}
                 onClick={onNavigate}
-                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-slate-600 hover:bg-accent-100 hover:text-black"
+                className="nav-subitem"
               >
                 <span className="flex-1 truncate">{room.name}</span>
                 {room.inProgressTaskCount > 0 && (

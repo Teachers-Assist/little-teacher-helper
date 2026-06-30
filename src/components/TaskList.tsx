@@ -41,12 +41,13 @@ export function TaskList({ roomId, tasks, mySeatNumber }: TaskListProps) {
             <div className="card-sm card-hover">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <h3 className="font-bold text-slate-900">{task.name}</h3>
-                <Icon name="lucide:pen-line" size={16} className="flex-shrink-0 text-slate-400" />
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">
-                  {task.type === TaskType.GRADE ? messages.task.typeGrade : messages.task.typeSubmission}
+                  {task.type === TaskType.GRADE
+                    ? messages.task.typeGrade
+                    : messages.task.typeSubmission}
                 </StatusBadge>
 
                 {isMine && (
@@ -57,18 +58,26 @@ export function TaskList({ roomId, tasks, mySeatNumber }: TaskListProps) {
                 )}
 
                 {task.status === TaskStatus.HELPER_COMPLETED && (
-                  <StatusBadge variant="success" size="sm">{messages.task.statusHelperCompleted}</StatusBadge>
+                  <StatusBadge variant="success" size="sm">
+                    {messages.task.statusHelperCompleted}
+                  </StatusBadge>
                 )}
                 {task.status === TaskStatus.CLOSED && (
-                  <StatusBadge variant="neutral" size="sm">{messages.task.statusClosed}</StatusBadge>
+                  <StatusBadge variant="neutral" size="sm">
+                    {messages.task.statusClosed}
+                  </StatusBadge>
                 )}
                 {lock === 'DUE_PASSED' && (
-                  <StatusBadge variant="danger" size="sm">{messages.task.statusActiveOverdue}</StatusBadge>
+                  <StatusBadge variant="danger" size="sm">
+                    {messages.task.statusActiveOverdue}
+                  </StatusBadge>
                 )}
               </div>
 
               <p className="mt-2 text-xs text-slate-400">
-                {task.dueDate ? messages.task.dueLabel(formatDate(task.dueDate)) : messages.task.noDue}
+                {task.dueDate
+                  ? messages.task.dueLabel(formatDate(task.dueDate))
+                  : messages.task.noDue}
               </p>
             </div>
           </Link>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon } from '@/components/ui/Icon';
+import { StatTile } from '@/components/ui/StatTile';
 import { useMessages } from '@/i18n/MessagesProvider';
 import type { DashboardStatsData } from './types';
 
@@ -32,13 +32,7 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       {cards.map((c) => (
-        <div key={c.label} className="card-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs text-slate-400">
-            <Icon name={c.icon} size={13} />
-            {c.label}
-          </div>
-          <p className={`text-2xl font-bold ${c.tone}`}>{c.value}</p>
-        </div>
+        <StatTile key={c.label} label={c.label} value={c.value} icon={c.icon} tone={c.tone} />
       ))}
     </div>
   );

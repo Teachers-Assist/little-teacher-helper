@@ -75,13 +75,11 @@ export function TasksView({ tasks }: { tasks: DashboardTask[] }) {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-slate-900">
-                  <span className="text-slate-400">{task.roomName}</span>
-                  <span className="mx-1.5 text-slate-300">·</span>
-                  {task.name}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-400">
+                <p className="truncate text-sm font-bold text-slate-900">{task.name}</p>
+                <p className="mt-0.5 truncate text-xs text-slate-400">
                   {messages.teacher.dashboard.recordedRatio(task.recordedCount, task.studentCount)}
+                  <span className="mx-1.5 text-slate-300">·</span>
+                  <span>{task.roomName}</span>
                 </p>
               </div>
               <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">

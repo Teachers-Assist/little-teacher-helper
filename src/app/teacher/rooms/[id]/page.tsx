@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Menu } from '@/components/ui/Menu';
 import { useToast } from '@/components/ui/Toast';
 import { StudentRoster, type RosterStudent } from '@/components/StudentRoster';
 import { StudentForm, type EditingStudent } from '@/components/StudentForm';
@@ -16,7 +17,7 @@ import { ArchivedTasksDrawer } from '@/components/ArchivedTasksDrawer';
 import { MonitoringStats, type MonitoringStatsData } from '@/components/MonitoringStats';
 import { MonitoringAlerts, type MonitoringWarning } from '@/components/MonitoringAlerts';
 import { QRCodeModal } from '@/components/QRCodeModal';
-import { Student, Task, TaskType, TaskStatus } from '@/types';
+import { Student, Task, TaskStatus } from '@/types';
 import { getTaskDisplayState, type TaskBadge } from '@/lib/task';
 import { cn, formatDate } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
@@ -328,8 +329,18 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
 
   const tabs = [
     { id: 'report', label: messages.teacher.classStatus.tab, icon: 'lucide:activity', count: null },
-    { id: 'students', label: messages.teacher.tabStudents, icon: 'lucide:users', count: students.length },
-    { id: 'tasks', label: messages.teacher.tabTasks, icon: 'lucide:clipboard-list', count: tasks.length },
+    {
+      id: 'students',
+      label: messages.teacher.tabStudents,
+      icon: 'lucide:users',
+      count: students.length,
+    },
+    {
+      id: 'tasks',
+      label: messages.teacher.tabTasks,
+      icon: 'lucide:clipboard-list',
+      count: tasks.length,
+    },
   ] as const;
 
   const badgeMeta: Record<TaskBadge, { variant: StatusBadgeVariant; label: string }> = {
@@ -403,188 +414,192 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {activeTab !== 'report' && (
-        <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
-          {/* 表單欄（反饋 #2/#3）：較大、置於右側（手機在下方），編輯時捲動至此 */}
-          <div
-            ref={formColRef}
-            className="order-2 space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto"
-          >
-            {activeTab === 'students' && (
-              <>
-                <div className="card-sm">
-                  <StudentForm
-                    roomId={id}
-                    editing={editingStudent}
-                    onSaved={handleStudentSaved}
-                    onCancelEdit={() => setEditingStudent(null)}
-                  />
-                </div>
-                <div className="card-sm">
-                  <h3 className="card-title">{messages.teacher.studentList.importTitle}</h3>
-                  <StudentImport roomId={id} onImported={(created) =>
-                    setStudents((prev) => sortStudents([...prev, ...created]))
-                  } />
-                </div>
-              </>
-            )}
-
-            {activeTab === 'tasks' && (
-              <>
-                <div className="card-sm">
-                  <TaskForm
-                    roomId={id}
-                    editing={editingTask}
-                    editSource={editTaskSource}
-                    seatOptions={seatOptions}
-                    onSaved={handleTaskSaved}
-                    onCancelEdit={() => {
-                      setEditingTask(null);
-                      setEditTaskSource('normal');
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-          </div>
-
-          {/* 列表欄（反饋 #3）：較小、置於左側（手機在上方） */}
-          <div className="order-1 flex flex-col lg:w-2/5 lg:shrink-0 lg:min-h-0">
-            {activeTab === 'students' && (
-              <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
-                <div className="mb-3 flex shrink-0 items-center justify-between">
-                  <h3 className="card-title mb-0">{messages.teacher.studentRoster}</h3>
-                  <Button variant="outline" size="sm" onClick={() => setRemovedDrawerOpen(true)}>
-                    <Icon name="lucide:archive" size={14} />
-                    {messages.teacher.studentList.removedDrawer}
-                  </Button>
-                </div>
-                <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-                  <StudentRoster
-                    students={students}
-                    editingId={editingStudent?.id ?? null}
-                    onEdit={(s) =>
-                      setEditingStudent({ id: s.id, name: s.name, seatNumber: s.seatNumber })
-                    }
-                    onRemove={(s) => setConfirm({ kind: 'removeStudent', student: s })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tasks' && (
-              <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
-                <div className="mb-3 flex shrink-0 items-center justify-between">
-                  <h3 className="card-title mb-0">{messages.teacher.taskListTitle}</h3>
-                  <Button variant="outline" size="sm" onClick={() => setArchivedDrawerOpen(true)}>
-                    <Icon name="lucide:archive" size={14} />
-                    {messages.teacher.taskList.archivedDrawer}
-                  </Button>
-                </div>
-                {tasks.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <Icon name="lucide:clipboard-list" size={36} className="mx-auto mb-2 text-slate-200" />
-                    <p className="text-sm text-slate-500">{messages.teacher.noTasks}</p>
-                    <p className="mt-1 text-xs text-slate-400">{messages.teacher.noTasksHint}</p>
+          <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
+            {/* 表單欄（反饋 #2/#3）：較大、置於右側（手機在下方），編輯時捲動至此 */}
+            <div
+              ref={formColRef}
+              className="order-2 space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto"
+            >
+              {activeTab === 'students' && (
+                <>
+                  <div className="card-sm">
+                    <StudentForm
+                      roomId={id}
+                      editing={editingStudent}
+                      onSaved={handleStudentSaved}
+                      onCancelEdit={() => setEditingStudent(null)}
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-                    {tasks.map((task) => {
-                      const display = getTaskDisplayState(task);
-                      const badge = badgeMeta[display.badge];
-                      return (
-                        <div
-                          key={task.id}
-                          className={cn(
-                            'rounded-lg border-2 border-black bg-white px-4 py-3',
-                            editingTask?.id === task.id && 'ring-2 ring-primary-400'
-                          )}
-                        >
-                          {/* 反饋 #1：整個卡片上半部可點進任務細節 */}
-                          <Link
-                            href={`/teacher/tasks/${id}/${task.id}`}
-                            className="group flex items-start justify-between gap-3"
+                  <div className="card-sm">
+                    <h3 className="card-title">{messages.teacher.studentList.importTitle}</h3>
+                    <StudentImport
+                      roomId={id}
+                      onImported={(created) =>
+                        setStudents((prev) => sortStudents([...prev, ...created]))
+                      }
+                    />
+                  </div>
+                </>
+              )}
+              {activeTab === 'tasks' && (
+                <>
+                  <div className="card-sm">
+                    <TaskForm
+                      roomId={id}
+                      editing={editingTask}
+                      editSource={editTaskSource}
+                      seatOptions={seatOptions}
+                      onSaved={handleTaskSaved}
+                      onCancelEdit={() => {
+                        setEditingTask(null);
+                        setEditTaskSource('normal');
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 列表欄（反饋 #3）：較小、置於左側（手機在上方） */}
+            <div className="order-1 flex flex-col lg:w-2/5 lg:shrink-0 lg:min-h-0">
+              {activeTab === 'students' && (
+                <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
+                  <div className="mb-3 flex shrink-0 items-center justify-between">
+                    <h3 className="card-title mb-0">{messages.teacher.studentRoster}</h3>
+                    <Button variant="outline" size="sm" onClick={() => setRemovedDrawerOpen(true)}>
+                      <Icon name="lucide:archive" size={14} />
+                      {messages.teacher.studentList.removedDrawer}
+                    </Button>
+                  </div>
+                  <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                    <StudentRoster
+                      students={students}
+                      editingId={editingStudent?.id ?? null}
+                      onEdit={(s) =>
+                        setEditingStudent({ id: s.id, name: s.name, seatNumber: s.seatNumber })
+                      }
+                      onRemove={(s) => setConfirm({ kind: 'removeStudent', student: s })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'tasks' && (
+                <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
+                  <div className="mb-3 flex shrink-0 items-center justify-between">
+                    <h3 className="card-title mb-0">{messages.teacher.taskListTitle}</h3>
+                    <Button variant="outline" size="sm" onClick={() => setArchivedDrawerOpen(true)}>
+                      <Icon name="lucide:archive" size={14} />
+                      {messages.teacher.taskList.archivedDrawer}
+                    </Button>
+                  </div>
+                  {tasks.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <Icon
+                        name="lucide:clipboard-list"
+                        size={36}
+                        className="mx-auto mb-2 text-slate-200"
+                      />
+                      <p className="text-sm text-slate-500">{messages.teacher.noTasks}</p>
+                      <p className="mt-1 text-xs text-slate-400">{messages.teacher.noTasksHint}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                      {tasks.map((task) => {
+                        const display = getTaskDisplayState(task);
+                        const badge = badgeMeta[display.badge];
+                        return (
+                          <div
+                            key={task.id}
+                            className={cn(
+                              'flex items-center gap-3 rounded-lg border-2 border-black bg-white px-3 py-2',
+                              editingTask?.id === task.id && 'ring-2 ring-primary-400'
+                            )}
                           >
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-slate-900 group-hover:text-primary-700 group-hover:underline">
-                                {task.name}
+                            {/* 資訊區（可點進細節）：badges 置於名稱上方，名稱/meta 取得整行寬度，避免被擠掉 */}
+                            <Link
+                              href={`/teacher/tasks/${id}/${task.id}`}
+                              className="group min-w-0 flex-1"
+                            >
+                              <p className="truncate text-base font-bold text-slate-900 group-hover:text-primary-700 group-hover:underline">
+                                <span className="mr-2">{task.name}</span>
+                                <StatusBadge variant={badge.variant} size="sm">
+                                  {badge.label}
+                                </StatusBadge>
                               </p>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-400">
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
                                 <span>
-                                  {messages.teacher.recorded(task._count?.records ?? 0, students.length)}
+                                  {messages.teacher.recorded(
+                                    task._count?.records ?? 0,
+                                    students.length
+                                  )}
                                 </span>
                                 {task.assignedSeatNumber != null && (
-                                  <span>{messages.teacher.assignedSeatLabel(task.assignedSeatNumber)}</span>
+                                  <span>
+                                    {messages.teacher.assignedSeatLabel(task.assignedSeatNumber)}
+                                  </span>
                                 )}
                                 {task.dueDate && (
                                   <span>{messages.task.dueLabel(formatDate(task.dueDate))}</span>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex flex-shrink-0 items-center gap-1.5">
-                              <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">
-                                {task.type === TaskType.GRADE
-                                  ? messages.task.typeGrade
-                                  : messages.task.typeSubmission}
-                              </StatusBadge>
-                              <StatusBadge variant={badge.variant} size="sm">
-                                {badge.label}
-                              </StatusBadge>
-                            </div>
-                          </Link>
+                            </Link>
 
-                          {/* 操作區：依 (status, dueDate) 派生 */}
-                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2.5">
-                            {display.actions.includes('extendDue') && (
-                              <Button variant="primary" size="sm" onClick={() => handleExtendDue(task)}>
-                                <Icon name="lucide:calendar-clock" size={13} />
-                                {messages.teacher.taskList.extendDue}
-                              </Button>
-                            )}
-                            {display.actions.includes('reopen') && (
-                              <Button variant="outline" size="sm" onClick={() => handleReopen(task)}>
-                                <Icon name="lucide:rotate-ccw" size={13} />
-                                {messages.teacher.reopen}
-                              </Button>
-                            )}
-                            {display.actions.includes('close') && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setConfirm({ kind: 'closeTask', task })}
-                              >
-                                {messages.teacher.close}
-                              </Button>
-                            )}
-                            <div className="ml-auto flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleEditTask(task)}
-                                aria-label={messages.common.edit(task.name)}
-                                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-primary-600"
-                              >
-                                <Icon name="lucide:pencil" size={15} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirm({ kind: 'archiveTask', task })}
-                                aria-label={messages.teacher.taskList.archive}
-                                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600"
-                              >
-                                <Icon name="lucide:archive" size={15} />
-                              </button>
+                            {/* 操作區：inline 只留主操作（結案 / 重新開放），其餘收進 ⋮，維持每張卡右緣對齊 */}
+                            <div className="flex shrink-0 items-center gap-1">
+                              {display.actions.includes('close') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setConfirm({ kind: 'closeTask', task })}
+                                >
+                                  {messages.teacher.close}
+                                </Button>
+                              )}
+                              {display.actions.includes('reopen') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReopen(task)}
+                                >
+                                  <Icon name="lucide:rotate-ccw" size={13} />
+                                  {messages.teacher.reopen}
+                                </Button>
+                              )}
+                              <Menu
+                                label={messages.common.edit(task.name)}
+                                items={[
+                                  ...(display.actions.includes('extendDue')
+                                    ? [
+                                        {
+                                          label: messages.teacher.taskList.extendDue,
+                                          icon: 'lucide:calendar-clock',
+                                          onClick: () => handleExtendDue(task),
+                                        },
+                                      ]
+                                    : []),
+                                  {
+                                    label: messages.teacher.taskList.edit,
+                                    icon: 'lucide:pencil',
+                                    onClick: () => handleEditTask(task),
+                                  },
+                                  {
+                                    label: messages.teacher.taskList.archive,
+                                    icon: 'lucide:archive',
+                                    onClick: () => setConfirm({ kind: 'archiveTask', task }),
+                                  },
+                                ]}
+                              />
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* US4：班級狀況 tab —— 全寬統計 + 警告（取代原報表 tab） */}

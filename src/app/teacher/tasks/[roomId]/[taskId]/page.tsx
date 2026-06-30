@@ -94,6 +94,13 @@ export default function TaskDetailPage({
   return (
     <>
       <div className="page-header">
+        <Link
+          href={`/teacher/rooms/${roomId}?tab=tasks`}
+          className="mb-1.5 link-back"
+        >
+          <Icon name="lucide:arrow-left" size={13} />
+          {messages.nav.tasks}
+        </Link>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-bold text-slate-900">{task.name}</h1>
           <StatusBadge variant={task.type === TaskType.GRADE ? 'info' : 'neutral'} size="sm">

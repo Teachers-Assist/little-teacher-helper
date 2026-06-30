@@ -117,6 +117,16 @@
   }
   .card-title { @apply text-sm font-bold text-slate-800 mb-3; }
 
+  /* ── Stat tile（統計小卡：大數字 + 圖示標籤，水平排列省空間） ───────── */
+
+  .stat-tile {
+    @apply flex items-center gap-2 rounded-xl border-2 border-black bg-white;
+    padding: 0.5rem 0.625rem; /* 比 card-sm 矮，數字與標籤同一行 */
+    box-shadow: 4px 4px 0 #000;
+  }
+  .stat-tile-value { @apply shrink-0 text-xl font-bold leading-none sm:text-2xl; }
+  .stat-tile-label { @apply flex min-w-0 items-center gap-1 text-xs leading-tight text-slate-500; }
+
   /* ── Form inputs ─────────────────────────────────────────────────────── */
 
   .input {
@@ -161,11 +171,33 @@
     @apply bg-accent-300 text-black font-bold;
     border: 2px solid #000;
   }
+  /* 子層導覽（「我的班級」展開的班級清單）：較 nav-item 小一號，但仍清楚可讀 */
+  .nav-subitem {
+    @apply flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium
+           text-slate-700 transition-colors hover:bg-accent-100 hover:text-black;
+  }
+
+  /* ── Overflow 選單（⋮ 下拉，portal 到 body、fixed 定位） ──────────────── */
+
+  .menu-panel {
+    @apply fixed z-50 min-w-36 overflow-hidden rounded-lg border-2 border-black bg-white py-1;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700
+           transition-colors hover:bg-accent-100 hover:text-black;
+  }
+  .menu-item-danger {
+    @apply text-red-600 hover:bg-red-50 hover:text-red-700;
+  }
 
   /* ── Page structure ──────────────────────────────────────────────────── */
 
   .page-title    { @apply text-xl font-bold text-slate-900; }
   .page-subtitle { @apply text-sm text-slate-600 mt-0.5; }
+
+  /* 返回連結（小型 icon + 文字，hover 轉主色）。margin 等版面間距留在 JSX。 */
+  .link-back { @apply inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600; }
 
   /* ── Empty states ────────────────────────────────────────────────────── */
 
