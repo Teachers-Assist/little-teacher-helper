@@ -66,13 +66,7 @@ export const messages = {
   qr: {
     enterTitle: '加入班級',
     enterHint: '掃描 QRCode 或輸入班級代碼',
-    scanTitle: '掃描 QRCode',
-    tapToOpenCamera: '點此開啟相機',
-    scanInstruction: '點擊下方按鈕開啟相機掃描 QRCode',
     startScan: '開始掃描',
-    stopScan: '停止掃描',
-    cancelScan: '取消掃描',
-    invalid: '這個 QRCode 不對，請掃描老師給你的班級 QRCode', // DEPRECATED：由 codeNotOurs 取代（003 US1）
     // 003 US1：兒童語氣錯誤訊息
     codeNotOurs: '這個 QR Code 好像不是老師給的喔，再試一次吧',
     permissionDenied: '你沒允許我看到相機，去找老師幫你打開吧。你也可以在下面直接打班級代碼',

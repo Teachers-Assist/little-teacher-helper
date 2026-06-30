@@ -70,14 +70,7 @@ export const messages = {
     // --- Student-facing (join flow) ---
     enterTitle: 'Join Your Class',
     enterHint: 'Scan a QR code or type in the class code',
-    scanTitle: 'Scan QR Code',
-    tapToOpenCamera: 'Tap here to open the camera',
-    scanInstruction: 'Tap the button below to open the camera and scan the QR code',
     startScan: 'Start Scanning',
-    stopScan: 'Stop Scanning',
-    cancelScan: 'Cancel',
-    invalid:
-      "Hmm, that QR code doesn't look right! Please scan the class QR code your teacher gave you.", // DEPRECATED: replaced by codeNotOurs (003 US1)
     // 003 US1: child-friendly error messages
     codeNotOurs: "That QR code doesn't look like one from your teacher. Try again?",
     permissionDenied:

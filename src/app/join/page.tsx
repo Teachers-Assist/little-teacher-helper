@@ -1,44 +1,92 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { QRScanner } from '@/components/QRScanner';
 import { useMessages } from '@/i18n/MessagesProvider';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useFailureCounter } from '@/hooks/useFailureCounter';
 
 export default function JoinPage() {
   const messages = useMessages();
+  const router = useRouter();
+  const { isOnline } = useNetworkStatus();
+  const failure = useFailureCounter(3);
+
   const [roomCode, setRoomCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-  const router = useRouter();
+  const [cameraHidden, setCameraHidden] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleJoin = async (code: string) => {
-    if (!code.trim()) {
+  // 進入頁面即偵測是否支援取得相機串流；不支援則隱藏相機區並聚焦輸入框（FR-063 / AS4）
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && !navigator.mediaDevices?.getUserMedia) {
+      setCameraHidden(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, []);
+
+  const focusInput = () => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const attemptJoin = async (raw: string) => {
+    const code = raw.trim().toUpperCase();
+    if (!code) {
       setError(messages.qr.emptyCode);
+      return;
+    }
+    if (!isOnline) {
+      setError(messages.qr.noNetwork);
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      router.push(`/join/${code.toUpperCase()}`);
+      // 先驗證房間碼存在，才導頁；失敗計數用於連續錯誤升級訊息（FR-065）
+      const res = await fetch(`/api/rooms/join/${code}`);
+      if (!res.ok) {
+        const nextCount = failure.count + 1;
+        failure.increment();
+        setError(nextCount >= 3 ? messages.qr.failureUpgrade : messages.join.roomNotFound);
+        return;
+      }
+      failure.reset();
+      router.push(`/join/${code}`);
     } catch {
-      setError(messages.qr.joinFailedRetry);
+      setError(messages.common.networkError);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    await handleJoin(roomCode);
+    attemptJoin(roomCode);
   };
 
   const handleScan = (code: string) => {
     setShowScanner(false);
-    handleJoin(code);
+    attemptJoin(code);
+  };
+
+  const handlePermissionDenied = () => {
+    // 相機權限被拒：退回開始狀態 + 提示 + 自動聚焦輸入框（FR-062 / AS3）
+    setShowScanner(false);
+    setError(messages.qr.permissionDenied);
+    focusInput();
+  };
+
+  const handleUnsupported = () => {
+    // 沒有可用相機：隱藏相機區 + 聚焦輸入框（FR-063 / AS4）
+    setShowScanner(false);
+    setCameraHidden(true);
+    setError(messages.qr.cameraUnsupported);
+    focusInput();
   };
 
   return (
@@ -53,52 +101,66 @@ export default function JoinPage() {
           <p className="mt-1 text-sm text-slate-500">{messages.qr.enterHint}</p>
         </div>
 
-        <div className="rounded-xl border-2 border-black bg-white p-6 space-y-5">
-          {/* QR Scanner */}
-          {showScanner ? (
-            <div>
-              <QRScanner onScan={handleScan} onError={(err) => setError(err)} />
-              <Button
-                variant="outline"
-                className="mt-3 w-full"
-                size="sm"
-                onClick={() => setShowScanner(false)}
-              >
-                {messages.qr.cancelScan}
-              </Button>
+        <div className="space-y-5 rounded-xl border-2 border-black bg-white p-6">
+          {/* 離線提示（AS7）：沒有網路時，掃描與送出都先停下 */}
+          {!isOnline && (
+            <div className="flex items-center gap-2 rounded-lg border-2 border-black bg-accent-100 p-3 text-sm font-medium text-slate-900">
+              <Icon name="lucide:wifi-off" size={16} />
+              {messages.qr.noNetwork}
             </div>
-          ) : (
-            <button
-              onClick={() => setShowScanner(true)}
-              className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-black bg-accent-100 py-7 text-center transition-colors hover:border-primary-400 hover:bg-primary-100"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white">
-                <Icon name="lucide:camera" size={24} className="text-primary-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-primary-700">{messages.qr.scanTitle}</p>
-                <p className="text-xs text-primary-500">{messages.qr.tapToOpenCamera}</p>
-              </div>
-            </button>
+          )}
+
+          {/* 相機掃描區（FR-060：預設單一「開始掃描」狀態，無中介虛線框、無取消鈕） */}
+          {!cameraHidden && (
+            <div>
+              {showScanner ? (
+                <QRScanner
+                  onScan={handleScan}
+                  onError={(err) => setError(err)}
+                  onPermissionDenied={handlePermissionDenied}
+                  onUnsupported={handleUnsupported}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border-2 border-black bg-accent-100">
+                    <Icon name="lucide:camera" size={28} className="text-primary-600" />
+                  </div>
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    onClick={() => {
+                      setError('');
+                      setShowScanner(true);
+                    }}
+                    disabled={!isOnline}
+                  >
+                    {messages.qr.startScan}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
+          {!cameraHidden && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-slate-400">{messages.qr.orManual}</span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-2 text-slate-400">{messages.qr.orManual}</span>
-            </div>
-          </div>
+          )}
 
-          {/* Manual Input */}
+          {/* 手動輸入 */}
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label htmlFor="roomCode" className="mb-1.5 block text-xs font-medium text-slate-500">
                 {messages.qr.roomCode}
               </label>
               <input
+                ref={inputRef}
                 type="text"
                 id="roomCode"
                 value={roomCode}
@@ -111,7 +173,13 @@ export default function JoinPage() {
 
             {error && <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</div>}
 
-            <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              isLoading={isLoading}
+              disabled={!isOnline}
+            >
               {messages.join.joinButton}
             </Button>
           </form>
