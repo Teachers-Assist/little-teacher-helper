@@ -165,6 +165,7 @@ export const messages = {
   identity: {
     selectSeatTitle: 'Pick Your Seat Number',
     selectSeatHint: 'Choose YOUR seat number — the app will remember that YOU did this recording!',
+    emptyRoster: "Your teacher hasn't set up the student list yet. Go ask your teacher!",
     seatLabel: (seat: number) => `Seat ${seat}`,
     isAssigned: "You're the one picked for this task — awesome, let's go!",
     notAssigned: "You weren't assigned to this task, but you can still go ahead and record it",

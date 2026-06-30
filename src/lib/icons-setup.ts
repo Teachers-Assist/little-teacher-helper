@@ -50,6 +50,8 @@ const USED_ICONS = [
   'archive',
   'calendar-clock',
   'rotate-ccw',
+  'party-popper',
+  'star',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;

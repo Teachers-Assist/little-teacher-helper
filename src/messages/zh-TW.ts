@@ -151,6 +151,7 @@ export const messages = {
   identity: {
     selectSeatTitle: '請選擇你的座號',
     selectSeatHint: '選你自己的座號，系統會記錄是「你」做了這次登記',
+    emptyRoster: '老師還沒有把學生名單建好，去找老師喔',
     seatLabel: (seat: number) => `${seat} 號`,
     isAssigned: '這次就是指定你！來吧，開始登記！',
     notAssigned: '這個任務不是指定給你的，不過你還是可以繼續登記。有問題記得去找老師',
