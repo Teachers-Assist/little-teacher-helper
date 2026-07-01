@@ -135,9 +135,23 @@
   }
   .input-lg { @apply px-4 py-2.5 text-base; }
 
+  /* ── Checkbox（neo-brutalist：黑框白底，勾選顯示 green-700 綠勾） ───────── */
+  .checkbox {
+    @apply shrink-0 cursor-pointer appearance-none rounded-md border-2 border-black bg-white
+           transition-colors
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1
+           disabled:cursor-not-allowed disabled:opacity-50;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 72%;
+  }
+  .checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+  }
+
   /* ── Badges ──────────────────────────────────────────────────────────── */
 
-  .badge     { @apply inline-flex items-center gap-1 rounded-full text-xs font-bold px-2 py-0.5 border border-black; }
+  .badge     { @apply inline-flex items-center gap-1 rounded-full text-xs font-bold px-2 py-0.5 border border-black select-none; }
   .badge-md  { @apply px-2.5 py-1; }
   .badge-lg  { @apply text-sm px-3 py-1.5 border-2 border-black; }
 

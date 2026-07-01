@@ -9,7 +9,7 @@ import { SeatSelector } from '@/components/SeatSelector';
 import { JoinTransition } from '@/components/JoinTransition';
 import { IdentityStamp } from '@/components/IdentityStamp';
 import { Student, Task } from '@/types';
-import { saveRoom, saveStudents, saveTasks } from '@/lib/offline/storage';
+import { saveRoom, saveStudents, saveTasks, getJoinedRoomByCode, clearRoom } from '@/lib/offline/storage';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { resolveError } from '@/i18n/resolveError';
 
@@ -33,6 +33,15 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
   const [selected, setSelected] = useState<{ seatNumber: number; name: string } | null>(null);
 
   useEffect(() => {
+    // 防止「靜默沿用/重選座號」：若本機已加入此房間（例：從 /helper 按上一頁、或離開班級後
+    // 重新輸入班級碼），先 clearRoom 釋放舊座號身份（保留未同步紀錄與佇列，不刪不改），再於
+    // 本頁走一次完整入場（歡迎過場 → 重新選座號 → 印章），與換座號同義。不直接把學生放回房間、
+    // 也不停在原座號，讓再選座號必須是顯式的重新入場；且單次輸入班級碼即可，不需輸入兩次。
+    const joined = getJoinedRoomByCode(code);
+    if (joined) {
+      clearRoom(joined.id);
+    }
+
     const joinRoom = async () => {
       try {
         const response = await fetch(`/api/rooms/join/${code.toUpperCase()}`);

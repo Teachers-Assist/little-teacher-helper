@@ -57,16 +57,22 @@ export function RecordForm({
 
   return (
     <div className="space-y-3">
+      {/* 登記者身份 badge（常駐，名單外框正上方）— 承諾裝置持續可見（FR-070/071） */}
+      <RecorderBadge
+        seatNumber={mySeatNumber}
+        assignmentState={assignmentState}
+        onClick={onChangeSeat}
+      />
+
       {/* 鎖定唯讀提示（截止逾期 vs 已標記完成，兩種文案） */}
       {locked && (
         <div className="flex items-center gap-2 rounded-xl border-2 border-black bg-red-100 p-3 text-sm font-medium text-red-900">
           <Icon name="lucide:lock" size={16} />
-          {lockReason === 'DUE_PASSED' ? messages.task.lockedDuePassed : messages.task.lockedCompleted}
+          {lockReason === 'DUE_PASSED'
+            ? messages.task.lockedDuePassed
+            : messages.task.lockedCompleted}
         </div>
       )}
-
-      {/* 登記者身份 badge（常駐，名單外框正上方）— 承諾裝置持續可見（FR-070/071） */}
-      <RecorderBadge seatNumber={mySeatNumber} assignmentState={assignmentState} onClick={onChangeSeat} />
 
       {/* 名單 */}
       <div className="card-sm">
@@ -144,9 +150,15 @@ function SubmissionRow({
         submitted ? 'bg-green-100' : 'bg-white'
       )}
     >
-      <Checkbox checked={submitted} onChange={() => onToggle(!submitted)} disabled={disabled} checkboxSize="lg" tabIndex={-1} aria-hidden="true" />
+      <Checkbox
+        checked={submitted}
+        onChange={() => onToggle(!submitted)}
+        disabled={disabled}
+        checkboxSize="lg"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <SeatName seat={student.seatNumber} name={student.name} />
-      {submitted && <Icon name="lucide:check" size={18} className="text-green-700" />}
     </button>
   );
 }

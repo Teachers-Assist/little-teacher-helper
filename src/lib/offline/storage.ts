@@ -137,6 +137,21 @@ export function getRoom(roomId: string) {
 }
 
 /**
+ * 找出本機已加入（選過座號）且 code 相符的房間，不存在時為 null。
+ *
+ * 用於防止「回上一頁重選座號」：/join/[code] 若偵測到此房間已加入（例：從 /helper 按上一頁
+ * 回來），一律視同「換座號 / 重新進入」——清掉房間快取後退回 /join，不在此就地重選座號。
+ */
+export function getJoinedRoomByCode(code: string) {
+  const data = getOfflineData();
+  const upper = code.toUpperCase();
+  return (
+    Object.values(data.rooms).find((r) => r.code?.toUpperCase() === upper && r.seatNumber != null) ??
+    null
+  );
+}
+
+/**
  * 儲存學生列表
  */
 export function saveStudents(roomId: string, students: Student[]): void {

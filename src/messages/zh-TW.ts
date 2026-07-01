@@ -69,7 +69,7 @@ export const messages = {
     startScan: '開始掃描',
     // 003 US1：兒童語氣錯誤訊息
     codeNotOurs: '這個 QR Code 好像不是老師給的喔，再試一次吧',
-    permissionDenied: '你沒允許我看到相機，去找老師幫你打開吧。你也可以在下面直接打班級代碼',
+    permissionDenied: '你沒允許我使用相機，去找老師幫你打開吧。你也可以在下面直接打班級代碼',
     cameraUnsupported: '這台裝置的相機不能用喔，下面直接打字也可以',
     failureUpgrade: '試了好幾次都沒成功，去找老師看看吧',
     noNetwork: '現在沒有網路喔，先去找一個有 WiFi 的地方再試試',

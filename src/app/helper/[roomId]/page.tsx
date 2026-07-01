@@ -2,14 +2,17 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { TaskList } from '@/components/TaskList';
+import { RecorderBadge } from '@/components/RecorderBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { getRoom, saveTasks, saveStudents } from '@/lib/offline/storage';
+import { getRoom, saveTasks, saveStudents, clearRoom } from '@/lib/offline/storage';
 import { useOfflineRoom, useOfflineTasks } from '@/lib/offline/store';
 import { useMessages } from '@/i18n/MessagesProvider';
 
@@ -21,6 +24,14 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   const tasks = useOfflineTasks(roomId);
   const [isLoading, setIsLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
+  const router = useRouter();
+  const [changeSeatOpen, setChangeSeatOpen] = useState(false);
+
+  // 點登記者身份 → 換座號（重新進入房間）：清本機 cache 後跳 /join（US4 / FR-074-075）
+  const handleChangeSeat = () => {
+    clearRoom(roomId);
+    router.push('/join');
+  };
 
   useEffect(() => {
     let active = true;
@@ -69,7 +80,9 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
         <Icon name="lucide:frown" size={40} className="mb-3 text-slate-300" />
         <p className="mb-4 text-slate-600">{messages.room.notFoundTitle}</p>
         <Link href="/join">
-          <Button variant="primary" size="sm">{messages.room.rejoin}</Button>
+          <Button variant="primary" size="sm">
+            {messages.room.rejoin}
+          </Button>
         </Link>
       </div>
     );
@@ -78,15 +91,15 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   return (
     <div className="min-h-screen bg-amber-50 pb-24">
       <div className="lp-header">
-        <div className="lp-body-narrow" style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
+        <div
+          className="lp-body-narrow"
+          style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}
+        >
           <Link href="/join" className="mb-1.5 link-back">
             <Icon name="lucide:arrow-left" size={13} />
             {messages.room.leave}
           </Link>
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-900">{room.name}</h1>
-            <span className="badge badge-info">{messages.identity.seatLabel(room.seatNumber)}</span>
-          </div>
+          <h1 className="text-lg font-bold text-slate-900">{room.name}</h1>
           <p className="mt-0.5 text-xs text-slate-500">{messages.task.listTitle}</p>
         </div>
       </div>
@@ -96,10 +109,28 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           <SyncIndicator />
         </div>
 
+        {/* 登記者身份（常駐、可點換座號）— 與 RecordForm 一致（FR-070/071/074） */}
+        <div className="mb-3">
+          <RecorderBadge
+            seatNumber={room.seatNumber}
+            assignmentState="noAssignment"
+            onClick={() => setChangeSeatOpen(true)}
+          />
+        </div>
+
         <TaskList roomId={roomId} tasks={tasks} mySeatNumber={room.seatNumber} />
 
         <NetworkStatus />
       </div>
+
+      <ConfirmDialog
+        open={changeSeatOpen}
+        title={messages.room.changeSeatTitle}
+        message={messages.room.changeSeatMessage}
+        confirmLabel={messages.room.changeSeatConfirm}
+        onConfirm={handleChangeSeat}
+        onCancel={() => setChangeSeatOpen(false)}
+      />
     </div>
   );
 }
