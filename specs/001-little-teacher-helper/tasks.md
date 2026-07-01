@@ -1,7 +1,7 @@
 # Tasks: 小老師助手系統 (Little Teacher Helper)
 
 **Input**: Design documents from `/specs/001-little-teacher-helper/`
-**Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅
+**Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, ../data-model.md ✅, contracts/ ✅
 
 **Tests**: Not requested - test tasks not included.
 
@@ -39,7 +39,7 @@
 - [x] T009 Define complete Prisma schema with all entities (Teacher, Room, Student, Item, Submission) in prisma/schema.prisma
 - [x] T010 Run Prisma migration to create database schema
 - [x] T011 [P] Implement Prisma client singleton in src/lib/db.ts
-- [x] T012 [P] Create shared TypeScript types in src/types/index.ts based on data-model.md
+- [x] T012 [P] Create shared TypeScript types in src/types/index.ts based on ../data-model.md
 - [x] T013 [P] Create base UI components (Button, Card, Checkbox, StatusBadge) in src/components/ui/
 - [x] T014 [P] Create root layout with PWA meta tags in src/app/layout.tsx
 - [x] T015 [P] Create utility functions (generateRoomCode, formatDate) in src/lib/utils.ts

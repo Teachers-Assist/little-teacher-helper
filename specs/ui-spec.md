@@ -66,6 +66,16 @@
 .card-title   卡片內標題（text-sm font-semibold text-slate-700 mb-3）
 ```
 
+### 統計小卡
+
+```
+.stat-tile        容器：大數字 + 圖示標籤，水平排列省垂直空間（比 card-sm 矮）
+.stat-tile-value  數值（text-xl → sm:text-2xl、font-bold；顏色由 tone 控制）
+.stat-tile-label  標籤（text-xs、slate-500 次要文字 + 圖示）
+```
+
+> 對應 `<StatTile>` 元件，供 Dashboard（`DashboardStats`）與班級狀況（`MonitoringStats`）統計列共用。
+
 ### 表單輸入
 
 ```
@@ -87,6 +97,7 @@
 ```
 .nav-item        未選中狀態
 .nav-item-active 選中狀態（搭配 .nav-item 使用）
+.nav-subitem     子層導覽（「我的班級」展開的班級清單；較 nav-item 小一號、slate-700 font-medium）
 ```
 
 ### 頁面文字
@@ -94,6 +105,7 @@
 ```
 .page-title    主標題（text-xl font-bold text-slate-900）
 .page-subtitle 副標題（text-sm text-slate-500 mt-0.5）
+.link-back     返回連結（小型 icon + 文字，hover 轉主色；margin 等間距留在 JSX）
 ```
 
 ### 特殊狀態容器
@@ -202,6 +214,7 @@ const USED_ICONS = [
 | `<Card>` | `variant`, `size` | variant: `default/elevated/bordered` |
 | `<CardHeader>` `<CardTitle>` `<CardContent>` `<CardFooter>` | — | Card 子元件 |
 | `<StatusBadge>` | `variant`, `dot`, `size` | 同 badge-* 色系 |
+| `<StatTile>` | `label`, `value`, `icon`, `tone` | 統計小卡，視覺在 `.stat-tile*` |
 | `<Icon>` | `name`, `size`, `className` | 見圖示系統章節 |
 
 ---
@@ -221,6 +234,64 @@ const USED_ICONS = [
 
 ---
 
+## 互動模式判斷規則（002 新增，對應 NFR-006 / NFR-007）
+
+決定「某個操作該用什麼互動模式」時，依下列規則，避免每個畫面各自發明做法：
+
+1. **跨 tab 重複的內容上提共用**：同一畫面內若有多個 tab 共用的資訊（如班級資訊），MUST 抽到 **tab 列之上**共用一份，**不在每個 tab 的側欄各放一份**。（見 `/teacher/rooms/[id]` 班級資訊區塊）
+2. **高頻 / 結構簡單的新增與編輯採側欄內嵌表單**：學生、任務的新增與編輯用**側欄 inline 表單 + 模式切換**（新增 ↔ 編輯，編輯時顯示「正在編輯：X」+「取消編輯」），**不採側拉面板或 modal**。（`StudentForm`、`TaskForm` 共用此樣式）
+3. **可逆動作只需一層確認**：soft delete / 封存等可還原的動作只需**一層**確認對話框（`ConfirmDialog`）；硬刪除（若存在）才需兩層。
+4. **進階 / 低頻 / 深入瀏覽可跳頁**：批次匯入、單一任務的完整結果（`/teacher/tasks/[roomId]/[taskId]`）等可採跳頁。
+5. **modal 僅用於「展示 / 分享」例外，不用於編輯資料**：QRCode 投影分享採滿版 modal（`QRCodeModal`）是「展示」用途的例外，**不是**拿 modal 來編輯資料；資料編輯一律走規則 2 的內嵌表單。
+6. **側欄是唯一導航中樞**：`/teacher/*`（dashboard 除外）的 page-header **不放「返回」連結**；跨頁 / 返回一律靠側欄。側欄含「儀表板」與可展開的「我的班級」清單。
+7. **小螢幕（< 768px）用 hamburger 開側欄抽屜**：側欄自動收合，page 區頂部提供 `lucide:menu` 開抽屜，避免移除返回連結後無法導航。
+8. **列表捲動發生在列表內、不是整個視窗**：班級詳情頁桌機（lg+）固定班級資訊 + tabs，**只有列表內部捲動**（app-shell：`.sidebar-layout` 固定視窗高、`.page-body` 內捲、`.room-detail-body` 控制列表內捲）。
+9. **dashboard 雙視角**：依老師類型提供「按班級檢視 / 按任務檢視」雙 tab；預設 tab 依班級數而定（1 班 → 按任務；≥2 班 → 按班級），手動切換暫存於 sessionStorage（不持久化）。
+
+---
+
+## 進場儀式 / 自我聲明印章 / 兒童語氣文案規範（003 新增，對應 vision 第 4、7 節）
+
+小老師端的進場與身份體驗有別於一般 CRUD 畫面，下列規範補足「儀式感」與「承諾裝置」的視覺要求。決定相關畫面做法時依此，避免削弱問責設計或讓兒童在同學面前卡住。
+
+### 進場過場（`JoinTransition`）
+
+1. `/join/[code]` 是**過場頁**不是狀態頁：歡迎畫面 1.5–2 秒**自動**進入選座號，**MUST NOT** 提供「跳過 / 進入」按鈕（避免下意識點過、失去儀式感）。
+2. **班級名稱是畫面最大、最醒目的元素**（字級需大於歡迎語）；icon 用慶祝符號（`lucide:party-popper`）。
+3. 計時器在 `useEffect` 卸載時 MUST cleanup，避免中途離開後重入卡住（Edge Case）。
+
+### 自我聲明印章（`IdentityStamp`）
+
+1. 選座號後 MUST 全螢幕亮出「我是 [座號] 號 [姓名]」停 1.5 秒，對應 vision 第 7 節「承諾裝置」—— 用視覺事實讓自我聲明具有問責重量。
+2. **點擊不可跳過**（停滿才自動進入），元件不接 `onClick`。
+3. 回饋：輕量短促音效（≤ 0.3 秒、< 30KB，置於 `public/sounds/stamp.mp3`，以 `try/catch` 包裹、autoplay 失敗 silent）+ haptic 短震（`useHaptic`，不支援時 noop）。裝置靜音時不播音效、haptic 仍觸發。
+
+### 登記者身份 badge（`RecorderBadge`）
+
+1. 「登記者：[座號]」大型 badge MUST **常駐**於學生名單外框正上方（承諾裝置在每次登記時持續可見），**不可**作為附屬資訊或僅在登記後才出現。
+2. 依三種指派狀態分流視覺，三態皆顯示 badge、差別在強度 / 星星 / 小行字：
+   - **受指定**：強調色（`bg-accent-200`）+ `lucide:star` + 進場 fade-in（**僅播 1 次**，非持續閃爍）+ 小行字「你是老師指定的登記者！」
+   - **未指定（他人受指定）**：灰藍系（`bg-slate-100`，**非警告色**，不用紅黃）+ 小行字「你不是被指定的小老師>\_<」
+   - **沒指定任何人**：中性純黑邊白底 + **無**小行字
+3. 點 badge 觸發換座號流程（彈窗 → 重新進入 `/join`）；換座號是顯式行為（重新入場），不就地切換。
+4. 登記頁 header **不**再放座號 badge；學生名單頂部**不**放「N 已繳 / N 未繳」統計（催繳是老師 / 家長責任，違反角色分工）。
+
+### 動畫規範（NFR-008）
+
+- 進場 / 印章動畫 MUST 以 `transform` / `opacity` 實作以維持 60fps；keyframes 定義於 `globals.css`（`pop-in` / `stamp-in` / `fade-in`）。
+- 動畫**克制**（vision「不把學生當小孩對待」）：星星 fade-in 僅 1 次、音效短促、不要每個操作都閃光發聲。
+- MUST 尊重 `prefers-reduced-motion`（已於 `globals.css` 將動畫時長縮到接近 0）。
+
+### 兒童語氣文案規範
+
+- 所有 user-facing 文字 MUST 走 i18n（NFR-001），不硬寫進元件；學生面向文字用兒童語氣。
+- 錯誤 / 限制發生時，提示要**指向概念與下一步出路**，不只是「再試一次」。子原則「**不讓學生在不知道下一步的狀況下卡住**」具體應用：
+  - 相機 / 瀏覽器不支援 → 自動把焦點切到下方輸入框
+  - 連續失敗 3 次以上 → 升級為「去找老師」（不再讓他繼續試）
+  - 拒絕相機權限 → 同時鋪「找老師」與「也可以直接打字」兩條路
+
+---
+
 ## 檔案位置索引
 
 | 用途 | 路徑 |
@@ -233,3 +304,6 @@ const USED_ICONS = [
 | Card 元件 | `src/components/ui/Card.tsx` |
 | Teacher 側邊欄 | `src/components/layout/TeacherSidebar.tsx` |
 | Teacher layout | `src/app/teacher/layout.tsx` |
+| 進場過場 / 自我聲明印章（003） | `src/components/JoinTransition.tsx`、`src/components/IdentityStamp.tsx` |
+| 登記者身份 badge（003） | `src/components/RecorderBadge.tsx` |
+| 失敗計數 / haptic hook（003） | `src/hooks/useFailureCounter.ts`、`src/hooks/useHaptic.ts` |

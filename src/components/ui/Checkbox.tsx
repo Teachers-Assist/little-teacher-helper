@@ -36,15 +36,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             ref={ref}
             type="checkbox"
             id={checkboxId}
-            className={cn(
-              sizes[actualSize],
-              'cursor-pointer rounded border-2 border-slate-300 dark:border-slate-600',
-              'text-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2',
-              'transition-all duration-150',
-              'checked:bg-sky-500 checked:border-sky-500',
-              'hover:border-sky-400 dark:hover:border-sky-400',
-              'disabled:cursor-not-allowed disabled:opacity-50'
-            )}
+            className={cn('checkbox', sizes[actualSize])}
             {...props}
           />
         </div>

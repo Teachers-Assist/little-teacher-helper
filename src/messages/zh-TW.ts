@@ -20,6 +20,8 @@ export const messages = {
     back: '返回',
     retry: '重試',
     backHome: '回到首頁',
+    edit: (name: string) => `編輯 ${name}`,
+    remove: (name: string) => `移除 ${name}`,
   },
 
   // App metadata（瀏覽器分頁、PWA）
@@ -33,9 +35,14 @@ export const messages = {
     appName: '小老師助手',
     sectionGeneral: '一般',
     dashboard: '儀表板',
-    rooms: '班級',
+    rooms: '班級', // DEPRECATED（002 US8）：偽按鈕，待程式移除
     settings: '設定',
     language: '語言',
+    // 002 US8：新增「我的班級」可展開清單
+    myClasses: '我的班級',
+    expandClasses: '展開班級清單',
+    noClassYet: '還沒建立班級喔',
+    tasks: '任務列表',
   },
 
   // 首頁
@@ -59,13 +66,13 @@ export const messages = {
   qr: {
     enterTitle: '加入班級',
     enterHint: '掃描 QRCode 或輸入班級代碼',
-    scanTitle: '掃描 QRCode',
-    tapToOpenCamera: '點此開啟相機',
-    scanInstruction: '點擊下方按鈕開啟相機掃描 QRCode',
     startScan: '開始掃描',
-    stopScan: '停止掃描',
-    cancelScan: '取消掃描',
-    invalid: '這個 QRCode 不對，請掃描老師給你的班級 QRCode',
+    // 003 US1：兒童語氣錯誤訊息
+    codeNotOurs: '這個 QR Code 好像不是老師給的喔，再試一次吧',
+    permissionDenied: '你沒允許我使用相機，去找老師幫你打開吧。你也可以在下面直接打班級代碼',
+    cameraUnsupported: '這台裝置的相機不能用喔，下面直接打字也可以',
+    failureUpgrade: '試了好幾次都沒成功，去找老師看看吧',
+    noNetwork: '現在沒有網路喔，先去找一個有 WiFi 的地方再試試',
     orManual: '或手動輸入',
     roomCode: '班級代碼',
     codePlaceholder: '例如：ABC123',
@@ -79,9 +86,6 @@ export const messages = {
     urlCopied: '連結已複製到剪貼簿',
     copyFailed: '複製失敗，請手動複製',
     instruction: '讓小老師用手機掃描此 QRCode，或輸入上方代碼即可加入班級',
-    pageTitle: (room: string) => `QR Code — ${room}`,
-    printQrcode: '列印 QRCode',
-    backToRoom: '返回班級',
   },
 
   // 網路 / 同步狀態
@@ -123,9 +127,10 @@ export const messages = {
     studentsCount: (n: number) => `${n} 位學生`,
     tasksCount: (n: number) => `${n} 個任務`,
     joinButton: '加入班級',
-    // 後端會回給使用者看的錯誤
-    roomNotFound: '找不到這個班級，代碼有輸入對嗎？請再確認一次',
-    roomInactive: '這個班級進不去，請去問老師',
+    // 後端會回給使用者看的錯誤（003 US1 改為兒童語氣）
+    roomNotFound: '找不到這個班級耶 🔍 是不是少打了一個字？或是大小寫不一樣？',
+    // 003 US2：自我聲明印章
+    identityStamp: (seat: number, name: string) => `我是 ${seat} 號 ${name}`,
   },
 
   // 學生相關的後端錯誤（會在老師端顯示給使用者）
@@ -146,10 +151,8 @@ export const messages = {
   identity: {
     selectSeatTitle: '請選擇你的座號',
     selectSeatHint: '選你自己的座號，系統會記錄是「你」做了這次登記',
+    emptyRoster: '老師還沒有把學生名單建好，去找老師喔',
     seatLabel: (seat: number) => `${seat} 號`,
-    isAssigned: '這次就是指定你！來吧，開始登記！',
-    notAssigned: '這個任務不是指定給你的，不過你還是可以繼續登記。有問題記得去找老師',
-    recordedAs: (seat: number) => `這次的登記記錄為：${seat} 號`,
   },
 
   task: {
@@ -180,23 +183,28 @@ export const messages = {
   record: {
     rosterTitle: '學生名單',
     rosterEmpty: '名單裡還沒有學生',
-    statusHeader: '繳交狀況',
     listAria: '學生繳交狀況列表',
     seatAria: (n: number) => `座號 ${n}`,
     toggleAria: (name: string, submitted: boolean) => `${name}，${submitted ? '已繳交' : '未繳交'}`,
-    submittedCount: (n: number) => `${n} 已繳`,
-    notSubmittedCount: (n: number) => `${n} 未繳`,
     progress: (percent: number) => `完成度 ${percent}%`,
     gradePlaceholder: '分數',
     numberOnly: '這裡只能填數字',
     gradeRange: '成績必須在 0-100 之間',
     saveFailed: '沒存到！可能是網路斷掉了。別擔心，你的資料還在 — 連上網路後再試試看！',
+    // 003 US3：登記者 badge（常駐顯示）
+    recorderLabel: '登記者：',
+    assignedHint: '你是老師指定的登記者！',
+    notAssignedHint: '你不是被指定的小老師>_<',
   },
 
   room: {
     notFoundTitle: '找不到這個班級',
     rejoin: '重新進入',
     leave: '離開班級',
+    // 003 US4：換座號彈窗
+    changeSeatTitle: '想換座號嗎？',
+    changeSeatMessage: '需要重新進入班級喔',
+    changeSeatConfirm: '重新進入',
   },
 
   // 報表
@@ -246,8 +254,6 @@ export const messages = {
     backToDashboard: '返回儀表板',
 
     // 班級詳情
-    active: '啟用中',
-    inactive: '已停用',
     showQrcode: '顯示 QRCode',
     tabStudents: '學生',
     tabTasks: '任務',
@@ -302,6 +308,123 @@ export const messages = {
     closeConfirm: '結案後此任務將不再開放登記。',
     deleteTitle: '刪除任務',
     deleteConfirm: '刪除後該任務的所有登記記錄都會一併移除，且無法復原。',
+
+    // ─── 002 新增：任務表單（inline 模式切換）─────────────────
+    taskForm: {
+      editing: (name: string) => `正在編輯：${name}`,
+      cancelEdit: '取消編輯',
+      dueDatePastError: '截止日不能為過去',
+      dueDateExpiredHint: (date: string) => `原截止日 ${date} 已過，請重設或留空`,
+    },
+
+    // ─── 002 新增：任務列項操作 / 徽章 ─────────────────────────
+    taskList: {
+      edit: '編輯',
+      archive: '封存',
+      archivedDrawer: '已封存任務',
+      archiveConfirmTitle: '封存任務',
+      archiveConfirmMessage: (name: string) =>
+        `確定要封存「${name}」嗎？歷史登記記錄會保留，可在「已封存任務」還原。`,
+      extendDue: '延長截止',
+      badgeInProgress: '進行中',
+      badgeDueExpired: '已截止',
+      badgeHelperCompleted: '小老師已標記完成',
+      badgeClosed: '已結案',
+    },
+
+    // ─── 002 新增：學生管理 ───────────────────────────────────
+    studentList: {
+      removed: '已移除',
+      removedSuffix: '（已移除）',
+      removedDrawer: '已移除學生',
+      removedEmpty: '目前沒有已移除的學生',
+      restore: '還原',
+      import: '上傳 Excel',
+      importTemplate: '下載範本',
+      importTitle: '批次匯入學生',
+      importHint: '下載範本填好座號與姓名後上傳，一次匯入整班。',
+      importing: '解析中...',
+      importSuccess: (count: number) => `成功匯入 ${count} 位學生`,
+      importConflict: '匯入有衝突，請修正後重試',
+      importConflictTitle: '無法匯入，請修正以下問題後再上傳：',
+      removeConfirmTitle: '移除學生',
+      removeConfirmMessage: (name: string) =>
+        `確定要移除「${name}」嗎？歷史登記記錄會保留，可在「已移除學生」還原。`,
+      importErrors: {
+        rowLabel: (n: number) => `第 ${n} 列`,
+        fileEmpty: '檔案是空的，找不到任何資料',
+        fileParseFailed: '無法讀取檔案，請確認是有效的 .xlsx 檔',
+        missingColumnSeat: '找不到「座號」欄位',
+        missingColumnName: '找不到「姓名」欄位',
+        noRows: '檔案裡沒有任何學生資料',
+        tooMany: '一次最多匯入 100 位學生',
+        seatNotNumber: '座號必須是數字',
+        seatOutOfRange: '座號必須在 1-99 之間',
+        nameRequired: '姓名不能空白',
+        nameTooLong: '姓名不可超過 50 字',
+        seatDupInFile: '座號與檔案中其他列重複',
+        nameDupInFile: '姓名與檔案中其他列重複',
+        seatDupExisting: '座號與班級現有學生重複',
+        nameDupExisting: '姓名與班級現有學生重複',
+      },
+    },
+
+    // ─── 002 新增：班級狀況 tab（取代原報表 tab）──────────────
+    classStatus: {
+      tab: '班級狀況',
+      empty: '目前沒有需要注意的事',
+      alertsTitle: '需要注意',
+      statTotal: '總任務數',
+      statInProgress: '進行中',
+      statAnomalies: '有異常',
+      statArchived: '已封存',
+      anomalyAssignedSeatIdle: (seat: number) => `指定座號 ${seat} 已超過 24 小時沒有登記`,
+      anomalyNoRecordsNearDue: '即將截止，但還沒有任何登記',
+    },
+
+    // ─── 002 新增：任務細節頁 ─────────────────────────────────
+    taskDetail: {
+      unrecorded: '未登記',
+      registrationList: '登記明細',
+      unrecordedList: '未登記學生',
+      recordedBy: (seat: number) => `登記者 ${seat} 號`,
+      noRecordsYet: '還沒有任何登記',
+      allRecorded: '全班都登記了！',
+      infoType: '類型',
+      infoAssigned: '指定小老師',
+      infoDue: '截止時間',
+      infoStatus: '狀態',
+      infoArchived: '已封存',
+      noDue: '無截止時間',
+      notAssigned: '未指定',
+      assignedRemoved: (seat: number) => `指定座號 ${seat}（學生已移除）`,
+    },
+
+    // ─── 002 新增：QRCode modal ───────────────────────────────
+    qrcode: {
+      showButton: '顯示 QRCode',
+      fullscreen: '進入全螢幕',
+      copySuccess: '已複製到剪貼簿',
+      copyFailed: '複製失敗，請手動選取',
+    },
+
+    // ─── 002 新增：Dashboard 雙視角 ───────────────────────────
+    dashboard: {
+      byClass: '按班級檢視',
+      byTask: '按任務檢視',
+      searchPlaceholder: '🔍 搜尋任務名稱',
+      noInProgressTasks: '還沒有進行中的任務喔',
+      createFirstClass: '來建立第一個班級吧',
+      statRoomCount: '班級數',
+      statInProgressTasks: '進行中任務',
+      statAnomalies: '異常',
+      inProgressUnit: (n: number) => `${n} 個進行中`,
+      recordedRatio: (done: number, total: number) => `已登記 ${done}/${total}`,
+      lastActivityMinutesAgo: (n: number) => `${n} 分鐘前`,
+      lastActivityHoursAgo: (n: number) => `${n} 小時前`,
+      lastActivityToday: '剛剛',
+      lastActivityYesterday: '昨天',
+    },
   },
 } as const;
 

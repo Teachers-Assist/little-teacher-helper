@@ -42,17 +42,25 @@
 
 ## Project Structure
 
-### Documentation (this feature)
+### Documentation
+
+通用文件（vision.md、ui-spec.md、open-questions.md、quickstart.md）位於 `specs/` 外層，跨所有 feature 共用。
+本 feature 專屬文件留在本資料夾。
 
 ```text
-specs/001-little-teacher-helper/
-├── plan.md              # 本檔案
-├── research.md          # Phase 0: 技術研究
-├── data-model.md        # Phase 1: 資料模型
-├── quickstart.md        # Phase 1: 快速開始指南
-├── contracts/           # Phase 1: API 合約
-│   └── openapi.yaml
-└── tasks.md             # Phase 2: 任務分解 (由 /speckit.tasks 建立)
+specs/
+├── vision.md                       # 產品願景，跨 feature 共用
+├── ui-spec.md                      # UI 視覺規範，跨 feature 共用
+├── data-model.md                   # 資料模型，跨 feature 共用（單一事實來源）
+├── open-questions.md               # 待解決問題清單，跨 feature 共用
+├── quickstart.md                   # 開發環境快速開始指南
+└── 001-little-teacher-helper/
+    ├── plan.md                     # 本檔案
+    ├── research.md                 # Phase 0: 技術研究
+    ├── contracts/                  # Phase 1: API 合約
+    │   └── openapi.yaml
+    ├── spec.md                     # Feature spec
+    └── tasks.md                    # Phase 2: 任務分解
 ```
 
 ### Source Code (repository root)
@@ -184,3 +192,17 @@ tests/
 | PWA 在 iOS Safari 的限制 | 部分 PWA 功能受限 | 優先測試 Safari，確保核心功能正常 |
 | 離線同步衝突 | 資料不一致 | 採用「最後更新優先」策略，UI 顯示衝突提示 |
 | QRCode 掃描相容性 | 部分裝置無法掃描 | 提供手動輸入房間代碼的備援方案 |
+
+---
+
+### 002 feature 對本 plan 的擴充（2026-06-26）
+
+002（班級管理體驗強化）在本 feature 之上擴充，註記如下：
+
+- **Task entity**：新增 `isArchived: Boolean @default(false)`（老師封存任務，soft archive；與 `status` 獨立）。
+- **路由結構變更**：
+  - 廢除 `/teacher/tasks/[roomId]`（任務列表頁）→ 由 `/teacher/rooms/[id]` 任務 tab 取代。
+  - `/teacher/tasks/[roomId]/[taskId]` → 改為單一任務「結果頁」（只看結果、不編輯）。
+  - 廢除 `/teacher/rooms/[id]/qrcode` → 改為 `/teacher/rooms/[id]` 內的 `QRCodeModal`（`?qr=open` 同步）。
+  - `/teacher`（dashboard）→ 簡易統計 + 雙視角 tab（按班級 / 按任務）；側欄移除偽按鈕、加入「我的班級」清單。
+- 詳見 `specs/002-class-management/{spec,plan,tasks}.md`。

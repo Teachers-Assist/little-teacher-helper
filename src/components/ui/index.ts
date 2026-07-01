@@ -10,6 +10,12 @@ export type { CheckboxProps } from './Checkbox';
 export { StatusBadge } from './StatusBadge';
 export type { StatusBadgeVariant } from './StatusBadge';
 
+export { StatTile } from './StatTile';
+export type { StatTileProps } from './StatTile';
+
+export { Menu } from './Menu';
+export type { MenuProps, MenuItem } from './Menu';
+
 export {
   Skeleton,
   CardSkeleton,

@@ -1,32 +1,29 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DashboardStats } from '@/components/dashboard/DashboardStats';
+import { ClassesView } from '@/components/dashboard/ClassesView';
+import { TasksView } from '@/components/dashboard/TasksView';
+import type { DashboardData } from '@/components/dashboard/types';
+import { cn } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
 
-interface Room {
-  id: string;
-  name: string;
-  code: string;
-  isActive: boolean;
-  _count?: {
-    students: number;
-    tasks: number;
-  };
-}
+type View = 'classes' | 'tasks';
+const VIEW_KEY = 'dashboardView';
 
 export default function TeacherDashboard() {
   const messages = useMessages();
   const [, setTeacherId] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState('');
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateTeacher, setShowCreateTeacher] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [view, setView] = useState<View | null>(null);
 
   useEffect(() => {
     const storedTeacherId = localStorage.getItem('teacherId');
@@ -34,22 +31,34 @@ export default function TeacherDashboard() {
     if (storedTeacherId && storedTeacherName) {
       setTeacherId(storedTeacherId);
       setTeacherName(storedTeacherName);
-      fetchRooms(storedTeacherId);
+      fetchDashboard(storedTeacherId);
     } else {
       setShowCreateTeacher(true);
       setIsLoading(false);
     }
   }, []);
 
-  const fetchRooms = async (id: string) => {
+  const fetchDashboard = async (id: string) => {
     try {
-      const response = await fetch(`/api/rooms?teacherId=${id}`);
-      if (response.ok) setRooms(await response.json());
+      const res = await fetch(`/api/teachers/${id}/dashboard`);
+      if (res.ok) {
+        const d = (await res.json()) as DashboardData;
+        setData(d);
+        // 預設 tab：1 班 → 按任務；≥2 班 → 按班級（FR-052）。
+        // 使用者主動切換暫存於 sessionStorage（不持久化）。
+        const stored = sessionStorage.getItem(VIEW_KEY) as View | null;
+        setView(stored ?? (d.stats.roomCount >= 2 ? 'classes' : 'tasks'));
+      }
     } catch (error) {
-      console.error('Failed to fetch rooms:', error);
+      console.error('Failed to fetch dashboard:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const switchView = (v: View) => {
+    setView(v);
+    sessionStorage.setItem(VIEW_KEY, v);
   };
 
   const handleCreateTeacher = async (e: React.FormEvent) => {
@@ -69,7 +78,8 @@ export default function TeacherDashboard() {
         setTeacherId(teacher.id);
         setTeacherName(teacher.name);
         setShowCreateTeacher(false);
-        fetchRooms(teacher.id);
+        setIsLoading(true);
+        fetchDashboard(teacher.id);
       }
     } catch (error) {
       console.error('Failed to create teacher:', error);
@@ -122,9 +132,10 @@ export default function TeacherDashboard() {
     );
   }
 
+  const roomCount = data?.stats.roomCount ?? 0;
+
   return (
     <>
-      {/* Page Header */}
       <div className="page-header flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
@@ -140,9 +151,8 @@ export default function TeacherDashboard() {
         </Link>
       </div>
 
-      {/* Content */}
-      <div className="page-body">
-        {rooms.length === 0 ? (
+      <div className="page-body space-y-5">
+        {roomCount === 0 ? (
           <div className="rounded-xl border border-dashed border-[#cabdff] bg-white py-16 text-center">
             <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:school" size={28} className="text-primary-400" />
@@ -150,7 +160,7 @@ export default function TeacherDashboard() {
             <h2 className="mb-1.5 text-base font-semibold text-slate-900">
               {messages.teacher.noRoomsTitle}
             </h2>
-            <p className="mb-5 text-sm text-slate-500">{messages.teacher.noRoomsDesc}</p>
+            <p className="mb-5 text-sm text-slate-500">{messages.teacher.dashboard.createFirstClass}</p>
             <Link href="/teacher/rooms/new">
               <Button variant="primary" size="sm">
                 {messages.teacher.createFirstRoom}
@@ -158,37 +168,40 @@ export default function TeacherDashboard() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {rooms.map((room) => (
-              <Link key={room.id} href={`/teacher/rooms/${room.id}`}>
-                <div className="group rounded-xl border-2 border-black bg-white p-5 transition-colors hover:bg-accent-100 cursor-pointer">
-                  <div className="mb-3 flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-slate-900 group-hover:text-primary-700 transition-colors">
-                      {room.name}
-                    </h3>
-                    <StatusBadge variant={room.isActive ? 'success' : 'neutral'} dot size="sm">
-                      {room.isActive ? messages.teacher.active : messages.teacher.inactive}
-                    </StatusBadge>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Icon name="lucide:users" size={13} />
-                      {messages.teacher.studentsUnit(room._count?.students || 0)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Icon name="lucide:clipboard-list" size={13} />
-                      {messages.teacher.tasksUnit(room._count?.tasks || 0)}
-                    </span>
-                  </div>
-                  <div className="mt-3 inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1">
-                    <span className="font-mono text-xs font-medium tracking-widest text-slate-600">
-                      {room.code}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          data && (
+            <>
+              <DashboardStats stats={data.stats} />
+
+              {/* 雙視角 tab */}
+              <div className="flex gap-1 border-b-2 border-black">
+                {([
+                  { id: 'classes', label: messages.teacher.dashboard.byClass, icon: 'lucide:layout-grid' },
+                  { id: 'tasks', label: messages.teacher.dashboard.byTask, icon: 'lucide:list' },
+                ] as const).map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => switchView(t.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors',
+                      {
+                        'border-b-2 border-primary-600 text-primary-700': view === t.id,
+                        'text-slate-500 hover:text-slate-900': view !== t.id,
+                      }
+                    )}
+                  >
+                    <Icon name={t.icon} size={14} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {view === 'classes' ? (
+                <ClassesView rooms={data.rooms} />
+              ) : (
+                <TasksView tasks={data.tasks} />
+              )}
+            </>
+          )
         )}
       </div>
     </>

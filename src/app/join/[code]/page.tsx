@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { SeatSelector } from '@/components/SeatSelector';
+import { JoinTransition } from '@/components/JoinTransition';
+import { IdentityStamp } from '@/components/IdentityStamp';
 import { Student, Task } from '@/types';
-import { saveRoom, saveStudents, saveTasks } from '@/lib/offline/storage';
+import { saveRoom, saveStudents, saveTasks, getJoinedRoomByCode, clearRoom } from '@/lib/offline/storage';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { resolveError } from '@/i18n/resolveError';
 
@@ -17,15 +19,29 @@ interface RoomJoinData {
   tasks: Task[];
 }
 
+/** 過場頁三段狀態（US2）：歡迎過場 → 選座號 → 自我聲明印章 */
+type Stage = 'welcoming' | 'seatSelecting' | 'stamping';
+
 export default function JoinCodePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const messages = useMessages();
+  const router = useRouter();
   const [data, setData] = useState<RoomJoinData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const router = useRouter();
+  const [stage, setStage] = useState<Stage>('welcoming');
+  const [selected, setSelected] = useState<{ seatNumber: number; name: string } | null>(null);
 
   useEffect(() => {
+    // 防止「靜默沿用/重選座號」：若本機已加入此房間（例：從 /helper 按上一頁、或離開班級後
+    // 重新輸入班級碼），先 clearRoom 釋放舊座號身份（保留未同步紀錄與佇列，不刪不改），再於
+    // 本頁走一次完整入場（歡迎過場 → 重新選座號 → 印章），與換座號同義。不直接把學生放回房間、
+    // 也不停在原座號，讓再選座號必須是顯式的重新入場；且單次輸入班級碼即可，不需輸入兩次。
+    const joined = getJoinedRoomByCode(code);
+    if (joined) {
+      clearRoom(joined.id);
+    }
+
     const joinRoom = async () => {
       try {
         const response = await fetch(`/api/rooms/join/${code.toUpperCase()}`);
@@ -45,10 +61,15 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
     joinRoom();
   }, [code, messages]);
 
-  const handleSelectSeat = (student: { seatNumber: number }) => {
-    if (!data) return;
-    // 以選定座號寫入本機快取，再進入任務清單
-    saveRoom(data.room.id, data.room, student.seatNumber);
+  const handleSelectSeat = (student: { seatNumber: number; name: string }) => {
+    setSelected({ seatNumber: student.seatNumber, name: student.name });
+    setStage('stamping');
+  };
+
+  // 印章結束才寫入本機快取並進入任務清單（沿用既有寫入邏輯）
+  const handleStampComplete = () => {
+    if (!data || !selected) return;
+    saveRoom(data.room.id, data.room, selected.seatNumber);
     saveStudents(data.room.id, data.students);
     saveTasks(data.room.id, data.tasks);
     router.push(`/helper/${data.room.id}`);
@@ -86,18 +107,34 @@ export default function JoinCodePage({ params }: { params: Promise<{ code: strin
 
   if (!data) return null;
 
+  // 過場：歡迎畫面（大字班名）1.8 秒後自動進選座號
+  if (stage === 'welcoming') {
+    return <JoinTransition roomName={data.room.name} onComplete={() => setStage('seatSelecting')} />;
+  }
+
+  // 自我聲明印章：停 1.5 秒後寫入本機並進任務清單
+  if (stage === 'stamping' && selected) {
+    return (
+      <IdentityStamp
+        seatNumber={selected.seatNumber}
+        studentName={selected.name}
+        onComplete={handleStampComplete}
+      />
+    );
+  }
+
+  // 選座號（含名單為空的 Edge Case：給出路、不卡住）
   return (
     <div className="flex min-h-screen items-center justify-center bg-amber-50 px-4 py-8">
       <div className="card w-full max-w-md">
-        <div className="mb-5 text-center">
-          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
-            <Icon name="lucide:check-circle-2" size={24} className="text-emerald-500" />
+        {data.students.length === 0 ? (
+          <div className="empty-state">
+            <Icon name="lucide:frown" size={40} className="mx-auto mb-3 text-slate-300" />
+            <p className="px-6 text-sm text-slate-600">{messages.identity.emptyRoster}</p>
           </div>
-          <h2 className="text-xl font-bold text-slate-900">{messages.join.joinSuccess}</h2>
-          <p className="mt-1 text-sm font-medium text-primary-700">{data.room.name}</p>
-        </div>
-
-        <SeatSelector students={data.students} onSelect={handleSelectSeat} />
+        ) : (
+          <SeatSelector students={data.students} onSelect={handleSelectSeat} />
+        )}
       </div>
     </div>
   );

@@ -7,7 +7,6 @@ export const ERROR_CODES = {
 
   // 加入班級流程
   ROOM_NOT_FOUND: 'join.roomNotFound',
-  ROOM_INACTIVE: 'join.roomInactive',
 
   // 單筆學生
   STUDENT_NAME_REQUIRED: 'student.nameRequired',

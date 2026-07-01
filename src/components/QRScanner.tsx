@@ -1,111 +1,103 @@
-﻿'use client';
+'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
-import { Button } from '@/components/ui/Button';
+import { useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { parseRoomCodeFromURL } from '@/lib/qrcode';
 import { useMessages } from '@/i18n/MessagesProvider';
 
 interface QRScannerProps {
+  /** 掃到有效房間碼時觸發 */
   onScan: (code: string) => void;
+  /** 掃到非本系統 QRCode（解析不出房間碼）時觸發，帶兒童語氣訊息 */
   onError?: (error: string) => void;
+  /** 相機權限被拒（FR-062）→ 由 /join 退回開始狀態並聚焦輸入框 */
+  onPermissionDenied?: () => void;
+  /** 沒有可用相機 / 瀏覽器不支援 getUserMedia（FR-063）→ 由 /join 隱藏相機區並聚焦輸入框 */
+  onUnsupported?: () => void;
 }
 
-export function QRScanner({ onScan, onError }: QRScannerProps) {
+const READER_ID = 'qr-reader';
+
+/**
+ * 相機 QRCode 掃描（003 US1）。
+ *
+ * 由 `/join` 在使用者按「開始掃描」後才掛載，掛載即自動啟動相機 —— 元件本身
+ * **不提供「停止 / 取消掃描」按鈕**（FR-061）；要切到手動輸入由 /join 往下捲動完成。
+ *
+ * 採 html5-qrcode 的核心 `Html5Qrcode`（非帶 UI 的 `Html5QrcodeScanner`），
+ * 以便程式化偵測相機權限被拒 / 無相機，並把出路交回 /join 處理。
+ */
+export function QRScanner({ onScan, onError, onPermissionDenied, onUnsupported }: QRScannerProps) {
   const messages = useMessages();
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleError = (err: string) => {
-    setError(err);
-    onError?.(err);
-  };
-
-  const startScanning = () => {
-    if (!containerRef.current) return;
-
-    setIsScanning(true);
-    setError(null);
-
-    scannerRef.current = new Html5QrcodeScanner(
-      'qr-reader',
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-        rememberLastUsedCamera: true,
-      },
-      false
-    );
-
-    scannerRef.current.render(
-      (decodedText) => {
-        // Try to parse room code from URL
-        const roomCode = parseRoomCodeFromURL(decodedText);
-        if (roomCode) {
-          stopScanning();
-          onScan(roomCode);
-        } else if (/^[A-Z0-9]{6}$/i.test(decodedText)) {
-          // Direct room code
-          stopScanning();
-          onScan(decodedText.toUpperCase());
-        } else {
-          handleError(messages.qr.invalid);
-        }
-      },
-      (errorMessage) => {
-        // Ignore common scan errors
-        if (!errorMessage.includes('No QR code found')) {
-          console.warn('QR Scanner error:', errorMessage);
-        }
-      }
-    );
-  };
-
-  const stopScanning = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().catch(console.error);
-      scannerRef.current = null;
-    }
-    setIsScanning(false);
-  };
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  // StrictMode 會掛載兩次；用 ref 確保只啟動一次相機
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    return () => {
-      stopScanning();
+    // 瀏覽器不支援取得相機串流 → 直接交回 /join 隱藏相機區
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      onUnsupported?.();
+      return;
+    }
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    const scanner = new Html5Qrcode(READER_ID);
+    scannerRef.current = scanner;
+
+    const handleDecoded = (decodedText: string) => {
+      const roomCode = parseRoomCodeFromURL(decodedText);
+      const code = roomCode ?? (/^[A-Z0-9]{6}$/i.test(decodedText) ? decodedText.toUpperCase() : null);
+      if (!code) {
+        // 掃到的不是老師給的房間碼 / URL（FR-064、AS8）
+        onError?.(messages.qr.codeNotOurs);
+        return;
+      }
+      stop().finally(() => onScan(code));
     };
+
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        handleDecoded,
+        // 逐幀掃描的雜訊錯誤（找不到碼）忽略
+        () => {}
+      )
+      .catch((err: unknown) => {
+        startedRef.current = false;
+        const name = (err as { name?: string })?.name ?? '';
+        const text = `${name} ${String(err)}`;
+        if (/NotAllowed|Permission|denied/i.test(text)) {
+          onPermissionDenied?.();
+        } else if (/NotFound|NotReadable|Overconstrained|no camera/i.test(text)) {
+          // 沒有可用相機，等同不支援的出路
+          onUnsupported?.();
+        } else {
+          onPermissionDenied?.();
+        }
+      });
+
+    async function stop() {
+      const s = scannerRef.current;
+      if (!s) return;
+      scannerRef.current = null;
+      try {
+        await s.stop();
+        s.clear();
+      } catch {
+        // 已停止 / 尚未啟動，忽略
+      }
+    }
+
+    return () => {
+      void stop();
+    };
+    // 僅在掛載時啟動一次；messages 為穩定參照
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div className="flex flex-col items-center">
-      {!isScanning ? (
-        <div className="flex flex-col items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 p-8 w-full">
-          <div className="mb-4 text-6xl">📷</div>
-          <p className="mb-4 text-center text-slate-600 dark:text-slate-300">
-            {messages.qr.scanInstruction}
-          </p>
-          <Button variant="primary" onClick={startScanning}>
-            {messages.qr.startScan}
-          </Button>
-        </div>
-      ) : (
-        <div className="w-full">
-          <div id="qr-reader" ref={containerRef} className="rounded-xl overflow-hidden" />
-          <Button variant="outline" onClick={stopScanning} className="mt-4 w-full">
-            {messages.qr.stopScan}
-          </Button>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400 w-full text-center">
-          {error}
-        </div>
-      )}
-    </div>
-  );
+  return <div id={READER_ID} className="overflow-hidden rounded-xl border-2 border-black" />;
 }
 
 export default QRScanner;

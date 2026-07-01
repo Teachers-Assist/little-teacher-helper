@@ -46,6 +46,12 @@ const USED_ICONS = [
   'loader-2',
   'refresh-cw',
   'door-open',
+  'ellipsis-vertical',
+  'archive',
+  'calendar-clock',
+  'rotate-ccw',
+  'party-popper',
+  'star',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;

@@ -117,6 +117,16 @@
   }
   .card-title { @apply text-sm font-bold text-slate-800 mb-3; }
 
+  /* ── Stat tile（統計小卡：大數字 + 圖示標籤，水平排列省空間） ───────── */
+
+  .stat-tile {
+    @apply flex items-center gap-2 rounded-xl border-2 border-black bg-white;
+    padding: 0.5rem 0.625rem; /* 比 card-sm 矮，數字與標籤同一行 */
+    box-shadow: 4px 4px 0 #000;
+  }
+  .stat-tile-value { @apply shrink-0 text-xl font-bold leading-none sm:text-2xl; }
+  .stat-tile-label { @apply flex min-w-0 items-center gap-1 text-xs leading-tight text-slate-500; }
+
   /* ── Form inputs ─────────────────────────────────────────────────────── */
 
   .input {
@@ -125,9 +135,23 @@
   }
   .input-lg { @apply px-4 py-2.5 text-base; }
 
+  /* ── Checkbox（neo-brutalist：黑框白底，勾選顯示 green-700 綠勾） ───────── */
+  .checkbox {
+    @apply shrink-0 cursor-pointer appearance-none rounded-md border-2 border-black bg-white
+           transition-colors
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1
+           disabled:cursor-not-allowed disabled:opacity-50;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 72%;
+  }
+  .checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+  }
+
   /* ── Badges ──────────────────────────────────────────────────────────── */
 
-  .badge     { @apply inline-flex items-center gap-1 rounded-full text-xs font-bold px-2 py-0.5 border border-black; }
+  .badge     { @apply inline-flex items-center gap-1 rounded-full text-xs font-bold px-2 py-0.5 border border-black select-none; }
   .badge-md  { @apply px-2.5 py-1; }
   .badge-lg  { @apply text-sm px-3 py-1.5 border-2 border-black; }
 
@@ -161,11 +185,33 @@
     @apply bg-accent-300 text-black font-bold;
     border: 2px solid #000;
   }
+  /* 子層導覽（「我的班級」展開的班級清單）：較 nav-item 小一號，但仍清楚可讀 */
+  .nav-subitem {
+    @apply flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium
+           text-slate-700 transition-colors hover:bg-accent-100 hover:text-black;
+  }
+
+  /* ── Overflow 選單（⋮ 下拉，portal 到 body、fixed 定位） ──────────────── */
+
+  .menu-panel {
+    @apply fixed z-50 min-w-36 overflow-hidden rounded-lg border-2 border-black bg-white py-1;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700
+           transition-colors hover:bg-accent-100 hover:text-black;
+  }
+  .menu-item-danger {
+    @apply text-red-600 hover:bg-red-50 hover:text-red-700;
+  }
 
   /* ── Page structure ──────────────────────────────────────────────────── */
 
   .page-title    { @apply text-xl font-bold text-slate-900; }
   .page-subtitle { @apply text-sm text-slate-600 mt-0.5; }
+
+  /* 返回連結（小型 icon + 文字，hover 轉主色）。margin 等版面間距留在 JSX。 */
+  .link-back { @apply inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600; }
 
   /* ── Empty states ────────────────────────────────────────────────────── */
 
@@ -184,7 +230,8 @@
 
 .sidebar-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* app shell：視窗不捲動，捲動發生在內層 */
 }
 
 .app-sidebar {
@@ -204,7 +251,9 @@
 .app-main {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fffbeb;
 }
 
@@ -212,20 +261,41 @@
   padding: 1.25rem 1.75rem;
   background: #ffffff;
   border-bottom: 3px solid #000;
+  flex-shrink: 0;
 }
 
 .page-body {
   padding: 1.5rem 1.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto; /* 內容捲動發生在這裡，不是整個視窗 */
+}
+
+/* 班級詳情頁：固定班級資訊 + tabs，只讓列表內部捲動（lg 以上） */
+@media (min-width: 1024px) {
+  .room-detail-body {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 768px) {
-  .app-sidebar {
+  .app-sidebar:not(.app-sidebar--drawer) {
     display: none;
   }
   .page-header,
   .page-body {
     padding: 1rem;
   }
+}
+
+/* 手機抽屜模式的側欄（002 US8 / FR-061）：在固定定位的抽屜容器內呈現 */
+.app-sidebar--drawer {
+  position: static;
+  height: 100%;
+  display: flex;
+  box-shadow: 4px 0 0 rgba(0, 0, 0, 0.1);
 }
 
 /* ─── Classic Layout (helper / join pages) ───────────────────────────────── */
@@ -304,5 +374,37 @@ button,
 @media print {
   .no-print {
     display: none !important;
+  }
+}
+
+/* ─── 進場儀式動畫（003 US2，NFR-008：以 transform/opacity 維持 60fps）─────── */
+
+@keyframes pop-in {
+  0%   { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* 印章「蓋下」效果：由大縮到定位、僅播 1 次 */
+@keyframes stamp-in {
+  0%   { transform: scale(1.6) rotate(-4deg); opacity: 0; }
+  55%  { transform: scale(0.94) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);    opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-pop-in   { animation: pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-stamp-in { animation: stamp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade-in  { animation: fade-in 0.4s ease-out both; }
+
+/* 尊重使用者「減少動態」偏好（無障礙） */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop-in,
+  .animate-stamp-in,
+  .animate-fade-in {
+    animation-duration: 0.01ms;
   }
 }

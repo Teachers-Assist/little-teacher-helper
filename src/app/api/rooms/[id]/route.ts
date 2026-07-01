@@ -50,9 +50,9 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, isActive } = body;
+    const { name } = body;
 
-    const updateData: { name?: string; isActive?: boolean } = {};
+    const updateData: { name?: string } = {};
 
     if (name !== undefined) {
       if (name.trim().length === 0) {
@@ -68,10 +68,6 @@ export async function PATCH(
         );
       }
       updateData.name = name.trim();
-    }
-
-    if (isActive !== undefined) {
-      updateData.isActive = isActive;
     }
 
     const room = await prisma.room.update({

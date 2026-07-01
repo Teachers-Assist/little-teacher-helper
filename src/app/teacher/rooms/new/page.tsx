@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
+import { StudentImport } from '@/components/StudentImport';
 import { useMessages } from '@/i18n/MessagesProvider';
 
 export default function NewRoomPage() {
@@ -75,13 +74,6 @@ export default function NewRoomPage() {
     <>
       {/* Page Header */}
       <div className="page-header">
-        <Link
-          href="/teacher"
-          className="mb-2 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600"
-        >
-          <Icon name="lucide:arrow-left" size={14} />
-          {messages.teacher.backToDashboard}
-        </Link>
         <h1 className="text-xl font-bold text-slate-900">{messages.teacher.newRoomTitle}</h1>
       </div>
 
@@ -126,6 +118,17 @@ export default function NewRoomPage() {
                 rows={8}
                 className="w-full rounded-lg border-2 border-black bg-white px-4 py-2.5 font-mono text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
               />
+              {/* US1：Excel 範本下載 + 解析填入上方名單（收集模式，建班時一起送出） */}
+              <div className="mt-3">
+                <StudentImport
+                  onParsed={(parsed) =>
+                    setStudentNames((prev) => {
+                      const lines = parsed.map((s) => `${s.seatNumber} ${s.name}`).join('\n');
+                      return prev.trim() ? `${prev.trim()}\n${lines}` : lines;
+                    })
+                  }
+                />
+              </div>
             </div>
 
             {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
