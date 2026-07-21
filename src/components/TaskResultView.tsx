@@ -4,8 +4,15 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useToast } from '@/components/ui/Toast';
 import { Student, Task, TaskType, SubmissionStatus } from '@/types';
-import { generateTextReport, printReport, copyToClipboard, ReportData } from '@/lib/report';
+import {
+  generateTextReport,
+  generateGradeTable,
+  printReport,
+  copyToClipboard,
+  ReportData,
+} from '@/lib/report';
 import { formatDateTime } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
 
@@ -32,9 +39,9 @@ interface TaskResultViewProps {
  */
 export function TaskResultView({ task, roomName, students }: TaskResultViewProps) {
   const messages = useMessages();
+  const toast = useToast();
   const [records, setRecords] = useState<RecordWithStudent[] | null>(null);
   const [error, setError] = useState(false);
-  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -102,9 +109,17 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
   const handleCopy = useCallback(async () => {
     if (!report) return;
     const ok = await copyToClipboard(generateTextReport(report, messages.report));
-    setNotice(ok ? messages.report.copied : messages.report.copyFailed);
-    setTimeout(() => setNotice(''), 2000);
-  }, [report, messages]);
+    if (ok) toast.success(messages.report.copied);
+    else toast.error(messages.report.copyFailed);
+  }, [report, messages, toast]);
+
+  // 成績類專用：複製成 Excel 可直接貼上的兩欄表格（座號 / 成績）
+  const handleCopyGrades = useCallback(async () => {
+    if (!report) return;
+    const ok = await copyToClipboard(generateGradeTable(report, messages.report));
+    if (ok) toast.success(messages.report.gradesCopied);
+    else toast.error(messages.report.copyFailed);
+  }, [report, messages, toast]);
 
   if (error) {
     return (
@@ -157,7 +172,6 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
     <div className="space-y-4">
       {/* 匯出 */}
       <div className="flex items-center justify-end gap-2">
-        {notice && <span className="text-xs font-medium text-emerald-600">{notice}</span>}
         <Button variant="outline" size="sm" onClick={handleCopy}>
           <Icon name="lucide:copy" size={14} />
           {messages.report.copyText}
@@ -201,7 +215,15 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
         <>
           {/* 成績類：登記明細（已輸入成績者）+ 未登記學生（尚未輸入成績，狀態獨立有意義） */}
           <div className="card-sm">
-            <h3 className="card-title">{messages.teacher.taskDetail.registrationList}</h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="card-title mb-0">{messages.teacher.taskDetail.registrationList}</h3>
+              {sortedRecords.length > 0 && (
+                <Button variant="outline" size="sm" onClick={handleCopyGrades}>
+                  <Icon name="lucide:table" size={14} />
+                  {messages.report.copyGrades}
+                </Button>
+              )}
+            </div>
             {sortedRecords.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-400">
                 {messages.teacher.taskDetail.noRecordsYet}

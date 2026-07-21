@@ -52,6 +52,8 @@ const USED_ICONS = [
   'rotate-ccw',
   'party-popper',
   'star',
+  'copy',
+  'table',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;
