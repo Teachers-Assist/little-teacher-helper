@@ -353,7 +353,15 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     <>
       <div className="page-header">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
+            <span className="flex flex-col items-baseline">
+              <span className="text-xs text-slate-400">{messages.teacher.roomCodeLabel}</span>
+              <span className="font-mono text-base font-bold tracking-widest text-slate-900">
+                {room.code}
+              </span>
+            </span>
+          </div>
           <Button variant="outline" size="sm" onClick={openQr}>
             <Icon name="lucide:qr-code" size={15} />
             {messages.teacher.qrcode.showButton}
@@ -362,27 +370,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <div className="page-body room-detail-body">
-        {/* US3：班級資訊上提至 tab 列之上，所有 tab 共用一份 */}
-        <div className="card-sm mb-4 lg:shrink-0">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-            <div>
-              <p className="text-xs text-slate-400">{messages.teacher.roomCodeLabel}</p>
-              <p className="font-mono text-xl font-bold tracking-widest text-slate-900">
-                {room.code}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">{messages.teacher.studentCountLabel}</p>
-              <p className="text-lg font-semibold text-slate-900">{students.length}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">{messages.teacher.taskCountLabel}</p>
-              <p className="text-lg font-semibold text-slate-900">{tasks.length}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
+        {/* Tabs（班級代碼移至標題列、人數/任務數由 tab 上的數字提供，故移除資訊卡） */}
         <div className="mb-5 flex gap-1 border-b-2 border-black lg:shrink-0">
           {tabs.map((tab) => (
             <button

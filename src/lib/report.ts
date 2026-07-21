@@ -37,8 +37,9 @@ export function generateTextReport(data: ReportData, m: ReportMessages): string 
     lines.push(m.allDone);
   } else {
     lines.push(`${m.incompleteList}（${incomplete.length} ${m.unitPerson}）：`);
-    incomplete.forEach((r, i) => {
-      lines.push(`${i + 1}. ${r.seatNumber}${m.colSeat} ${r.name}`);
+    // 貼到通訊軟體時，序號與「座號」字樣都是雜訊：只留「座號 姓名」
+    incomplete.forEach((r) => {
+      lines.push(`${r.seatNumber} ${r.name}`);
     });
   }
 
