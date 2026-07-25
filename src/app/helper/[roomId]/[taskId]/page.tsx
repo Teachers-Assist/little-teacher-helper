@@ -47,7 +47,7 @@ export default function RecordPage({
   const room = useOfflineRoom(roomId);
   const task = useOfflineTask(roomId, taskId);
   const students = useOfflineStudents(roomId);
-  const records = useOfflineRecords(taskId);
+  const records = useOfflineRecords(taskId, task?.assignedSeatNumber);
   const [isLoading, setIsLoading] = useState(true);
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
   const { isOnline } = useNetworkStatus();
