@@ -14,6 +14,7 @@ export const messages = {
     offlineHint: '沒有網路 — 資料暫存在本機，連上網路後自動上傳',
     pendingSync: '待同步',
     error: '發生錯誤，請稍後再試',
+    errorChild: '網頁出了點問題，等一下再試試看', // 004 US2：學生端伺服器錯誤（兒童語氣，取代成人化的「請稍後再試」）
     networkError: '網路連不上。別擔心，你的資料安全存在本機 — 連上網路後再試試',
     confirm: '確認',
     cancel: '取消',
@@ -77,7 +78,6 @@ export const messages = {
     roomCode: '班級代碼',
     codePlaceholder: '例如：ABC123',
     emptyCode: '還沒輸入班級代碼喔',
-    joinFailedRetry: '加入班級失敗了，代碼有輸入對嗎？請再確認一次',
     generating: '產生 QRCode 中...',
     generateFailed: '無法產生 QRCode',
     copyCode: '複製代碼',
@@ -98,6 +98,11 @@ export const messages = {
     pending: (n: number) => `有 ${n} 筆資料還沒上傳，等待連上網路`,
     syncNow: '現在上傳',
     synced: '上傳完成！老師現在看得到你的登記了',
+    // 004 US1：同步失敗態 + 錯誤碼（不可重試者的兒童語氣文案）
+    failed: (n: number) => `有 ${n} 筆送不出去，去找老師看看吧`,
+    taskLocked: '這個任務老師已經收起來了',
+    taskNotFound: '找不到這個任務了，去問老師吧',
+    studentRemoved: '你好像不在這個班級了，去找老師確認',
   },
   toast: {
     close: '關閉通知',
@@ -178,6 +183,18 @@ export const messages = {
     lockedCompleted: '你已經標記完畢了！如果需要修改，告訴老師幫你重新開放就好',
     lockedDuePassed:
       '截止時間到了，這個任務鎖起來了，沒辦法再改。資料都有截止時間 — 時間一到就會自動鎖定。如果還需要繼續登記，去找老師吧！',
+    // 004 US5：任務生命週期語意（區分「被老師收起來」與「找不到班級」）
+    taskRemovedByTeacher: '這個任務老師收起來了，去問問老師吧',
+    taskArchivedNotice: '這個任務老師已經收起來了', // FR-101a：封存後離線登記仍算成功，用「已收起」非「遲交」
+    // 004 US7：標記完成前的承諾核對
+    commitCheckMessage: (n: number) => `還有 ${n} 個同學沒登記，完成後就不能自己改囉，確定嗎?`,
+    commitContinue: '確認完成',
+    commitGoBack: '先回去補登',
+    // 004 US9：載入時「已有人登過」提示
+    alreadyRecordedNotice: (seat: number, done: number, total: number) =>
+      `這個任務座號 ${seat} 已經登了 ${done}/${total}，你要接手嗎?`,
+    takeOver: '接手繼續',
+    backToList: '返回任務清單',
   },
 
   record: {
@@ -195,6 +212,12 @@ export const messages = {
     recorderLabel: '登記者：',
     assignedHint: '你是老師指定的登記者！',
     notAssignedHint: '你不是被指定的小老師>_<',
+    // 004 US3：標記完成 / 本機儲存失敗（區分成因、皆不阻擋操作）
+    markCompleteFailedNetwork: '沒送出去，網路好像斷了，連上網路再按一次',
+    markCompleteFailedOther: '沒送出去，再按一次看看，還是不行就找老師',
+    storageFull: '存不下來了！平板空間可能滿了，去找老師幫忙',
+    // 004 US4：覆蓋他人紀錄的陳述句（右上 toast、800ms 自動消失、非警告色）
+    overwriteNotice: (seat: number) => `這一筆原本是 ${seat} 號登的`,
   },
 
   room: {
@@ -378,6 +401,17 @@ export const messages = {
       statArchived: '已封存',
       anomalyAssignedSeatIdle: (seat: number) => `指定座號 ${seat} 已超過 24 小時沒有登記`,
       anomalyNoRecordsNearDue: '即將截止，但還沒有任何登記',
+      // 004 US2：monitoring 載入失敗的「無法確認」狀態（區分連線問題 vs 伺服器錯誤）
+      unavailableTitle: '現在讀不到班級狀況',
+      unavailableNetwork: '你的裝置好像沒連上網路，請檢查連線後重試',
+      unavailableServer: '伺服器暫時出了點問題，請稍後重試',
+      retry: '重新載入',
+      unknownCount: '—', // dashboard 異常數無法取得時顯示，MUST NOT 顯示 0 或過期值（FR-086）
+      // 004 US2/US6：異常卡片的時間 / 閾值資訊（規則重整後的文案）
+      anomalyIdle: (hours: number) => `已經 ${hours} 小時沒有新的登記了（超過 24 小時就會提醒）`,
+      anomalyNearDue: (due: string) => `截止 ${due}，目前還沒有任何登記`,
+      // 004 US8：規則三 — 完成但登記率過低
+      anomalyLowCompletion: (done: number, total: number) => `標記完成了，但只登了 ${done}/${total}`,
     },
 
     // ─── 002 新增：任務細節頁 ─────────────────────────────────
@@ -396,6 +430,11 @@ export const messages = {
       noDue: '無截止時間',
       notAssigned: '未指定',
       assignedRemoved: (seat: number) => `指定座號 ${seat}（學生已移除）`,
+      // 004 US4：順序處理者名單（監視器留痕、可展開查閱）
+      multiHandler: '多人經手',
+      handlerChainTitle: '經手紀錄',
+      handlerChainAt: (seat: number, time: string) => `${seat} 號・${time}`,
+      archivedLateRecord: '任務封存後才同步進來', // FR-097a：證據級標示（被動可見、不主動喊）
     },
 
     // ─── 002 新增：QRCode modal ───────────────────────────────

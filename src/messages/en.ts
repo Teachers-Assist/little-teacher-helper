@@ -14,6 +14,7 @@ export const messages = {
     offlineHint: 'No internet — data saved on this device and will upload when reconnected',
     pendingSync: 'Pending upload',
     error: 'Something went wrong. Please try again.',
+    errorChild: 'Something went wrong with the page — try again in a bit.', // 004 US2: student-facing server error (child tone)
     networkError:
       "Can't connect to the internet. Your data is safe on this device — try again when you're back online.",
     confirm: 'Confirm',
@@ -83,8 +84,6 @@ export const messages = {
     roomCode: 'Class Code',
     codePlaceholder: 'e.g. ABC123',
     emptyCode: "Oops! You haven't typed in a class code yet.",
-    joinFailedRetry:
-      "Couldn't join the class. Did you type the code right? Check it and try again!",
     // --- Teacher-facing (display / share) ---
     generating: 'Generating QR code...',
     generateFailed: 'Failed to generate QR code',
@@ -108,6 +107,11 @@ export const messages = {
     pending: (n: number) => `${n} record${n === 1 ? '' : 's'} waiting to upload`,
     syncNow: 'Upload Now',
     synced: 'All uploaded! Your teacher can see your records now.',
+    // 004 US1: sync failure state + error codes (child-friendly copy for non-retryable cases)
+    failed: (n: number) => `${n} record${n === 1 ? '' : 's'} couldn't be sent — go ask your teacher`,
+    taskLocked: 'Your teacher has closed this task',
+    taskNotFound: "This task is gone now — ask your teacher",
+    studentRemoved: "You're no longer in this class — check with your teacher",
   },
   toast: {
     close: 'Dismiss',
@@ -195,6 +199,19 @@ export const messages = {
       'You already marked this done! If you need to make changes, ask your teacher to reopen it.',
     lockedDuePassed:
       "The due date has passed, so this task is now locked. Data has a deadline — once it's over, it can't be changed anymore. If you still need to record something, go find your teacher!",
+    // 004 US5: task lifecycle wording (tell "put away by teacher" apart from "class not found")
+    taskRemovedByTeacher: 'Your teacher put this task away — go ask them about it',
+    taskArchivedNotice: 'Your teacher has already closed this task', // FR-101a: offline record still counts as saved; say "closed", not "late"
+    // 004 US7: mark-complete commitment check
+    commitCheckMessage: (n: number) =>
+      `${n} classmate${n === 1 ? '' : 's'} still ${n === 1 ? 'needs' : 'need'} recording. After this you can't edit it yourself — sure?`,
+    commitContinue: 'Confirm Done',
+    commitGoBack: 'Go Back and Finish',
+    // 004 US9: "someone already recorded" notice on load
+    alreadyRecordedNotice: (seat: number, done: number, total: number) =>
+      `Seat ${seat} already recorded ${done}/${total} here — want to take over?`,
+    takeOver: 'Take Over',
+    backToList: 'Back to Task List',
   },
 
   // Student-facing — recording screen
@@ -215,6 +232,12 @@ export const messages = {
     recorderLabel: 'Recorded by: ',
     assignedHint: "You're the recorder for this task!",
     notAssignedHint: "You're not the assigned recorder >_<",
+    // 004 US3: mark-complete / local storage failures (distinct causes, never block the action)
+    markCompleteFailedNetwork: "That didn't go through — looks like you're offline. Reconnect and tap again.",
+    markCompleteFailedOther: "That didn't go through — tap again, or ask your teacher if it keeps failing.",
+    storageFull: "Can't save — the tablet might be full. Go ask your teacher for help.",
+    // 004 US4: overwrite-someone-else notice (top-right toast, auto-dismiss 800ms, not a warning color)
+    overwriteNotice: (seat: number) => `Seat ${seat} recorded this one first`,
   },
 
   // Student-facing — room/class state
@@ -403,6 +426,19 @@ export const messages = {
       anomalyAssignedSeatIdle: (seat: number) =>
         `Assigned seat ${seat} has not recorded for over 24 hours`,
       anomalyNoRecordsNearDue: 'Due soon, but no records yet',
+      // 004 US2: "can't confirm" state when monitoring fails (network problem vs server error)
+      unavailableTitle: "Can't load class status right now",
+      unavailableNetwork: 'Your device seems offline. Check your connection and try again.',
+      unavailableServer: 'The server had a temporary problem. Please try again shortly.',
+      retry: 'Reload',
+      unknownCount: '—', // shown when the dashboard anomaly count is unavailable; never show 0 or a stale value (FR-086)
+      // 004 US2/US6: anomaly card time / threshold info (post-refactor wording)
+      anomalyIdle: (hours: number) =>
+        `No new records for ${hours} hour${hours === 1 ? '' : 's'} (alerts after 24 hours)`,
+      anomalyNearDue: (due: string) => `Due ${due}, still no records`,
+      // 004 US8: rule three — completed but low recording rate
+      anomalyLowCompletion: (done: number, total: number) =>
+        `Marked complete, but only ${done}/${total} recorded`,
     },
 
     // ─── 002 new: task detail page ─────────────────────────────
@@ -421,6 +457,11 @@ export const messages = {
       noDue: 'No due date',
       notAssigned: 'Unassigned',
       assignedRemoved: (seat: number) => `Assigned seat ${seat} (student removed)`,
+      // 004 US4: ordered handler list (monitoring trail, expandable)
+      multiHandler: 'Multiple handlers',
+      handlerChainTitle: 'Handler History',
+      handlerChainAt: (seat: number, time: string) => `Seat ${seat} · ${time}`,
+      archivedLateRecord: 'Synced after the task was archived', // FR-097a: evidence-level marker (passive, no active alert)
     },
 
     // ─── 002 new: QR code modal ────────────────────────────────
