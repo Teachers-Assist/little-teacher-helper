@@ -423,9 +423,6 @@ export const messages = {
       statInProgress: 'In Progress',
       statAnomalies: 'Anomalies',
       statArchived: 'Archived',
-      anomalyAssignedSeatIdle: (seat: number) =>
-        `Assigned seat ${seat} has not recorded for over 24 hours`,
-      anomalyNoRecordsNearDue: 'Due soon, but no records yet',
       // 004 US2: "can't confirm" state when monitoring fails (network problem vs server error)
       unavailableTitle: "Can't load class status right now",
       unavailableNetwork: 'Your device seems offline. Check your connection and try again.',

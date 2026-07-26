@@ -22,11 +22,14 @@ export function MonitoringAlerts({ roomId, warnings }: MonitoringAlertsProps) {
   const messages = useMessages();
   const router = useRouter();
 
-  const reasonText = (a: Anomaly): string => {
-    if (a.type === 'ASSIGNED_SEAT_IDLE') {
-      return messages.teacher.classStatus.anomalyAssignedSeatIdle(a.assignedSeatNumber ?? 0);
+  const reasonText = (a: Anomaly, dueDate: string | Date | null): string => {
+    if (a.type === 'TASK_STALLED') {
+      const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
+      return messages.teacher.classStatus.anomalyIdle(hours);
     }
-    return messages.teacher.classStatus.anomalyNoRecordsNearDue;
+    // NO_RECORDS_BY_DUE：顯示截止日（FR-085）
+    const due = dueDate ? new Date(dueDate).toLocaleDateString() : '';
+    return messages.teacher.classStatus.anomalyNearDue(due);
   };
 
   // 無異常時不畫卡片外框：白底方框與有異常時的紅色卡片風格不搭，只留 icon + 文字
@@ -58,7 +61,7 @@ export function MonitoringAlerts({ roomId, warnings }: MonitoringAlertsProps) {
             <ul className="mt-0.5 space-y-0.5">
               {w.anomalies.map((a, i) => (
                 <li key={i} className="text-xs text-red-700">
-                  {reasonText(a)}
+                  {reasonText(a, w.dueDate)}
                 </li>
               ))}
             </ul>

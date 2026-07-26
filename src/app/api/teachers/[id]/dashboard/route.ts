@@ -14,10 +14,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const rooms = await prisma.room.findMany({
       where: { teacherId },
       include: {
-        _count: { select: { students: true } },
+        // 分母只計在籍學生（FR-104）
+        _count: { select: { students: { where: { isRemoved: false } } } },
         tasks: {
           where: { isArchived: false },
-          include: { _count: { select: { records: true } } },
+          // 分子排除已移除學生的紀錄（FR-104）
+          include: { _count: { select: { records: { where: { student: { isRemoved: false } } } } } },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -25,23 +27,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const taskIds = rooms.flatMap((r) => r.tasks.map((t) => t.id));
 
-    // 每個任務的最後活動時間（最後一筆登記）與是否有指定小老師的登記
+    // 每個任務的最後一次登記活動時間（滑動視窗起算點，US6 規則一）
     const lastByTask = new Map<string, Date>();
-    const assignedSet = new Set<string>();
     if (taskIds.length > 0) {
       const grouped = await prisma.record.groupBy({
         by: ['taskId'],
-        where: { taskId: { in: taskIds } },
+        where: { taskId: { in: taskIds }, student: { isRemoved: false } },
         _max: { updatedAt: true },
       });
       for (const g of grouped) if (g._max.updatedAt) lastByTask.set(g.taskId, g._max.updatedAt);
-
-      const assigned = await prisma.record.findMany({
-        where: { taskId: { in: taskIds }, isAssignedRecorder: true },
-        select: { taskId: true },
-        distinct: ['taskId'],
-      });
-      for (const a of assigned) assignedSet.add(a.taskId);
     }
 
     const now = Date.now();
@@ -88,11 +82,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           {
             status: task.status,
             isArchived: task.isArchived,
-            assignedSeatNumber: task.assignedSeatNumber,
             dueDate: task.dueDate,
             createdAt: task.createdAt,
             recordedCount: task._count.records,
-            assignedRecorderHasRecord: assignedSet.has(task.id),
+            classStudentCount: room._count.students,
+            lastRecordActivityAt: lastByTask.get(task.id) ?? null,
           },
           now
         );

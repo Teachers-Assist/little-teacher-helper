@@ -12,17 +12,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const tasks = await prisma.task.findMany({
       where: { roomId },
-      include: { _count: { select: { records: true } } },
+      // 分子排除已移除學生的紀錄（FR-104）
+      include: { _count: { select: { records: { where: { student: { isRemoved: false } } } } } },
       orderBy: { createdAt: 'desc' },
     });
 
-    // 哪些任務已有「指定小老師」的登記（一次查詢避免 N+1）
-    const assignedRecords = await prisma.record.findMany({
-      where: { task: { roomId }, isAssignedRecorder: true },
-      select: { taskId: true },
-      distinct: ['taskId'],
+    // 分母：班級在籍學生數（只計 isRemoved=false，FR-104）
+    const classStudentCount = await prisma.student.count({
+      where: { roomId, isRemoved: false },
     });
-    const assignedSet = new Set(assignedRecords.map((r) => r.taskId));
+
+    // 每個任務的最後一次登記活動時間（滑動視窗起算點，US6 規則一）
+    const lastByTask = new Map<string, Date>();
+    const taskIds = tasks.map((t) => t.id);
+    if (taskIds.length > 0) {
+      const grouped = await prisma.record.groupBy({
+        by: ['taskId'],
+        where: { taskId: { in: taskIds }, student: { isRemoved: false } },
+        _max: { updatedAt: true },
+      });
+      for (const g of grouped) if (g._max.updatedAt) lastByTask.set(g.taskId, g._max.updatedAt);
+    }
 
     const now = Date.now();
     const warnings: {
@@ -48,11 +58,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         {
           status: task.status,
           isArchived: task.isArchived,
-          assignedSeatNumber: task.assignedSeatNumber,
           dueDate: task.dueDate,
           createdAt: task.createdAt,
           recordedCount: task._count.records,
-          assignedRecorderHasRecord: assignedSet.has(task.id),
+          classStudentCount,
+          lastRecordActivityAt: lastByTask.get(task.id) ?? null,
         },
         now
       );

@@ -1,60 +1,71 @@
-// 任務異常偵測（002 US4 / US8，FR-035）。
+// 任務異常偵測（004 US6 重整；002 US4/US8 建立）。
 //
-// MVP 階段只實作可用現有資料模型判斷的兩條規則；「裝置長時間未同步」因缺乏
-// 裝置心跳資料而略過（見 specs/open-questions.md 2026-06-26）。
+// 純函式，無 I/O —— monitoring endpoint 與 dashboard endpoint 共用，確保兩處判斷一致
+// （NFR-015）。DB 過濾（排除 isRemoved 學生、納入哪些 status）由 endpoint 負責。
+// 規則的單一真實來源見 specs/anomaly-rules.md。
 //
-// 純函式，無 I/O —— monitoring endpoint（US4）與 dashboard endpoint（US8）共用，
-// 確保兩處異常判斷一致。
+// 規則一（TASK_STALLED）：任務層級停擺——距「最後一次登記活動」超過閾值（無登記則自建立
+//   時間起算，滑動視窗）。不要求指定小老師、不要求設截止；全班登滿則不判。此規則同時是
+//   「裝置長時間未同步」的代理指標（004 US6，推翻原需裝置心跳的結論）。
+// 規則二（NO_RECORDS_BY_DUE）：有截止日、已過「截止日當天 08:00（Asia/Taipei）」且全班零
+//   登記。取代舊的「距截止 6h」相對閾值；僅適用 08:00 前已建立的任務。
 
-/** 閾值（同步記錄於 specs/002-class-management/plan.md）。 */
+import { taipeiDayStartAt } from '@/lib/timezone';
+
 export const ANOMALY_THRESHOLDS = {
-  /** 指定座號的小老師多久沒登記算異常（自任務建立起算）。 */
-  assignedSeatIdleMs: 24 * 60 * 60 * 1000, // 24 小時
-  /** 距截止時間多近、且完全無登記算異常。 */
-  nearDueMs: 6 * 60 * 60 * 1000, // 6 小時
+  /** 規則一：距最後一次登記活動多久未動算停擺。 */
+  taskStalledMs: 24 * 60 * 60 * 1000, // 24 小時
+  /** 規則二：截止日當天幾點（台北）起，全班零登記即示警。 */
+  dueDayAlertHour: 8, // 08:00
 } as const;
 
-export type AnomalyType = 'ASSIGNED_SEAT_IDLE' | 'NO_RECORDS_NEAR_DUE';
+export type AnomalyType = 'TASK_STALLED' | 'NO_RECORDS_BY_DUE';
 
 export interface AnomalyInput {
   status: string;
   isArchived: boolean;
-  assignedSeatNumber: number | null;
   dueDate: Date | string | null;
   createdAt: Date | string;
+  /** 已登記筆數（分子）。MUST 由 endpoint 排除 isRemoved 學生的紀錄後傳入（FR-104）。 */
   recordedCount: number;
-  /** 是否已有「任務指定的小老師」所做的登記。 */
-  assignedRecorderHasRecord: boolean;
+  /** 班級在籍學生總數（分母）。MUST 只計 isRemoved=false 的學生（FR-104）。 */
+  classStudentCount: number;
+  /** 最後一次登記活動時間；從未有登記時為 null（滑動視窗起算點退回 createdAt）。 */
+  lastRecordActivityAt: Date | string | null;
 }
 
 export interface Anomaly {
   type: AnomalyType;
-  /** 指定座號（ASSIGNED_SEAT_IDLE 才有）。 */
-  assignedSeatNumber?: number;
-  /** 距截止剩餘毫秒（NO_RECORDS_NEAR_DUE 才有）。 */
-  msToDue?: number;
+  /** TASK_STALLED：已停擺多久（毫秒），供 UI 顯示已閒置時長（FR-085）。 */
+  idleMs?: number;
 }
 
 /**
- * 偵測單一任務的異常。已封存或非 ACTIVE 的任務不判異常（已結案 / 已完成不需提醒）。
+ * 偵測單一任務的異常。已封存或非 ACTIVE 的任務不判（規則一、二只判 ACTIVE；
+ * HELPER_COMPLETED 由 US8 規則三涵蓋，另案）。
  */
 export function detectAnomalies(task: AnomalyInput, now: number = Date.now()): Anomaly[] {
   const anomalies: Anomaly[] = [];
   if (task.isArchived || task.status !== 'ACTIVE') return anomalies;
 
-  // 1. 指定座號 24h 無登記
-  if (task.assignedSeatNumber != null && !task.assignedRecorderHasRecord) {
-    const age = now - new Date(task.createdAt).getTime();
-    if (age >= ANOMALY_THRESHOLDS.assignedSeatIdleMs) {
-      anomalies.push({ type: 'ASSIGNED_SEAT_IDLE', assignedSeatNumber: task.assignedSeatNumber });
+  // 規則一：任務停擺（滑動視窗）。全班登滿則不判（分子分母皆已排除 isRemoved）。
+  const isFull = task.classStudentCount > 0 && task.recordedCount >= task.classStudentCount;
+  if (!isFull) {
+    const anchor = task.lastRecordActivityAt
+      ? new Date(task.lastRecordActivityAt).getTime()
+      : new Date(task.createdAt).getTime();
+    const idleMs = now - anchor;
+    if (idleMs >= ANOMALY_THRESHOLDS.taskStalledMs) {
+      anomalies.push({ type: 'TASK_STALLED', idleMs });
     }
   }
 
-  // 2. 所有人未登記且距截止 < 6h（尚未過截止）
+  // 規則二：截止日當天 08:00（台北）起、全班零登記。僅適用 08:00 前已建立者。
   if (task.dueDate && task.recordedCount === 0) {
-    const msToDue = new Date(task.dueDate).getTime() - now;
-    if (msToDue > 0 && msToDue < ANOMALY_THRESHOLDS.nearDueMs) {
-      anomalies.push({ type: 'NO_RECORDS_NEAR_DUE', msToDue });
+    const dueDayStart = taipeiDayStartAt(task.dueDate, ANOMALY_THRESHOLDS.dueDayAlertHour).getTime();
+    const createdMs = new Date(task.createdAt).getTime();
+    if (createdMs < dueDayStart && now >= dueDayStart) {
+      anomalies.push({ type: 'NO_RECORDS_BY_DUE' });
     }
   }
 

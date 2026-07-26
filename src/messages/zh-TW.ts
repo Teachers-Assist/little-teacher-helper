@@ -399,8 +399,6 @@ export const messages = {
       statInProgress: '進行中',
       statAnomalies: '有異常',
       statArchived: '已封存',
-      anomalyAssignedSeatIdle: (seat: number) => `指定座號 ${seat} 已超過 24 小時沒有登記`,
-      anomalyNoRecordsNearDue: '即將截止，但還沒有任何登記',
       // 004 US2：monitoring 載入失敗的「無法確認」狀態（區分連線問題 vs 伺服器錯誤）
       unavailableTitle: '現在讀不到班級狀況',
       unavailableNetwork: '你的裝置好像沒連上網路，請檢查連線後重試',
