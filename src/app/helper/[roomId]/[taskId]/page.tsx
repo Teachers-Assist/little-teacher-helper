@@ -17,6 +17,7 @@ import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
 import { useMessages } from '@/i18n/MessagesProvider';
+import { useToast } from '@/components/ui/Toast';
 
 interface RecordApiItem {
   studentId: string;
@@ -43,6 +44,7 @@ export default function RecordPage({
   const { roomId, taskId } = use(params);
   const messages = useMessages();
   const router = useRouter();
+  const toast = useToast();
   // 單一真相：座號、任務、學生、登記值全部讀自離線 store；登記寫入後畫面自動更新
   const room = useOfflineRoom(roomId);
   const task = useOfflineTask(roomId, taskId);
@@ -104,11 +106,19 @@ export default function RecordPage({
         submissionStatus: value.submissionStatus,
         gradeValue: value.gradeValue,
       });
-      if (!result.ok) return;
+      // 驗證失敗（不該發生，GradeRow 已擋）→ 告知，不靜默 return（FR-087）
+      if (!result.ok) {
+        toast.error(messages.record.saveFailed);
+        return;
+      }
+      // 存不下來（無痕 / 配額爆）→ 告知但不阻擋操作（FR-090/091）
+      if (result.stored === false) {
+        toast.warning(messages.record.storageFull);
+      }
 
       if (isOnline) requestSync();
     },
-    [task, seatNumber, isOnline]
+    [task, seatNumber, isOnline, toast, messages]
   );
 
   const handleMarkComplete = useCallback(async () => {
@@ -120,12 +130,18 @@ export default function RecordPage({
         body: JSON.stringify({ status: TaskStatus.HELPER_COMPLETED }),
       });
       if (res.ok) {
-        saveTask(roomId, { ...task, status: TaskStatus.HELPER_COMPLETED });
+        // 臉 D：用伺服器回應更新，MUST NOT 用 await 前的閉包 task 拼（避免陳舊快照回捲，INV-4）
+        saveTask(roomId, (await res.json()) as Task);
+      } else {
+        // 非 2xx（伺服器回應了但失敗）→ 告知；按鈕未鎖定，仍可再按（AS2）
+        toast.error(messages.record.markCompleteFailedOther);
       }
     } catch (error) {
+      // 拋錯通常是斷線 → 區分「沒網路」文案（AS3）
       console.error('Failed to mark complete:', error);
+      toast.error(messages.record.markCompleteFailedNetwork);
     }
-  }, [task, roomId, taskId]);
+  }, [task, roomId, taskId, toast, messages]);
 
   if (isLoading) {
     return (

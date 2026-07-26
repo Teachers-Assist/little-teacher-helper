@@ -30,9 +30,10 @@ export function nextSyncOp(
 }
 
 /**
- * 新增操作到同步佇列（同一 task+student 只保留最新一筆）
+ * 新增操作到同步佇列（同一 task+student 只保留最新一筆）。
+ * @returns 是否成功持久化（false = localStorage 寫入失敗，供上層告知，見 FR-089/090）
  */
-export function addToSyncQueue(type: 'UPDATE_RECORD', payload: UpdateRecordInput): void {
+export function addToSyncQueue(type: 'UPDATE_RECORD', payload: UpdateRecordInput): boolean {
   const data = getOfflineData();
 
   const existingIndex = data.syncQueue.findIndex(
@@ -51,7 +52,7 @@ export function addToSyncQueue(type: 'UPDATE_RECORD', payload: UpdateRecordInput
     data.syncQueue.push(op);
   }
 
-  saveOfflineData(data);
+  return saveOfflineData(data);
 }
 
 /**
@@ -64,7 +65,7 @@ export function queueRecordUpdate(params: {
   recorderSeatNumber: number;
   submissionStatus?: SubmissionStatus;
   gradeValue?: number | null;
-}): { ok: boolean; error?: string } {
+}): { ok: boolean; error?: string; stored?: boolean } {
   const { task, studentId, recorderSeatNumber, submissionStatus, gradeValue } = params;
 
   // 仍用 resolveRecordMutation 驗證輸入（非法成績等），但不再據此寫 records 快取。
@@ -76,7 +77,7 @@ export function queueRecordUpdate(params: {
   // Overlay 模型（INV-3）：登記只入佇列，不寫 records 快取。base 的唯一寫入者是
   // cacheSyncedRecords；畫面顯示由 useOfflineRecords 的 overlay 疊加派生。刪除意圖
   // （取消勾選 / 清空成績）同樣是佇列中的一個 op，overlay 會渲染成「沒登記」。
-  addToSyncQueue('UPDATE_RECORD', {
+  const stored = addToSyncQueue('UPDATE_RECORD', {
     taskId: task.id,
     studentId,
     submissionStatus,
@@ -84,7 +85,8 @@ export function queueRecordUpdate(params: {
     recorderSeatNumber,
   });
 
-  return { ok: true };
+  // ok=驗證通過；stored=是否成功持久化（false 時上層告知「存不下來」，但不阻擋操作）
+  return { ok: true, stored };
 }
 
 /**
