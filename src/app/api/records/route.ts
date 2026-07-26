@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
+import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 
 interface RecordInput {
   taskId: string;
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     const taskId = searchParams.get('taskId');
 
     if (!taskId) {
-      return NextResponse.json({ error: 'taskId 為必填參數' }, { status: 400 });
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 400 });
     }
 
     const records = await prisma.record.findMany({
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     return NextResponse.json(records);
   } catch (error) {
     console.error('Failed to fetch records:', error);
-    return NextResponse.json({ error: '取得登記記錄失敗' }, { status: 500 });
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }
 
@@ -44,7 +45,7 @@ export async function PATCH(request: Request) {
     const { records } = body as { records: RecordInput[] };
 
     if (!records || !Array.isArray(records) || records.length === 0) {
-      return NextResponse.json({ error: '請提供要更新的登記記錄' }, { status: 400 });
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 400 });
     }
 
     // 一次撈出涉及的任務，供類型驗證與鎖定判斷
@@ -53,30 +54,31 @@ export async function PATCH(request: Request) {
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
     const results: unknown[] = [];
-    const errors: Array<{ taskId: string; studentId: string; reason: string }> = [];
+    // reason 一律為 ERROR_CODES 碼值（FR-111/112），MUST NOT 回硬編中文。
+    const errors: Array<{ taskId: string; studentId: string; reason: ErrorCode }> = [];
 
     for (const input of records) {
       const { taskId, studentId, recorderSeatNumber } = input;
 
       if (!taskId || !studentId || typeof recorderSeatNumber !== 'number') {
-        errors.push({ taskId, studentId, reason: '缺少 taskId、studentId 或 recorderSeatNumber' });
+        errors.push({ taskId, studentId, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
       const task = taskMap.get(taskId);
       if (!task) {
-        errors.push({ taskId, studentId, reason: '找不到該任務' });
+        errors.push({ taskId, studentId, reason: ERROR_CODES.TASK_NOT_FOUND });
         continue;
       }
 
       if (getTaskLockReason(task) !== null) {
-        errors.push({ taskId, studentId, reason: '任務已鎖定，無法登記' });
+        errors.push({ taskId, studentId, reason: ERROR_CODES.TASK_LOCKED });
         continue;
       }
 
       const mutation = resolveRecordMutation(task.type, input);
       if (!mutation.ok) {
-        errors.push({ taskId, studentId, reason: mutation.error });
+        errors.push({ taskId, studentId, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
@@ -119,6 +121,6 @@ export async function PATCH(request: Request) {
     );
   } catch (error) {
     console.error('Failed to update records:', error);
-    return NextResponse.json({ error: '更新登記記錄失敗' }, { status: 500 });
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }

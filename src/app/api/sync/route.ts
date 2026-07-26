@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
+import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 
 interface SyncOperation {
   id: string;
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
     };
 
     if (!operations || !Array.isArray(operations) || operations.length === 0) {
-      return NextResponse.json({ error: '請提供要同步的操作' }, { status: 400 });
+      // 請求本身格式錯誤（client bug，不會逐筆呈現給學生）→ 通用碼
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 400 });
     }
 
     // 一次撈出涉及任務，供類型驗證與鎖定判斷
@@ -33,11 +35,14 @@ export async function POST(request: Request) {
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
     const syncedIds: string[] = [];
-    const conflicts: Array<{ operationId: string; reason: string }> = [];
+    // reason 一律為 ERROR_CODES 碼值（FR-112），供 client 依碼分類可重試 / 不可重試（FR-078），
+    // MUST NOT 回硬編中文。
+    const conflicts: Array<{ operationId: string; reason: ErrorCode }> = [];
 
     for (const operation of operations) {
       if (operation.type !== 'UPDATE_RECORD') {
-        conflicts.push({ operationId: operation.id, reason: '不支援的操作類型' });
+        // 不支援的操作類型：資料問題，重送也不會過 → 不可重試
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
@@ -45,17 +50,17 @@ export async function POST(request: Request) {
       const task = taskMap.get(taskId);
 
       if (!task) {
-        conflicts.push({ operationId: operation.id, reason: '找不到該任務' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.TASK_NOT_FOUND });
         continue;
       }
       if (getTaskLockReason(task) !== null) {
-        conflicts.push({ operationId: operation.id, reason: '任務已鎖定，無法登記' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.TASK_LOCKED });
         continue;
       }
 
       const mutation = resolveRecordMutation(task.type, operation.payload);
       if (!mutation.ok) {
-        conflicts.push({ operationId: operation.id, reason: mutation.error });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
@@ -92,8 +97,9 @@ export async function POST(request: Request) {
 
         syncedIds.push(operation.id);
       } catch (error) {
+        // DB 寫入等暫時性失敗：可重試 → 通用碼（不在 NON_RETRYABLE 集合內）
         console.error('Failed to sync operation:', operation.id, error);
-        conflicts.push({ operationId: operation.id, reason: '同步失敗' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.INTERNAL_ERROR });
       }
     }
 
@@ -114,6 +120,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ synced: syncedIds.length, operationIds: syncedIds });
   } catch (error) {
     console.error('Sync failed:', error);
-    return NextResponse.json({ error: '同步失敗' }, { status: 500 });
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }
