@@ -28,6 +28,11 @@ export async function GET(request: Request) {
         student: {
           select: { id: true, name: true, seatNumber: true, isRemoved: true },
         },
+        // US4：順序處理者名單（依時間），供老師端查閱經手鏈
+        handlers: {
+          orderBy: { handledAt: 'asc' },
+          select: { seatNumber: true, handledAt: true },
+        },
       },
       orderBy: [{ student: { seatNumber: 'asc' } }, { student: { name: 'asc' } }],
     });
