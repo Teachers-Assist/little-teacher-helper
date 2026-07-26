@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useCallback, useMemo } from 'react';
+import { useState, useEffect, use, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
@@ -55,6 +55,9 @@ export default function RecordPage({
   // 'gone'=任務被刪/封存；'network'=連線問題；'server'=伺服器錯誤；null=正常。
   const [loadError, setLoadError] = useState<'gone' | 'network' | 'server' | null>(null);
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
+  // US9：載入時「已有非本人座號登過」提示（只在載入/重連時判斷一次，非即時 presence）。
+  const [alreadyRecorded, setAlreadyRecorded] = useState<{ seat: number; done: number; total: number } | null>(null);
+  const alreadyRecordedShownRef = useRef(false);
   const { isOnline } = useNetworkStatus();
 
   // 換座號：清掉本機房間/座號/名單/任務快取（保留未同步登記）後回 /join 重新入場（FR-075）
@@ -126,6 +129,22 @@ export default function RecordPage({
       active = false;
     };
   }, [roomId, taskId, isOnline]);
+
+  // US9：載入完成後判斷一次——若本機/剛同步資料顯示已有「非自己座號」登過，提示接手（FR-126-129）。
+  // 只判一次（ref 守門）；離線冷啟動無快取時 records 為空 → 不提示、不阻擋進入（FR-129）。
+  useEffect(() => {
+    if (isLoading || alreadyRecordedShownRef.current || seatNumber == null) return;
+    const others = Object.values(records).filter((r) => r.recorderSeatNumber !== seatNumber);
+    if (others.length === 0) return; // 全新 / 只有自己登過 → 不提示（FR-128）
+    // 取登記最多的他人座號代表
+    const counts = new Map<number, number>();
+    for (const r of others) counts.set(r.recorderSeatNumber, (counts.get(r.recorderSeatNumber) ?? 0) + 1);
+    let topSeat = others[0].recorderSeatNumber;
+    let topN = 0;
+    for (const [s, n] of counts) if (n > topN) { topSeat = s; topN = n; }
+    alreadyRecordedShownRef.current = true;
+    setAlreadyRecorded({ seat: topSeat, done: Object.keys(records).length, total: students.length });
+  }, [isLoading, records, seatNumber, students]);
 
   const persist = useCallback(
     (studentId: string, value: { submissionStatus?: SubmissionStatus; gradeValue?: number | null }) => {
@@ -274,6 +293,25 @@ export default function RecordPage({
         confirmLabel={messages.room.changeSeatConfirm}
         onConfirm={handleChangeSeat}
         onCancel={() => setChangeSeatOpen(false)}
+      />
+
+      {/* US9：載入時已有他人登過 → 陳述句提示 + 接手/返回（不阻擋登記，選接手即關閉） */}
+      <ConfirmDialog
+        open={alreadyRecorded != null}
+        title={messages.task.listTitle}
+        message={
+          alreadyRecorded
+            ? messages.task.alreadyRecordedNotice(
+                alreadyRecorded.seat,
+                alreadyRecorded.done,
+                alreadyRecorded.total
+              )
+            : ''
+        }
+        confirmLabel={messages.task.takeOver}
+        cancelLabel={messages.task.backToList}
+        onConfirm={() => setAlreadyRecorded(null)}
+        onCancel={() => router.push(`/helper/${roomId}`)}
       />
     </div>
   );
