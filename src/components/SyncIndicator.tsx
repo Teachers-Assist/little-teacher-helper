@@ -23,12 +23,12 @@ export function SyncIndicator({ className }: SyncIndicatorProps) {
     return (
       <div
         className={cn(
-          'flex items-center gap-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 px-3 py-2',
+          'flex items-center gap-3 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2',
           className
         )}
       >
-        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-        <span className="text-sm text-rose-700 dark:text-rose-300">
+        <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+        <span className="text-sm text-red-700 dark:text-red-300">
           {messages.sync.failed(failedCount)}
         </span>
       </div>
