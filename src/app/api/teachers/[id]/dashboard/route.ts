@@ -75,9 +75,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         const lastAt = lastByTask.get(task.id) ?? task.createdAt;
         roomLastActivity = Math.max(roomLastActivity, new Date(lastAt).getTime());
 
-        if (task.status !== TaskStatus.ACTIVE) continue;
-        roomInProgress += 1;
-
+        // 異常偵測涵蓋 ACTIVE（規則一、二）與 HELPER_COMPLETED（規則三，FR-122）——
+        // 先算再依 status 決定是否列入「進行中任務」清單。
         const anomalies = detectAnomalies(
           {
             status: task.status,
@@ -91,6 +90,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           now
         );
         if (anomalies.length > 0) roomAnomalies += 1;
+
+        if (task.status !== TaskStatus.ACTIVE) continue; // tasksOut 僅列進行中任務
+        roomInProgress += 1;
 
         tasksOut.push({
           id: task.id,

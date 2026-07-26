@@ -17,9 +17,11 @@ export const ANOMALY_THRESHOLDS = {
   taskStalledMs: 24 * 60 * 60 * 1000, // 24 小時
   /** 規則二：截止日當天幾點（台北）起，全班零登記即示警。 */
   dueDayAlertHour: 8, // 08:00
+  /** 規則三：標記完成但登記率低於此值即示警（US8，待觀察調參）。 */
+  lowCompletionRate: 0.5, // 50%
 } as const;
 
-export type AnomalyType = 'TASK_STALLED' | 'NO_RECORDS_BY_DUE';
+export type AnomalyType = 'TASK_STALLED' | 'NO_RECORDS_BY_DUE' | 'LOW_COMPLETION';
 
 export interface AnomalyInput {
   status: string;
@@ -38,34 +40,53 @@ export interface Anomaly {
   type: AnomalyType;
   /** TASK_STALLED：已停擺多久（毫秒），供 UI 顯示已閒置時長（FR-085）。 */
   idleMs?: number;
+  /** LOW_COMPLETION：已登記筆數與班級人數，供卡片顯示 N/M（US8）。 */
+  recordedCount?: number;
+  classStudentCount?: number;
 }
 
 /**
- * 偵測單一任務的異常。已封存或非 ACTIVE 的任務不判（規則一、二只判 ACTIVE；
- * HELPER_COMPLETED 由 US8 規則三涵蓋，另案）。
+ * 偵測單一任務的異常。封存任務一律不判。
+ * - ACTIVE：規則一（停擺滑動視窗）、規則二（截止日 08:00 零登記）
+ * - HELPER_COMPLETED：規則三（完成但登記率過低，US8）——唯一打破「只判 ACTIVE」共同前提者
+ * - CLOSED：不判（老師已親自處理）
  */
 export function detectAnomalies(task: AnomalyInput, now: number = Date.now()): Anomaly[] {
   const anomalies: Anomaly[] = [];
-  if (task.isArchived || task.status !== 'ACTIVE') return anomalies;
+  if (task.isArchived) return anomalies;
 
-  // 規則一：任務停擺（滑動視窗）。全班登滿則不判（分子分母皆已排除 isRemoved）。
-  const isFull = task.classStudentCount > 0 && task.recordedCount >= task.classStudentCount;
-  if (!isFull) {
-    const anchor = task.lastRecordActivityAt
-      ? new Date(task.lastRecordActivityAt).getTime()
-      : new Date(task.createdAt).getTime();
-    const idleMs = now - anchor;
-    if (idleMs >= ANOMALY_THRESHOLDS.taskStalledMs) {
-      anomalies.push({ type: 'TASK_STALLED', idleMs });
+  if (task.status === 'ACTIVE') {
+    // 規則一：任務停擺（滑動視窗）。全班登滿則不判（分子分母皆已排除 isRemoved）。
+    const isFull = task.classStudentCount > 0 && task.recordedCount >= task.classStudentCount;
+    if (!isFull) {
+      const anchor = task.lastRecordActivityAt
+        ? new Date(task.lastRecordActivityAt).getTime()
+        : new Date(task.createdAt).getTime();
+      const idleMs = now - anchor;
+      if (idleMs >= ANOMALY_THRESHOLDS.taskStalledMs) {
+        anomalies.push({ type: 'TASK_STALLED', idleMs });
+      }
     }
-  }
 
-  // 規則二：截止日當天 08:00（台北）起、全班零登記。僅適用 08:00 前已建立者。
-  if (task.dueDate && task.recordedCount === 0) {
-    const dueDayStart = taipeiDayStartAt(task.dueDate, ANOMALY_THRESHOLDS.dueDayAlertHour).getTime();
-    const createdMs = new Date(task.createdAt).getTime();
-    if (createdMs < dueDayStart && now >= dueDayStart) {
-      anomalies.push({ type: 'NO_RECORDS_BY_DUE' });
+    // 規則二：截止日當天 08:00（台北）起、全班零登記。僅適用 08:00 前已建立者。
+    if (task.dueDate && task.recordedCount === 0) {
+      const dueDayStart = taipeiDayStartAt(task.dueDate, ANOMALY_THRESHOLDS.dueDayAlertHour).getTime();
+      const createdMs = new Date(task.createdAt).getTime();
+      if (createdMs < dueDayStart && now >= dueDayStart) {
+        anomalies.push({ type: 'NO_RECORDS_BY_DUE' });
+      }
+    }
+  } else if (task.status === 'HELPER_COMPLETED') {
+    // 規則三：標記完成但登記率 < 50%（成績類與繳交類皆適用）。分母 0 不判（避免除以零）。
+    if (task.classStudentCount > 0) {
+      const rate = task.recordedCount / task.classStudentCount;
+      if (rate < ANOMALY_THRESHOLDS.lowCompletionRate) {
+        anomalies.push({
+          type: 'LOW_COMPLETION',
+          recordedCount: task.recordedCount,
+          classStudentCount: task.classStudentCount,
+        });
+      }
     }
   }
 

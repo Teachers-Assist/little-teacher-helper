@@ -36,6 +36,12 @@ export function TasksView({ tasks }: { tasks: DashboardTask[] }) {
           const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
           return messages.teacher.classStatus.anomalyIdle(hours);
         }
+        if (a.type === 'LOW_COMPLETION') {
+          return messages.teacher.classStatus.anomalyLowCompletion(
+            a.recordedCount ?? 0,
+            a.classStudentCount ?? 0
+          );
+        }
         return messages.teacher.classStatus.anomalyNearDue(
           dueDate ? new Date(dueDate).toLocaleDateString() : ''
         );

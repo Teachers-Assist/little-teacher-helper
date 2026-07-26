@@ -103,13 +103,66 @@ describe('detectAnomalies 規則二（NO_RECORDS_BY_DUE，絕對時鐘 08:00 台
   });
 });
 
-describe('detectAnomalies 共同前提', () => {
-  it('已封存 → 不判', () => {
-    expect(detectAnomalies(input({ isArchived: true, createdAt: new Date(NOW - 5 * DAY) }), NOW)).toHaveLength(0);
+describe('detectAnomalies 規則三（LOW_COMPLETION，完成但登記率過低）', () => {
+  it('HELPER_COMPLETED 且登記率 < 50% → 判，帶 N/M', () => {
+    const r = detectAnomalies(
+      input({ status: 'HELPER_COMPLETED', recordedCount: 10, classStudentCount: 30 }),
+      NOW
+    );
+    const low = r.find((a) => a.type === 'LOW_COMPLETION');
+    expect(low).toBeDefined();
+    expect(low?.recordedCount).toBe(10);
+    expect(low?.classStudentCount).toBe(30);
   });
-  it('非 ACTIVE（HELPER_COMPLETED）→ 不判（規則三另案）', () => {
+
+  it('HELPER_COMPLETED 且登記率 ≥ 50% → 不判', () => {
+    const r = detectAnomalies(
+      input({ status: 'HELPER_COMPLETED', recordedCount: 20, classStudentCount: 30 }),
+      NOW
+    );
+    expect(r.some((a) => a.type === 'LOW_COMPLETION')).toBe(false);
+  });
+
+  it('剛好 50% → 不判（< 50% 才判）', () => {
+    const r = detectAnomalies(
+      input({ status: 'HELPER_COMPLETED', recordedCount: 15, classStudentCount: 30 }),
+      NOW
+    );
+    expect(r.some((a) => a.type === 'LOW_COMPLETION')).toBe(false);
+  });
+
+  it('班級人數 0（全移除）→ 不判（避免除以零）', () => {
+    const r = detectAnomalies(
+      input({ status: 'HELPER_COMPLETED', recordedCount: 0, classStudentCount: 0 }),
+      NOW
+    );
+    expect(r).toHaveLength(0);
+  });
+
+  it('ACTIVE 任務不觸發規則三', () => {
+    const r = detectAnomalies(
+      input({ status: 'ACTIVE', recordedCount: 1, classStudentCount: 30, lastRecordActivityAt: new Date(NOW) }),
+      NOW
+    );
+    expect(r.some((a) => a.type === 'LOW_COMPLETION')).toBe(false);
+  });
+});
+
+describe('detectAnomalies 共同前提', () => {
+  it('已封存 → 不判（即使 HELPER_COMPLETED 且低登記率）', () => {
     expect(
-      detectAnomalies(input({ status: 'HELPER_COMPLETED', createdAt: new Date(NOW - 5 * DAY) }), NOW)
+      detectAnomalies(
+        input({ isArchived: true, status: 'HELPER_COMPLETED', recordedCount: 1, classStudentCount: 30 }),
+        NOW
+      )
+    ).toHaveLength(0);
+  });
+  it('CLOSED → 不判（老師已親自處理）', () => {
+    expect(
+      detectAnomalies(
+        input({ status: 'CLOSED', recordedCount: 1, classStudentCount: 30, createdAt: new Date(NOW - 5 * DAY) }),
+        NOW
+      )
     ).toHaveLength(0);
   });
 });
