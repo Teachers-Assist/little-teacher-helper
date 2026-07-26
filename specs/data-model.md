@@ -1,6 +1,6 @@
 # Data Model: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-06-25（002 增量：Task.isArchived）
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-07-20（004 增量：新增 RecordHandler 子表；Task.dueDate 寫入慣例改 17:00）
 
 本文件定義系統的資料模型，基於 Feature Spec 中的 Key Entities。
 
@@ -24,6 +24,12 @@
                       ┌─────────────┐              │
                       │   Record    │──────────────┘
                       └─────────────┘
+                            │
+                           1:N
+                            │
+                      ┌───────────────┐
+                      │ RecordHandler │  （004：順序處理者名單）
+                      └───────────────┘
 ```
 
 ---
@@ -105,7 +111,7 @@
 | type | Enum | Required | 任務類型：SUBMISSION（繳交與否）/ GRADE（成績數值） |
 | roomId | String | FK → Room | 所屬房間 |
 | assignedSeatNumber | Int | Optional | 指定負責登記的小老師座號（可為空，可後來再指定） |
-| dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除） |
+| dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除）。**寫入慣例（004）**：老師只選日期，系統補時間為當天 **17:00**（放學）；取代 001 的 `23:59:59`。同影響「延長截止」。既有 23:59:59 舊資料不 migration |
 | status | Enum | Default: ACTIVE | 任務狀態（見下方說明） |
 | isArchived | Boolean | Default: false | 是否已封存（soft archive，002 引入；封存後主清單不顯示，但歷史登記記錄保留；與 status 欄位獨立） |
 | createdAt | DateTime | Auto | 建立時間 |
@@ -155,8 +161,8 @@ ACTIVE / HELPER_COMPLETED ──[老師結案]──→ CLOSED
 | studentId | String | FK → Student | 被登記的學生 |
 | submissionStatus | Enum | Optional | 繳交狀態（SUBMISSION 類型；實際只會是 SUBMITTED） |
 | gradeValue | Int | Optional, 0-100 | 成績數值（GRADE 類型任務使用） |
-| recorderSeatNumber | Int | Required | 實際操作登記的小老師座號 |
-| isAssignedRecorder | Boolean | Required | 此次登記者是否為任務指定的小老師 |
+| recorderSeatNumber | Int | Required | 實際操作登記的小老師座號（**最後一手**；每次 upsert 覆寫。等於 RecordHandler 名單最後一筆的座號） |
+| isAssignedRecorder | Boolean | Required | 此次登記者是否為任務指定的小老師（跟隨 recorderSeatNumber，即「最後一手」的身份） |
 | syncedAt | DateTime | Optional | 同步至伺服器的時間（null 表示待同步） |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
@@ -182,6 +188,31 @@ enum SubmissionStatus {
 ```
 
 > 統計時「未繳交人數」以 `班級在籍學生總數 − 已繳交記錄數` 推導，不依賴 NOT_SUBMITTED 記錄。
+> 統計與異常判定的分子分母 MUST 排除 `isRemoved` 學生（004 FR-104）：分母只算在籍、分子不計已移除學生的記錄。移除為軟刪除，records 實體保留、可還原。
+
+---
+
+### 6. RecordHandler (登記處理者，004 引入)
+
+一筆 Record 的**順序處理者名單**：每一次處理（建立或修改）追加一筆，依時間排序，構成完整經手鏈。目的是「監視器」證據 —— 老師起疑時可查「這筆被哪些座號、依什麼順序、在什麼時間處理過」（004 US4）。
+
+| 欄位 | 型別 | 約束 | 說明 |
+|------|------|------|------|
+| id | String | PK, UUID | 唯一識別碼 |
+| recordId | String | FK → Record | 所屬登記記錄 |
+| seatNumber | Int | Required | 該次處理者座號 |
+| handledAt | DateTime | Required | 該次處理時間（名單排序依據） |
+
+**關聯**: 屬於一筆 Record (N:1 → Record)
+
+**語意**:
+- 名單**第一筆**＝最初建立者；**最後一筆**＝最後修改者（＝ `Record.recorderSeatNumber`）
+- 因此不需要另立「最初建立者座號」「最後修改者座號」純量欄位 —— 由名單首尾推導
+- **只留人與順序，不留前值**：查得到誰、何時、第幾手，查不到每一手改成什麼（升級為完整 audit log 仍待決，見 `open-questions.md` 2026-07-20）
+
+**寫入規則**:
+- 同一座號**連續**修改自己剛登的紀錄 MUST NOT 追加相鄰重複項（避免正常修正灌爆名單）；被其他座號穿插後的同座號再次修改仍各自記錄（`8 → 12 → 8` 與 `8 → 8 → 8` 意義不同）
+- 離線期間的處理 MUST 隨同步一併送出，並依 `handledAt` 正確順序併入名單
 
 ---
 
@@ -266,6 +297,7 @@ model Record {
   gradeValue           Int?
   recorderSeatNumber   Int
   isAssignedRecorder   Boolean
+  handlers             RecordHandler[]   // 004：順序處理者名單
   syncedAt             DateTime?
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
@@ -273,6 +305,17 @@ model Record {
   @@unique([taskId, studentId])
   @@index([taskId])
   @@index([studentId])
+}
+
+// 004：一筆 Record 的順序處理者名單（每次處理追加一筆，依 handledAt 排序）
+model RecordHandler {
+  id         String   @id @default(uuid())
+  record     Record   @relation(fields: [recordId], references: [id])
+  recordId   String
+  seatNumber Int
+  handledAt  DateTime @default(now())
+
+  @@index([recordId])
 }
 
 enum TaskType {
@@ -415,8 +458,10 @@ interface OfflineData {
 3. 偵測網路恢復
 4. 依序處理 syncQueue
 5. 成功 → 移出佇列，標記 synced: true，填入 syncedAt
-6. 失敗 → retryCount++，下次重試（最多 3 次）
+6. 失敗 → retryCount++，session 內重試（上限屬調參）
 ```
+
+> **004 修正**：`retryCount` 與「不可重試」標記為 session 範圍，**每次頁面載入時重置並重試一次**；未送出的佇列資料一律持久保留、永不靜默丟棄。因此 session 內「放棄」不等於資料死亡（老師重新開放任務後，學生重整即自動重送）。詳見 `specs/004-alerts-and-feedback/spec.md` US1 / FR-079。
 
 **換座號（clearRoom）對離線資料的影響**（003 US4 引入）：
 小老師換座號（`clearRoom(roomId)`）時，只清掉 `rooms` / `students` / `tasks` 三類本機快取讓使用者重新從 `/join` 入場；**`records` 與 `syncQueue` 刻意保留**。理由：未同步的登記是不可逆資料，不可因換座號而遺失（守 vision「不可逆操作不破壞資料」）。未送出的登記仍掛在佇列裡、連線後照常上傳，並保留原 `recorderSeatNumber`（問責不丟）。同一台裝置換座號後可繼續累積登記；對同一 `taskId + studentId` 再次登記則沿用既有去重邏輯更新該筆。

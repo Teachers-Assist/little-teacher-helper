@@ -29,9 +29,10 @@ export function MonitoringAlerts({ roomId, warnings }: MonitoringAlertsProps) {
     return messages.teacher.classStatus.anomalyNoRecordsNearDue;
   };
 
+  // 無異常時不畫卡片外框：白底方框與有異常時的紅色卡片風格不搭，只留 icon + 文字
   if (warnings.length === 0) {
     return (
-      <div className="card-sm flex flex-col items-center justify-center py-12 text-center">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
         <Icon name="lucide:check-circle-2" size={36} className="mb-2 text-emerald-400" />
         <p className="text-sm text-slate-500">{messages.teacher.classStatus.empty}</p>
       </div>

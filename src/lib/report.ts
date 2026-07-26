@@ -37,11 +37,26 @@ export function generateTextReport(data: ReportData, m: ReportMessages): string 
     lines.push(m.allDone);
   } else {
     lines.push(`${m.incompleteList}（${incomplete.length} ${m.unitPerson}）：`);
-    incomplete.forEach((r, i) => {
-      lines.push(`${i + 1}. ${r.seatNumber}${m.colSeat} ${r.name}`);
+    // 貼到通訊軟體時，序號與「座號」字樣都是雜訊：只留「座號 姓名」
+    incomplete.forEach((r) => {
+      lines.push(`${r.seatNumber} ${r.name}`);
     });
   }
 
+  return lines.join('\n');
+}
+
+/**
+ * 成績表（可直接貼進 Excel）：以 Tab 分隔、換行分列，
+ * 貼上時試算表會自動切成「座號 / 成績」兩欄。只含已登記成績者。
+ */
+export function generateGradeTable(data: ReportData, m: ReportMessages): string {
+  const lines = [`${m.colSeat}\t${m.grade}`];
+  data.rows
+    .filter((r) => r.done)
+    .forEach((r) => {
+      lines.push(`${r.seatNumber}\t${r.result}`);
+    });
   return lines.join('\n');
 }
 
