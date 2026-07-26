@@ -95,6 +95,14 @@ export function getQueueSize(): number {
 }
 
 /**
+ * 某 op 是否處於「需人工處理」的失敗態：不可重試，或重試已達上限（session 內放棄）。
+ * op 仍保留於佇列（INV-1）；UI 據此顯示失敗態，重整會重置判定並再試一次（S11）。
+ */
+export function isOpFailed(op: OfflineSyncQueueItem): boolean {
+  return op.nonRetryable === true || op.retryCount >= MAX_RETRY_COUNT;
+}
+
+/**
  * 重置佇列所有 op 的**重試判定**（retryCount 歸零、清除 nonRetryable），但**保留所有 op**。
  *
  * 供頁面載入時呼叫（FR-079 / INV-2 / NFR-013）：重試判定為 session 範圍、刻意不持久化，

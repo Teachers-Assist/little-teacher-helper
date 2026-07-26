@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { OfflineData, OfflineRecordEntry, Student, Task } from '@/types';
 import { subscribe, getSnapshot, getServerSnapshot } from './storage';
 import { mergeRecords } from './overlay';
+import { isOpFailed } from './queue';
 import {
   subscribeSync,
   getSyncRuntime,
@@ -87,8 +88,13 @@ export function useSyncStatus() {
   const runtime = useSyncExternalStore(subscribeSync, getSyncRuntime, getSyncRuntimeServer);
   const { isOnline } = useNetworkStatus();
 
+  // 失敗態（004 US1）：不可重試或重試耗盡的 op 數。這些 op 仍在佇列（未靜默移除），
+  // 重整會重置判定並再試一次（S11）。
+  const failedCount = data.syncQueue.filter(isOpFailed).length;
+
   return {
     pendingCount: data.syncQueue.length,
+    failedCount,
     isSyncing: runtime.isSyncing,
     lastSyncTime: runtime.lastSyncTime,
     isOnline,

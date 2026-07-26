@@ -11,10 +11,28 @@ interface SyncIndicatorProps {
 
 export function SyncIndicator({ className }: SyncIndicatorProps) {
   const messages = useMessages();
-  const { pendingCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
+  const { pendingCount, failedCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
 
   if (pendingCount === 0 && !isSyncing) {
     return null;
+  }
+
+  // 失敗態優先（US1 FR-081）：有送不出去的登記時，蓋過「同步中 / 待上傳」，指向找老師。
+  // 資料仍在佇列（未消失），重整會再試一次（S11）。
+  if (failedCount > 0 && !isSyncing) {
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 px-3 py-2',
+          className
+        )}
+      >
+        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+        <span className="text-sm text-rose-700 dark:text-rose-300">
+          {messages.sync.failed(failedCount)}
+        </span>
+      </div>
+    );
   }
 
   return (
