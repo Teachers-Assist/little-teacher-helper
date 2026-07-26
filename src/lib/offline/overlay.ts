@@ -1,4 +1,4 @@
-import { OfflineRecordEntry, OfflineSyncQueueItem, SubmissionStatus } from '@/types';
+import { OfflineData, OfflineRecordEntry, OfflineSyncQueueItem, SubmissionStatus } from '@/types';
 import { computeIsAssignedRecorder } from '@/lib/task';
 
 /**
@@ -52,4 +52,39 @@ export function mergeRecords(
   }
 
   return merged;
+}
+
+/**
+ * 同步成功後，把已 ack 的 op 從 overlay「沉澱」到 base 快取（overlay 模型：ack 後該變更
+ * 成為伺服器已知狀態）。移除雙寫後，登記只入佇列、不寫 base，因此成功時必須在此寫回 base，
+ * 否則該筆會在 op 移出佇列後從畫面消失（要等下次 refetch 才回來）。
+ *
+ * upsert 或 delete 由 op 的 payload 意圖決定（同 mergeRecords）。
+ * isAssignedRecorder 為便捷欄位、學生端不顯示，權威值由下次 `cacheSyncedRecords`（refetch）
+ * 校正；此處沿用既有 base 值、無則暫記 false。**就地修改傳入的 records 物件。**
+ *
+ * 注意：此函式不驗版本（op 是否於飛行期間被改）——那是 S10 版本戳的職責。此步只解決
+ * 「移除雙寫後成功記錄消失」的問題，不改動既有的成功判定方式。
+ */
+export function applyAckedOp(records: OfflineData['records'], op: OfflineSyncQueueItem): void {
+  const { taskId, studentId, submissionStatus, gradeValue, recorderSeatNumber } = op.payload;
+
+  const isSubmitted = submissionStatus === SubmissionStatus.SUBMITTED;
+  const isGraded = typeof gradeValue === 'number';
+
+  if (!isSubmitted && !isGraded) {
+    if (records[taskId]) delete records[taskId][studentId];
+    return;
+  }
+
+  if (!records[taskId]) records[taskId] = {};
+  const prev = records[taskId][studentId];
+  records[taskId][studentId] = {
+    submissionStatus: isSubmitted ? SubmissionStatus.SUBMITTED : undefined,
+    gradeValue: isGraded ? gradeValue : undefined,
+    recorderSeatNumber,
+    isAssignedRecorder: prev?.isAssignedRecorder ?? false,
+    updatedAt: op.createdAt,
+    synced: true,
+  };
 }

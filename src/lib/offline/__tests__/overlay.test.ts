@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { mergeRecords } from '../overlay';
-import { OfflineRecordEntry, OfflineSyncQueueItem, SubmissionStatus } from '@/types';
+import { mergeRecords, applyAckedOp } from '../overlay';
+import { OfflineData, OfflineRecordEntry, OfflineSyncQueueItem, SubmissionStatus } from '@/types';
 
 function baseEntry(partial: Partial<OfflineRecordEntry>): OfflineRecordEntry {
   return {
@@ -76,5 +76,31 @@ describe('mergeRecords (overlay 疊加)', () => {
     const result = mergeRecords({}, [op('s1', { submissionStatus: SubmissionStatus.SUBMITTED })]);
     expect(result.s1.submissionStatus).toBe(SubmissionStatus.SUBMITTED);
     expect(result.s1.gradeValue).toBeUndefined();
+  });
+});
+
+describe('applyAckedOp (ack 後沉澱到 base)', () => {
+  it('upsert：成功的成績 op 寫回 base 並標記 synced=true', () => {
+    const records: OfflineData['records'] = {};
+    applyAckedOp(records, op('s1', { gradeValue: 88 }));
+    expect(records.t1.s1.gradeValue).toBe(88);
+    expect(records.t1.s1.synced).toBe(true);
+  });
+
+  it('delete：成功的取消/清空 op 從 base 移除該學生', () => {
+    const records: OfflineData['records'] = {
+      t1: { s1: baseEntry({ gradeValue: 60, synced: true }) },
+    };
+    applyAckedOp(records, op('s1', {})); // 清空成績意圖
+    expect(records.t1.s1).toBeUndefined();
+  });
+
+  it('保留既有 base 的 isAssignedRecorder（權威值待 refetch 校正）', () => {
+    const records: OfflineData['records'] = {
+      t1: { s1: baseEntry({ gradeValue: 50, isAssignedRecorder: true, synced: true }) },
+    };
+    applyAckedOp(records, op('s1', { gradeValue: 70 }));
+    expect(records.t1.s1.isAssignedRecorder).toBe(true);
+    expect(records.t1.s1.gradeValue).toBe(70);
   });
 });

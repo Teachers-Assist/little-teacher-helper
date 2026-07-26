@@ -203,39 +203,6 @@ export function saveTask(roomId: string, task: Task): void {
 }
 
 /**
- * 寫入一筆登記記錄到本機快取（標記為待同步）。
- * 僅用於「有登記」的記錄；取消登記請改用 removeRecord。
- */
-export function saveRecord(
-  taskId: string,
-  studentId: string,
-  entry: Omit<OfflineRecordEntry, 'updatedAt' | 'synced'>,
-  synced: boolean = false
-): void {
-  const data = getOfflineData();
-  if (!data.records[taskId]) {
-    data.records[taskId] = {};
-  }
-  data.records[taskId][studentId] = {
-    ...entry,
-    updatedAt: new Date().toISOString(),
-    synced,
-  };
-  saveOfflineData(data);
-}
-
-/**
- * 從本機快取移除一筆登記記錄（取消勾選 / 清空成績 → 回到「沒登記過」）。
- */
-export function removeRecord(taskId: string, studentId: string): void {
-  const data = getOfflineData();
-  if (data.records[taskId]?.[studentId]) {
-    delete data.records[taskId][studentId];
-    saveOfflineData(data);
-  }
-}
-
-/**
  * 取得某任務在本機的所有登記記錄
  */
 export function getRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {

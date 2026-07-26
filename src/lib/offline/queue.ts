@@ -1,6 +1,7 @@
 import { SubmissionStatus, UpdateRecordInput } from '@/types';
-import { computeIsAssignedRecorder, resolveRecordMutation } from '@/lib/task';
-import { getOfflineData, saveOfflineData, saveRecord, removeRecord } from './storage';
+import { resolveRecordMutation } from '@/lib/task';
+import { getOfflineData, saveOfflineData } from './storage';
+import { applyAckedOp } from './overlay';
 
 const MAX_RETRY_COUNT = 3;
 
@@ -54,22 +55,15 @@ export function queueRecordUpdate(params: {
 }): { ok: boolean; error?: string } {
   const { task, studentId, recorderSeatNumber, submissionStatus, gradeValue } = params;
 
+  // 仍用 resolveRecordMutation 驗證輸入（非法成績等），但不再據此寫 records 快取。
   const mutation = resolveRecordMutation(task.type, { submissionStatus, gradeValue });
   if (!mutation.ok) {
     return { ok: false, error: mutation.error };
   }
 
-  if (mutation.action === 'delete') {
-    removeRecord(task.id, studentId);
-  } else {
-    saveRecord(task.id, studentId, {
-      submissionStatus: mutation.data.submissionStatus ?? undefined,
-      gradeValue: mutation.data.gradeValue ?? undefined,
-      recorderSeatNumber,
-      isAssignedRecorder: computeIsAssignedRecorder(task.assignedSeatNumber, recorderSeatNumber),
-    });
-  }
-
+  // Overlay 模型（INV-3）：登記只入佇列，不寫 records 快取。base 的唯一寫入者是
+  // cacheSyncedRecords；畫面顯示由 useOfflineRecords 的 overlay 疊加派生。刪除意圖
+  // （取消勾選 / 清空成績）同樣是佇列中的一個 op，overlay 會渲染成「沒登記」。
   addToSyncQueue('UPDATE_RECORD', {
     taskId: task.id,
     studentId,
@@ -123,8 +117,9 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
   const data = getOfflineData();
   for (const op of data.syncQueue) {
     if (syncedIds.has(op.id)) {
-      const entry = data.records[op.payload.taskId]?.[op.payload.studentId];
-      if (entry) entry.synced = true; // delete 類操作已無快取記錄，略過
+      // ack 成功：把 op 從 overlay 沉澱到 base（移除雙寫後，成功記錄需在此寫回 base，
+      // 否則移出佇列後會從畫面消失）。upsert/delete 由 payload 意圖決定。
+      applyAckedOp(data.records, op);
     } else if (pending.some((p) => p.id === op.id)) {
       op.retryCount++; // 只對本次嘗試過、卻沒成功的操作累加重試
     }
