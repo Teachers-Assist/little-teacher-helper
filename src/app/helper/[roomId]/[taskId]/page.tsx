@@ -51,6 +51,9 @@ export default function RecordPage({
   const students = useOfflineStudents(roomId);
   const records = useOfflineRecords(taskId, task?.assignedSeatNumber);
   const [isLoading, setIsLoading] = useState(true);
+  // US5：載入失敗成因，用於顯示對的對話（非一律「找不到班級」）。
+  // 'gone'=任務被刪/封存；'network'=連線問題；'server'=伺服器錯誤；null=正常。
+  const [loadError, setLoadError] = useState<'gone' | 'network' | 'server' | null>(null);
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
   const { isOnline } = useNetworkStatus();
 
@@ -73,7 +76,20 @@ export default function RecordPage({
             fetch(`/api/records?taskId=${taskId}`),
             fetch(`/api/rooms/${roomId}/students`),
           ]);
-          if (taskRes.ok) saveTask(roomId, (await taskRes.json()) as Task);
+          if (taskRes.ok) {
+            const t = (await taskRes.json()) as Task & { isArchived?: boolean };
+            if (t.isArchived) {
+              // 封存＝老師把任務收起來了（FR-098）
+              if (active) setLoadError('gone');
+            } else {
+              saveTask(roomId, t);
+              if (active) setLoadError(null);
+            }
+          } else if (taskRes.status === 404) {
+            if (active) setLoadError('gone'); // 任務被老師刪除
+          } else {
+            if (active) setLoadError('server'); // 伺服器錯誤（學生端兒童語氣，T325）
+          }
           if (studentsRes.ok) saveStudents(roomId, await studentsRes.json());
           if (recordsRes.ok) {
             // 回寫已同步記錄到本機（store），畫面 values 隨之更新並供離線檢視
@@ -81,7 +97,12 @@ export default function RecordPage({
           }
         } catch (error) {
           console.error('Failed to load task:', error);
+          // 斷線且本機無此任務快取才報連線問題；有快取則沿用離線資料（不打斷離線登記）
+          if (active && !task && room) setLoadError('network');
         }
+      } else if (!task && room) {
+        // 離線且無快取（但已加入班級）→ 連線問題（FR-099）
+        if (active) setLoadError('network');
       }
       // 頁面載入：重置重試判定（retryCount / nonRetryable）並觸發一次同步（FR-079 / INV-2）。
       // 卡住的登記（含老師重新開放任務後）重整即自動重送；未送出資料一律保留、不清除。
@@ -156,6 +177,27 @@ export default function RecordPage({
     );
   }
 
+  // US5：依成因顯示對的對話（任務被收起來 / 連線問題 / 伺服器錯誤），優先於「找不到班級」。
+  // 出口一律回任務清單，MUST NOT 以「重新掃碼」為主要行動（AS2）。
+  if (loadError) {
+    const { icon, text } =
+      loadError === 'gone'
+        ? { icon: 'lucide:package', text: messages.task.taskRemovedByTeacher }
+        : loadError === 'network'
+          ? { icon: 'lucide:wifi-off', text: messages.common.networkError }
+          : { icon: 'lucide:frown', text: messages.common.errorChild };
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6 text-center">
+        <Icon name={icon} size={40} className="mb-3 text-slate-300" />
+        <p className="mb-4 text-slate-600">{text}</p>
+        <Link href={`/helper/${roomId}`}>
+          <Button variant="primary" size="sm">{messages.common.back}</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // 本機無此任務快取且非上述成因（未加入班級 / 已清除快取）→ 才顯示「找不到班級」（FR-100）
   if (!task || seatNumber == null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6">
