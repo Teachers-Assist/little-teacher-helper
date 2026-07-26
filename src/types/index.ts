@@ -140,6 +140,17 @@ export interface RecordWithStudent extends Record {
 }
 
 /**
+ * 一筆 Record 的順序處理者名單項（004 US4，監視器留痕）。
+ * 依 handledAt 排序：第一筆＝最初建立者、最後一筆＝最後修改者（＝ Record.recorderSeatNumber）。
+ */
+export interface RecordHandler {
+  id: string;
+  recordId: string;
+  seatNumber: number;
+  handledAt: Date;
+}
+
+/**
  * 登記一筆記錄的輸入。
  * SUBMISSION 類型填 submissionStatus；GRADE 類型填 gradeValue。
  * isAssignedRecorder 由伺服器端依 task.assignedSeatNumber 計算，不由前端帶入。
