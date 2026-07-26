@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
@@ -23,6 +23,8 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   const room = useOfflineRoom(roomId);
   const tasks = useOfflineTasks(roomId);
   const [isLoading, setIsLoading] = useState(true);
+  // US5：清單載入失敗成因（僅在無快取任務可顯示時才呈現，否則沿用離線快取）。
+  const [refreshError, setRefreshError] = useState<'network' | 'server' | null>(null);
   const { isOnline } = useNetworkStatus();
   const router = useRouter();
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
@@ -33,33 +35,36 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
     router.push('/join');
   };
 
-  useEffect(() => {
-    let active = true;
-    const refresh = async () => {
-      // 以非反應式讀取判斷是否已加入房間，避免依賴反應式 room 造成重複 fetch
-      if (getRoom(roomId) && isOnline) {
-        try {
-          const [tasksRes, studentsRes] = await Promise.all([
-            fetch(`/api/tasks/${roomId}`),
-            fetch(`/api/rooms/${roomId}/students`),
-          ]);
-          if (tasksRes.ok) {
-            saveTasks(roomId, (await tasksRes.json()) as Task[]);
-          }
-          if (studentsRes.ok) {
-            saveStudents(roomId, await studentsRes.json());
-          }
-        } catch (error) {
-          console.error('Failed to refresh tasks:', error);
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setRefreshError(null);
+    // 以非反應式讀取判斷是否已加入房間，避免依賴反應式 room 造成重複 fetch
+    if (getRoom(roomId) && isOnline) {
+      try {
+        const [tasksRes, studentsRes] = await Promise.all([
+          fetch(`/api/tasks/${roomId}`),
+          fetch(`/api/rooms/${roomId}/students`),
+        ]);
+        if (tasksRes.ok) {
+          saveTasks(roomId, (await tasksRes.json()) as Task[]);
+        } else {
+          setRefreshError('server');
         }
+        if (studentsRes.ok) {
+          saveStudents(roomId, await studentsRes.json());
+        }
+      } catch (error) {
+        // 斷線：有快取任務則沿用（離線優先）；下方 render 只在無任務可顯示時才報連線問題
+        console.error('Failed to refresh tasks:', error);
+        setRefreshError('network');
       }
-      if (active) setIsLoading(false);
-    };
-    refresh();
-    return () => {
-      active = false;
-    };
+    }
+    setIsLoading(false);
   }, [roomId, isOnline]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   if (isLoading) {
     return (
@@ -84,6 +89,26 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
             {messages.room.rejoin}
           </Button>
         </Link>
+      </div>
+    );
+  }
+
+  // US5：已加入班級，但線上更新失敗且本機沒有任務可顯示 → 區分連線 / 伺服器問題（FR-101），
+  // 不落入「還沒有任務」空狀態。有快取任務時沿用離線資料、不打斷（不進此分支）。
+  if (refreshError && tasks.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6 text-center">
+        <Icon
+          name={refreshError === 'network' ? 'lucide:wifi-off' : 'lucide:frown'}
+          size={40}
+          className="mb-3 text-slate-300"
+        />
+        <p className="mb-4 text-slate-600">
+          {refreshError === 'network' ? messages.common.networkError : messages.common.errorChild}
+        </p>
+        <Button variant="primary" size="sm" onClick={refresh}>
+          {messages.common.retry}
+        </Button>
       </div>
     );
   }
