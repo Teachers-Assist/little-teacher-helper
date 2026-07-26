@@ -95,6 +95,7 @@ export interface Task {
   dueDate?: Date | null;
   status: TaskStatus;
   isArchived: boolean;
+  archivedAt?: Date | string | null; // 最近一次封存時間（004 FR-097a）
   createdAt: Date;
   updatedAt: Date;
 }

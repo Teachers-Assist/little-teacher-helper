@@ -57,6 +57,7 @@ export async function PATCH(
       dueDate?: Date | null;
       status?: string;
       isArchived?: boolean;
+      archivedAt?: Date | null;
     } = {};
 
     if (name !== undefined) {
@@ -100,6 +101,8 @@ export async function PATCH(
         return NextResponse.json({ error: 'isArchived 必須為布林值' }, { status: 400 });
       }
       updateData.isArchived = isArchived;
+      // 004 FR-097a：記下 / 清除封存時間，供辨識「封存後才同步進來」的登記
+      updateData.archivedAt = isArchived ? new Date() : null;
     }
 
     const task = await prisma.task.update({

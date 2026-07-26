@@ -114,6 +114,7 @@
 | dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除）。**寫入慣例（004）**：老師只選日期，系統補時間為當天 **17:00**（放學）；取代 001 的 `23:59:59`。同影響「延長截止」。既有 23:59:59 舊資料不 migration |
 | status | Enum | Default: ACTIVE | 任務狀態（見下方說明） |
 | isArchived | Boolean | Default: false | 是否已封存（soft archive，002 引入；封存後主清單不顯示，但歷史登記記錄保留；與 status 欄位獨立） |
+| archivedAt | DateTime | Optional | 最近一次封存時間（004 FR-097a）；封存時設為 now、還原時清為 null。用於辨識「封存後才同步進來」的登記 |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
@@ -279,6 +280,7 @@ model Task {
   dueDate             DateTime?
   status              TaskStatus @default(ACTIVE)
   isArchived          Boolean    @default(false)
+  archivedAt          DateTime?  // 004 FR-097a：最近一次封存時間
   records             Record[]
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
