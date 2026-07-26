@@ -449,6 +449,7 @@ export const messages = {
     dashboard: {
       byClass: '按班級檢視',
       byTask: '按任務檢視',
+      loadFailed: '現在讀不到你的班級資料', // US2：讀不到 dashboard 時的標題（非「還沒有班級」）
       searchPlaceholder: '🔍 搜尋任務名稱',
       noInProgressTasks: '還沒有進行中的任務喔',
       createFirstClass: '來建立第一個班級吧',

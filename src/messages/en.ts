@@ -476,6 +476,7 @@ export const messages = {
     dashboard: {
       byClass: 'By Class',
       byTask: 'By Task',
+      loadFailed: "Can't load your class data right now", // US2: dashboard load failure title (not "no classes")
       searchPlaceholder: '🔍 Search task name',
       noInProgressTasks: 'No tasks in progress yet',
       createFirstClass: 'Create your first class',
