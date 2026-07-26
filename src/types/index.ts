@@ -269,6 +269,10 @@ export interface OfflineSyncQueueItem {
   // processSyncQueue 送出前記下 sentRev，回應到達時只 ack「rev 未變」者（S10），
   // 避免飛行期間被改的新值被舊回應誤 ack 而蒸發（remediation 臉 A）。
   rev: number;
+  // 不可重試標記（004 S10）：同步回傳不可重試衝突（任務鎖定 / 不存在 / 學生已移除 /
+  // 驗證失敗）時設為 true，不再送出、但**保留於佇列**（INV-1 不靜默移除）。
+  // 屬 session 範圍的重試判定，MUST 於頁面載入時重置（S11 / FR-079 / NFR-013）。
+  nonRetryable?: boolean;
 }
 
 // ===== API Response Types =====
