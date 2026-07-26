@@ -94,6 +94,29 @@ export function getQueueSize(): number {
   return getOfflineData().syncQueue.length;
 }
 
+/**
+ * 重置佇列所有 op 的**重試判定**（retryCount 歸零、清除 nonRetryable），但**保留所有 op**。
+ *
+ * 供頁面載入時呼叫（FR-079 / INV-2 / NFR-013）：重試判定為 session 範圍、刻意不持久化，
+ * 每次載入重置並重試一次——支援老師重新開放任務後，學生只要重整即自動重送卡住的登記，
+ * 無需重新登記。未送出的佇列資料一律保留、永不因此清除。
+ *
+ * @returns 是否有任何 op 的判定被重置（供呼叫端決定要不要接著觸發同步）
+ */
+export function resetRetryJudgment(): boolean {
+  const data = getOfflineData();
+  let changed = false;
+  data.syncQueue = data.syncQueue.map((op) => {
+    if (op.retryCount !== 0 || op.nonRetryable) {
+      changed = true;
+      return { ...op, retryCount: 0, nonRetryable: false };
+    }
+    return op;
+  });
+  if (changed) saveOfflineData(data);
+  return changed;
+}
+
 export interface SyncConflict {
   operationId: string;
   reason: string; // ERROR_CODES 碼值（FR-112）

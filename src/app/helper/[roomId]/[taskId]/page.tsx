@@ -12,7 +12,7 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task, TaskStatus, SubmissionStatus, OfflineRecordEntry } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { saveTask, saveStudents, cacheSyncedRecords, clearRoom } from '@/lib/offline/storage';
-import { queueRecordUpdate } from '@/lib/offline/queue';
+import { queueRecordUpdate, resetRetryJudgment } from '@/lib/offline/queue';
 import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
@@ -81,6 +81,10 @@ export default function RecordPage({
           console.error('Failed to load task:', error);
         }
       }
+      // 頁面載入：重置重試判定（retryCount / nonRetryable）並觸發一次同步（FR-079 / INV-2）。
+      // 卡住的登記（含老師重新開放任務後）重整即自動重送；未送出資料一律保留、不清除。
+      resetRetryJudgment();
+      void requestSync();
       if (active) setIsLoading(false);
     };
     load();
