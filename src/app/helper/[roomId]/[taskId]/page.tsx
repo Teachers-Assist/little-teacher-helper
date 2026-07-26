@@ -9,7 +9,7 @@ import { RecordForm, RecordValueMap } from '@/components/RecordForm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { SyncIndicator } from '@/components/SyncIndicator';
-import { Task, TaskStatus, SubmissionStatus, OfflineRecordEntry } from '@/types';
+import { Task, TaskStatus, TaskType, SubmissionStatus, OfflineRecordEntry } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { saveTask, saveStudents, cacheSyncedRecords, clearRoom } from '@/lib/offline/storage';
 import { queueRecordUpdate, resetRetryJudgment } from '@/lib/offline/queue';
@@ -65,6 +65,17 @@ export default function RecordPage({
 
   const seatNumber = room?.seatNumber ?? null;
   const values = useMemo(() => valuesFromRecords(records), [records]);
+
+  // US7：標記完成前的承諾核對缺口。僅成績類（繳交類不觸發，FR-118）；登滿→null（FR-117）。
+  // 以本機可見資料推算（含 overlay 未同步值）；快取不準不阻擋（FR-114 註 / AS7）。
+  const markCompleteGapCount = useMemo(() => {
+    if (!task || task.type !== TaskType.GRADE) return null;
+    const total = students.length;
+    if (total === 0) return null;
+    const recorded = students.filter((s) => records[s.id]?.gradeValue != null).length;
+    const gap = total - recorded;
+    return gap > 0 ? gap : null;
+  }, [task, students, records]);
 
   useEffect(() => {
     let active = true;
@@ -250,6 +261,7 @@ export default function RecordPage({
           onChangeGrade={(studentId, grade) => persist(studentId, { gradeValue: grade })}
           onMarkComplete={handleMarkComplete}
           onChangeSeat={() => setChangeSeatOpen(true)}
+          markCompleteGapCount={markCompleteGapCount}
         />
 
         <NetworkStatus />

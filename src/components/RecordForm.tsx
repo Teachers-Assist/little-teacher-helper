@@ -27,6 +27,11 @@ interface RecordFormProps {
   onMarkComplete: () => void;
   /** 點「登記者：」badge 觸發換座號流程（US4） */
   onChangeSeat?: () => void;
+  /**
+   * US7 承諾核對：成績類任務尚未登滿時的缺口人數；null 表示不提示（繳交類 / 已登滿）。
+   * 有缺口時，標記完成的確認彈窗改用「還有 N 個沒登記」承諾提示 + 兩出路。
+   */
+  markCompleteGapCount?: number | null;
 }
 
 export function RecordForm({
@@ -39,6 +44,7 @@ export function RecordForm({
   onChangeGrade,
   onMarkComplete,
   onChangeSeat,
+  markCompleteGapCount,
 }: RecordFormProps) {
   const messages = useMessages();
   const isGrade = task.type === TaskType.GRADE;
@@ -114,8 +120,23 @@ export function RecordForm({
       <ConfirmDialog
         open={confirmOpen}
         title={messages.task.markComplete}
-        message={messages.task.markCompleteWarning}
-        confirmLabel={messages.task.markComplete}
+        // US7：有缺口（成績類未登滿）→ 承諾核對提示 + 兩出路；否則沿用既有「完成後不能改」警語。
+        // 登滿 / 繳交類 gapCount 為 null → 不觸發承諾提示（FR-117/118 / SC-029）。
+        message={
+          markCompleteGapCount != null && markCompleteGapCount > 0
+            ? messages.task.commitCheckMessage(markCompleteGapCount)
+            : messages.task.markCompleteWarning
+        }
+        confirmLabel={
+          markCompleteGapCount != null && markCompleteGapCount > 0
+            ? messages.task.commitContinue
+            : messages.task.markComplete
+        }
+        cancelLabel={
+          markCompleteGapCount != null && markCompleteGapCount > 0
+            ? messages.task.commitGoBack
+            : undefined
+        }
         confirmVariant="secondary"
         onConfirm={() => {
           setConfirmOpen(false);
