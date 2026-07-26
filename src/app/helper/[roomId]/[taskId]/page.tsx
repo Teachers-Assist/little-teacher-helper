@@ -119,6 +119,13 @@ export default function RecordPage({
   const persist = useCallback(
     (studentId: string, value: { submissionStatus?: SubmissionStatus; gradeValue?: number | null }) => {
       if (!task || seatNumber == null) return;
+      // US4：偵測覆蓋他人紀錄——寫入前，若本機已知這筆由「別的座號」登記，稍後以陳述句提示。
+      // 依賴 overlay base 有他人記錄可比對；離線冷啟動無快取時 existing 為空 → 不觸發（FR-096/129）。
+      const existing = records[studentId];
+      const overwrittenSeat =
+        existing && existing.recorderSeatNumber !== seatNumber
+          ? existing.recorderSeatNumber
+          : null;
       // 寫入 store（依意圖寫入或刪除）＋ 入佇列；畫面 values 由 useOfflineRecords 反應更新
       const result = queueRecordUpdate({
         task,
@@ -136,10 +143,14 @@ export default function RecordPage({
       if (result.stored === false) {
         toast.warning(messages.record.storageFull);
       }
+      // 覆蓋他人紀錄 → 陳述句 toast（非警告色 info、800ms 自動消失、不阻擋，FR-096）
+      if (overwrittenSeat != null) {
+        toast.info(messages.record.overwriteNotice(overwrittenSeat), 800);
+      }
 
       if (isOnline) requestSync();
     },
-    [task, seatNumber, isOnline, toast, messages]
+    [task, seatNumber, isOnline, records, toast, messages]
   );
 
   const handleMarkComplete = useCallback(async () => {
