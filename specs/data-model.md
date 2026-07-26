@@ -404,11 +404,13 @@ interface OfflineData {
       submissionStatus?: 'SUBMITTED' | 'NOT_SUBMITTED';
       gradeValue?: number;
       recorderSeatNumber: number;
-      isAssignedRecorder: boolean;
+      // isAssignedRecorder 不在 payload——由 server 依 recorderSeatNumber 派生
+      // （computeIsAssignedRecorder）；handledAt 用 op 的 timestamp 送出（FR-097）
     };
     createdAt: string;
     retryCount: number;
     rev: number;          // 樂觀並行控制版本戳（004 S9）：新建=0，去重換 payload 時 +1
+    nonRetryable?: boolean; // 不可重試標記（004 S10）；session 範圍、載入時重置，不視為持久判定
   }[];
 }
 ```
