@@ -406,13 +406,14 @@ interface OfflineData {
     };
     createdAt: string;
     retryCount: number;
+    rev: number;          // 樂觀並行控制版本戳（004 S9）：新建=0，去重換 payload 時 +1
   }[];
 }
 ```
 
 > **004 交錯的同步正確性修正（`specs/offline-sync-remediation.md`）**：
 > - **Overlay 模型（S1–S3 已落地）**：畫面為 `records`（base，伺服器鏡像）⊕ `syncQueue`（overlay，未同步變更集）的**派生**值，兩層各一個寫入者。原 `records[].synced` 欄位**已移除**（S3），未同步狀態改由「該筆是否還在佇列」派生。`queueRecordUpdate` 不再寫 `records` 快取。
-> - **版本戳（S8/S10，待落地）**：`syncQueue[]` 將新增 `rev: number`（樂觀並行控制），送出前記 `sentRev`、回應到達時只 ack `rev` 未變者，避免飛行期間被改的新值被舊回應誤 ack 而蒸發。`/api/sync` 無需改動（`rev` 為純 client 端）。
+> - **版本戳（rev 欄位 S9 已加；條件式 ack S10 待落地）**：`syncQueue[]` 已有 `rev: number`（樂觀並行控制）。S10 將於 `processSyncQueue` 送出前記 `sentRev`、回應到達時只 ack `rev` 未變者，避免飛行期間被改的新值被舊回應誤 ack 而蒸發。`/api/sync` 無需改動（`rev` 為純 client 端）。
 > - **離線經手鏈（S29，待落地）**：`syncQueue[].payload` 送出時一併帶 `handledAt`，供 server 併入 `RecordHandler` 名單（004 FR-097）。
 >
 > 上述屬 remediation 交錯項，尚未實作；本結構待 004 對應 task（T301/T313/T350）落地後同步更新為最終樣貌。未送出的佇列資料在任何情況下都持久保留（NFR-013）。

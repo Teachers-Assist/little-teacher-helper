@@ -28,6 +28,7 @@ function op(
     },
     createdAt: '2026-07-26T01:00:00.000Z',
     retryCount: 0,
+    rev: 0,
   };
 }
 

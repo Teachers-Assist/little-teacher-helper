@@ -1,4 +1,4 @@
-import { SubmissionStatus, UpdateRecordInput } from '@/types';
+import { OfflineSyncQueueItem, SubmissionStatus, UpdateRecordInput } from '@/types';
 import { resolveRecordMutation } from '@/lib/task';
 import { getOfflineData, saveOfflineData } from './storage';
 import { applyAckedOp } from './overlay';
@@ -7,6 +7,25 @@ const MAX_RETRY_COUNT = 3;
 
 function generateUUID(): string {
   return crypto.randomUUID();
+}
+
+/**
+ * 建立或就地更新一筆佇列 op（純函式，供測試）。
+ * - 已存在（同 task+student）：沿用同一 id，換上新 payload、重置 retryCount，**rev + 1**
+ *   （版本戳：告訴 S10 的 reconciliation「這筆在飛行期間被改過」）。
+ * - 不存在：新建 op，rev = 0。
+ */
+export function nextSyncOp(
+  existing: OfflineSyncQueueItem | undefined,
+  type: 'UPDATE_RECORD',
+  payload: UpdateRecordInput,
+  now: string,
+  newId: string
+): OfflineSyncQueueItem {
+  if (existing) {
+    return { ...existing, payload, createdAt: now, retryCount: 0, rev: existing.rev + 1 };
+  }
+  return { id: newId, type, payload, createdAt: now, retryCount: 0, rev: 0 };
 }
 
 /**
@@ -22,21 +41,13 @@ export function addToSyncQueue(type: 'UPDATE_RECORD', payload: UpdateRecordInput
       op.payload.studentId === payload.studentId
   );
 
+  const existing = existingIndex >= 0 ? data.syncQueue[existingIndex] : undefined;
+  const op = nextSyncOp(existing, type, payload, new Date().toISOString(), generateUUID());
+
   if (existingIndex >= 0) {
-    data.syncQueue[existingIndex] = {
-      ...data.syncQueue[existingIndex],
-      payload,
-      createdAt: new Date().toISOString(),
-      retryCount: 0,
-    };
+    data.syncQueue[existingIndex] = op;
   } else {
-    data.syncQueue.push({
-      id: generateUUID(),
-      type,
-      payload,
-      createdAt: new Date().toISOString(),
-      retryCount: 0,
-    });
+    data.syncQueue.push(op);
   }
 
   saveOfflineData(data);

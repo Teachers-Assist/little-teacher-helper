@@ -265,6 +265,10 @@ export interface OfflineSyncQueueItem {
   payload: UpdateRecordInput;
   createdAt: string;
   retryCount: number;
+  // 樂觀並行控制版本戳（004 S9）：新建 op = 0；去重就地換 payload 時 +1。
+  // processSyncQueue 送出前記下 sentRev，回應到達時只 ack「rev 未變」者（S10），
+  // 避免飛行期間被改的新值被舊回應誤 ack 而蒸發（remediation 臉 A）。
+  rev: number;
 }
 
 // ===== API Response Types =====
