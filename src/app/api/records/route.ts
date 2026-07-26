@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
+import { writeRecordWithHandler } from '@/lib/recordWrite';
 
 interface RecordInput {
   taskId: string;
@@ -94,24 +95,16 @@ export async function PATCH(request: Request) {
         recorderSeatNumber
       );
 
-      const record = await prisma.record.upsert({
-        where: { taskId_studentId: { taskId, studentId } },
-        update: {
-          ...mutation.data,
-          recorderSeatNumber,
-          isAssignedRecorder,
-          syncedAt: new Date(),
-        },
-        create: {
-          taskId,
-          studentId,
-          ...mutation.data,
-          recorderSeatNumber,
-          isAssignedRecorder,
-          syncedAt: new Date(),
-        },
+      // 寫入並維護順序處理者名單（US4）。線上直接寫入用 now 作為 handledAt。
+      await writeRecordWithHandler({
+        taskId,
+        studentId,
+        submissionStatus: mutation.data.submissionStatus,
+        gradeValue: mutation.data.gradeValue,
+        recorderSeatNumber,
+        isAssignedRecorder,
       });
-      results.push(record);
+      results.push({ taskId, studentId, updated: true });
     }
 
     const status = errors.length > 0 ? (results.length > 0 ? 207 : 409) : 200;

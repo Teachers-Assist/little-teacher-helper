@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
+import { writeRecordWithHandler } from '@/lib/recordWrite';
 
 interface SyncOperation {
   id: string;
@@ -91,22 +92,17 @@ export async function POST(request: Request) {
           recorderSeatNumber
         );
 
-        await prisma.record.upsert({
-          where: { taskId_studentId: { taskId, studentId } },
-          update: {
-            ...mutation.data,
-            recorderSeatNumber,
-            isAssignedRecorder,
-            syncedAt: new Date(),
-          },
-          create: {
-            taskId,
-            studentId,
-            ...mutation.data,
-            recorderSeatNumber,
-            isAssignedRecorder,
-            syncedAt: new Date(),
-          },
+        // 寫入紀錄並維護順序處理者名單（US4）。handledAt 用操作原始時間，使離線經手鏈
+        // 依正確順序併入（FR-097）；timestamp 無效時退回 now。
+        const handledAt = operation.timestamp ? new Date(operation.timestamp) : new Date();
+        await writeRecordWithHandler({
+          taskId,
+          studentId,
+          submissionStatus: mutation.data.submissionStatus,
+          gradeValue: mutation.data.gradeValue,
+          recorderSeatNumber,
+          isAssignedRecorder,
+          handledAt: isNaN(handledAt.getTime()) ? new Date() : handledAt,
         });
 
         syncedIds.push(operation.id);
