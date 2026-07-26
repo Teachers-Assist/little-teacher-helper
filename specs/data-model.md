@@ -386,7 +386,8 @@ interface OfflineData {
         recorderSeatNumber: number;
         isAssignedRecorder: boolean;
         updatedAt: string;    // ISO timestamp
-        synced: boolean;
+        // 「是否已同步」不存於此——改由「該 (taskId, studentId) 是否還在 syncQueue」派生
+        // （overlay 模型；004 S3 移除原 synced 欄位）
       };
     };
   };
@@ -409,10 +410,10 @@ interface OfflineData {
 }
 ```
 
-> **004 交錯的同步正確性修正（`specs/offline-sync-remediation.md`，隨 004 US1/US9 落地後本結構將調整）**：
-> - **Overlay 模型**：畫面改為 `records`（base，伺服器鏡像）⊕ `syncQueue`（overlay，未同步變更集）的**派生**值，兩層各一個寫入者。因此 `records[].synced` 欄位**移除**，改由「該筆是否還在佇列」派生（未同步標記為佇列的免費副產品）。`queueRecordUpdate` 不再寫 `records` 快取。
-> - **版本戳**：`syncQueue[]` 新增 `rev: number`（樂觀並行控制），送出前記 `sentRev`、回應到達時只 ack `rev` 未變者，避免飛行期間被改的新值被舊回應誤 ack 而蒸發。`/api/sync` 無需改動（`rev` 為純 client 端）。
-> - **離線經手鏈**：`syncQueue[].payload` 送出時一併帶 `handledAt`，供 server 併入 `RecordHandler` 名單（004 FR-097）。
+> **004 交錯的同步正確性修正（`specs/offline-sync-remediation.md`）**：
+> - **Overlay 模型（S1–S3 已落地）**：畫面為 `records`（base，伺服器鏡像）⊕ `syncQueue`（overlay，未同步變更集）的**派生**值，兩層各一個寫入者。原 `records[].synced` 欄位**已移除**（S3），未同步狀態改由「該筆是否還在佇列」派生。`queueRecordUpdate` 不再寫 `records` 快取。
+> - **版本戳（S8/S10，待落地）**：`syncQueue[]` 將新增 `rev: number`（樂觀並行控制），送出前記 `sentRev`、回應到達時只 ack `rev` 未變者，避免飛行期間被改的新值被舊回應誤 ack 而蒸發。`/api/sync` 無需改動（`rev` 為純 client 端）。
+> - **離線經手鏈（S29，待落地）**：`syncQueue[].payload` 送出時一併帶 `handledAt`，供 server 併入 `RecordHandler` 名單（004 FR-097）。
 >
 > 上述屬 remediation 交錯項，尚未實作；本結構待 004 對應 task（T301/T313/T350）落地後同步更新為最終樣貌。未送出的佇列資料在任何情況下都持久保留（NFR-013）。
 

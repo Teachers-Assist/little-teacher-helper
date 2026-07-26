@@ -235,7 +235,6 @@ export function cacheSyncedRecords(
       recorderSeatNumber: r.recorderSeatNumber,
       isAssignedRecorder: r.isAssignedRecorder,
       updatedAt: r.updatedAt ?? new Date().toISOString(),
-      synced: true,
     };
   });
   data.records[taskId] = map;

@@ -9,7 +9,6 @@ function baseEntry(partial: Partial<OfflineRecordEntry>): OfflineRecordEntry {
     recorderSeatNumber: 1,
     isAssignedRecorder: false,
     updatedAt: '2026-07-26T00:00:00.000Z',
-    synced: true,
     ...partial,
   };
 }
@@ -40,11 +39,11 @@ describe('mergeRecords (overlay 疊加)', () => {
     expect(result.s1.gradeValue).toBe(90);
   });
 
-  it('overlay-only：base 無此學生、佇列有 op → 顯示 op 值（synced=false）', () => {
+  it('overlay-only：base 無此學生、佇列有 op → 顯示 op 值', () => {
     const result = mergeRecords({}, [op('s1', { gradeValue: 77, recorderSeatNumber: 8 })], 8);
     expect(result.s1.gradeValue).toBe(77);
     expect(result.s1.recorderSeatNumber).toBe(8);
-    expect(result.s1.synced).toBe(false);
+    expect(result.s1.updatedAt).toBe('2026-07-26T01:00:00.000Z'); // 取自 op（未同步變更）
     expect(result.s1.isAssignedRecorder).toBe(true); // assignedSeatNumber 8 === recorder 8
   });
 
@@ -60,15 +59,13 @@ describe('mergeRecords (overlay 疊加)', () => {
 
   it('base+overlay：overlay 優先覆蓋同一學生，未被 op 觸及的 base 學生保留', () => {
     const base = {
-      s1: baseEntry({ gradeValue: 50, synced: true }),
-      s2: baseEntry({ gradeValue: 60, synced: true }),
+      s1: baseEntry({ gradeValue: 50 }),
+      s2: baseEntry({ gradeValue: 60 }),
     };
-    // s1 被離線改成 88（未同步）；s2 沒有 op
+    // s1 被離線改成 88（未同步，overlay 有 op）；s2 沒有 op（仍為 base 值）
     const result = mergeRecords(base, [op('s1', { gradeValue: 88 })]);
-    expect(result.s1.gradeValue).toBe(88);
-    expect(result.s1.synced).toBe(false); // overlay 值＝未同步
+    expect(result.s1.gradeValue).toBe(88); // overlay 值優先
     expect(result.s2.gradeValue).toBe(60); // base 保留
-    expect(result.s2.synced).toBe(true);
     expect(base.s1.gradeValue).toBe(50); // 不可變動原 base 物件
   });
 
@@ -80,16 +77,16 @@ describe('mergeRecords (overlay 疊加)', () => {
 });
 
 describe('applyAckedOp (ack 後沉澱到 base)', () => {
-  it('upsert：成功的成績 op 寫回 base 並標記 synced=true', () => {
+  it('upsert：成功的成績 op 寫回 base', () => {
     const records: OfflineData['records'] = {};
     applyAckedOp(records, op('s1', { gradeValue: 88 }));
     expect(records.t1.s1.gradeValue).toBe(88);
-    expect(records.t1.s1.synced).toBe(true);
+    expect(records.t1.s1.recorderSeatNumber).toBe(8);
   });
 
   it('delete：成功的取消/清空 op 從 base 移除該學生', () => {
     const records: OfflineData['records'] = {
-      t1: { s1: baseEntry({ gradeValue: 60, synced: true }) },
+      t1: { s1: baseEntry({ gradeValue: 60 }) },
     };
     applyAckedOp(records, op('s1', {})); // 清空成績意圖
     expect(records.t1.s1).toBeUndefined();
@@ -97,7 +94,7 @@ describe('applyAckedOp (ack 後沉澱到 base)', () => {
 
   it('保留既有 base 的 isAssignedRecorder（權威值待 refetch 校正）', () => {
     const records: OfflineData['records'] = {
-      t1: { s1: baseEntry({ gradeValue: 50, isAssignedRecorder: true, synced: true }) },
+      t1: { s1: baseEntry({ gradeValue: 50, isAssignedRecorder: true }) },
     };
     applyAckedOp(records, op('s1', { gradeValue: 70 }));
     expect(records.t1.s1.isAssignedRecorder).toBe(true);

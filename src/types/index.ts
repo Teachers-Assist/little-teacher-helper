@@ -219,7 +219,8 @@ export interface OfflineRecordEntry {
   recorderSeatNumber: number; // 登記者（小老師）座號，非被登記學生
   isAssignedRecorder: boolean; // 登記者是否為任務指定的小老師
   updatedAt: string;
-  synced: boolean;
+  // 「是否已同步」不再存於此——改由「該 (taskId, studentId) 是否還在 syncQueue」派生
+  // （overlay 模型：佇列是未同步狀態的單一真相）。見 overlay.ts / store.ts。
 }
 
 export interface OfflineData {

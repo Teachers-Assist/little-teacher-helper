@@ -47,7 +47,6 @@ export function mergeRecords(
       recorderSeatNumber,
       isAssignedRecorder: computeIsAssignedRecorder(assignedSeatNumber, recorderSeatNumber),
       updatedAt: op.createdAt,
-      synced: false,
     };
   }
 
@@ -85,6 +84,5 @@ export function applyAckedOp(records: OfflineData['records'], op: OfflineSyncQue
     recorderSeatNumber,
     isAssignedRecorder: prev?.isAssignedRecorder ?? false,
     updatedAt: op.createdAt,
-    synced: true,
   };
 }
