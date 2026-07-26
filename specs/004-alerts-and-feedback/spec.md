@@ -519,7 +519,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 
 ## Success Criteria _(mandatory)_
 
-- **SC-019**: 學生的登記在任何情境下都不會靜默消失 —— 程式碼中 MUST NOT 存在「從同步佇列移除但未通知使用者」的路徑
+- **SC-019**: 學生的登記在任何情境下既不**靜默消失**也不**靜默分歧** ——（不遺失）程式碼中 MUST NOT 存在「從同步佇列移除但未通知使用者」的路徑；（不分歧）MUST NOT 在 op 於飛行期間被改、伺服器卻 ack 舊版本時把該筆標記為已同步（remediation 臉 A）。實作對應：`reconcileSync` 只 ack `rev` 未變者、不可重試 / 重試耗盡一律保留並標記（`nonRetryable` / `retryCount`），失敗態由 `SyncIndicator` 呈現（`isOpFailed`）。〔2026-07-26 依 `offline-sync-remediation.md` 第 6 節回饋，由原本只涵蓋「不遺失」擴寫為同時涵蓋「不分歧」〕
 - **SC-020**: 老師端在資料無法取得時，畫面 MUST NOT 出現任何形式的「一切正常」表述（可用測試斷言：mock monitoring 回 500，斷言畫面不含 `classStatus.empty` 文案）
 - **SC-021**: 程式碼搜尋 `messages.record.saveFailed` MUST 出現於元件中而非僅定義處（dead string 清除驗證）
 - **SC-022**: 學生端所有 `catch` 區塊 MUST NOT 僅含 `console.error` —— 每個 catch 都要有對應的使用者可見結果或明確註明為何不需要
