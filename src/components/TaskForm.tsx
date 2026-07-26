@@ -6,6 +6,7 @@ import { useMessages } from '@/i18n/MessagesProvider';
 import { resolveError } from '@/i18n/resolveError';
 import { TaskType, TaskStatus, type Task } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { taipeiDayStartAt } from '@/lib/timezone';
 
 export interface EditingTask {
   id: string;
@@ -118,8 +119,9 @@ export function TaskForm({
     setIsSaving(true);
     setError('');
     try {
-      // date-only → 當天結束（23:59:59 本地時間），留空則 null
-      const dueDate = due ? new Date(`${due}T23:59:59`).toISOString() : null;
+      // date-only → 當天台北 17:00（放學鎖定點，FR-108），留空則 null。
+      // 取代舊的本地時區 23:59:59；延長截止沿用此表單，故同樣標準化為 17:00。
+      const dueDate = due ? taipeiDayStartAt(due, 17).toISOString() : null;
 
       const seat = assignedSeat ? parseInt(assignedSeat, 10) : null;
 
