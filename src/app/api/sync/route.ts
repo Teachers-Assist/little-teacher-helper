@@ -34,6 +34,15 @@ export async function POST(request: Request) {
     const tasks = await prisma.task.findMany({ where: { id: { in: taskIds } } });
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
+    // 涉及班級的「在籍座號」集合，供辨識「登記者（小老師）座號已被老師移除」（AS8）。
+    // 封存任務不在此擋——沿用 FR-101a：封存後離線登記照常寫入、由學生端告知「已收起」。
+    const roomIds = [...new Set(tasks.map((t) => t.roomId))];
+    const activeStudents = await prisma.student.findMany({
+      where: { roomId: { in: roomIds }, isRemoved: false },
+      select: { roomId: true, seatNumber: true },
+    });
+    const activeSeatSet = new Set(activeStudents.map((s) => `${s.roomId}:${s.seatNumber}`));
+
     const syncedIds: string[] = [];
     // reason 一律為 ERROR_CODES 碼值（FR-112），供 client 依碼分類可重試 / 不可重試（FR-078），
     // MUST NOT 回硬編中文。
@@ -51,6 +60,11 @@ export async function POST(request: Request) {
 
       if (!task) {
         conflicts.push({ operationId: operation.id, reason: ERROR_CODES.TASK_NOT_FOUND });
+        continue;
+      }
+      // 登記者座號已不屬於任何在籍學生（老師移除了該小老師）→ 不可重試，讓學生看見（AS8）
+      if (!activeSeatSet.has(`${task.roomId}:${recorderSeatNumber}`)) {
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.STUDENT_NOT_IN_ROOM });
         continue;
       }
       if (getTaskLockReason(task) !== null) {
