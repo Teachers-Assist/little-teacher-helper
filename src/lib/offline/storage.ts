@@ -174,11 +174,36 @@ export function getStudents(roomId: string): Student[] {
 }
 
 /**
- * 儲存任務列表
+ * 清掉「孤兒」登記快取：某 taskId 的記錄，若該任務已不在任何本機房間的任務清單中
+ * （老師刪除任務、或換／離開房間後其任務清單被移除），且**沒有任何待同步操作指向它**，
+ * 即整包移除——這些是純鏡像、連線後可重新取回的已同步資料（P2-1，止住 records 只增不減）。
+ *
+ * 安全不變式：只要該 taskId 尚有待送 op（syncQueue 內），一律保留——未送出的登記是不可逆
+ * 資料，不可因清理而遺失（守 vision 原則一 / NFR-013）。
+ *
+ * 刻意只做**任務層級**：不因學生被移除而刪其記錄——移除須維持可還原（002 FR-025/026、
+ * 004 Edge Cases「計算層排除、不刪資料」），故移除學生的記錄由計算層排除、實體不刪。
+ */
+function pruneSyncedOrphanRecords(data: OfflineData): void {
+  const knownTaskIds = new Set<string>();
+  for (const roomId of Object.keys(data.tasks)) {
+    for (const task of data.tasks[roomId]) knownTaskIds.add(task.id);
+  }
+  const queuedTaskIds = new Set(data.syncQueue.map((op) => op.payload.taskId));
+  for (const taskId of Object.keys(data.records)) {
+    if (!knownTaskIds.has(taskId) && !queuedTaskIds.has(taskId)) {
+      delete data.records[taskId];
+    }
+  }
+}
+
+/**
+ * 儲存任務列表。任務清單是「哪些任務還存在」的最新事實，故在此順道清掉孤兒登記快取（P2-1）。
  */
 export function saveTasks(roomId: string, tasks: Task[]): void {
   const data = getOfflineData();
   data.tasks[roomId] = tasks;
+  pruneSyncedOrphanRecords(data);
   saveOfflineData(data);
 }
 
@@ -250,15 +275,19 @@ export function cacheSyncedRecords(
  * 換座號用：清掉「身份 / 名單 / 任務」本機快取，讓使用者重新從 /join 入場
  * （003 US4 / FR-075）。
  *
- * 刻意**保留 records 與 syncQueue** —— 未同步的登記是不可逆資料，不可因換座號而遺失
+ * 刻意**保留未同步的登記與 syncQueue** —— 未送出的登記是不可逆資料，不可因換座號而遺失
  * （守 vision.md「不可逆操作不破壞資料」原則）。未送出的登記仍掛在佇列裡，連線後照常
  * 上傳，且保留原 recorderSeatNumber（問責不丟）。同一台裝置換座號後可繼續累積登記；
  * 對同一 task+student 再次登記則沿用既有去重邏輯更新該筆，不覆蓋他人尚未上傳的登記。
+ *
+ * 房間任務清單被移除後，其**已同步且無待送 op** 的登記快取即成孤兒，順道清掉（P2-1）；
+ * 有待送 op 者由 pruneSyncedOrphanRecords 的不變式保留，不受影響。
  */
 export function clearRoom(roomId: string): void {
   const data = getOfflineData();
   delete data.rooms[roomId];
   delete data.students[roomId];
   delete data.tasks[roomId];
+  pruneSyncedOrphanRecords(data);
   saveOfflineData(data);
 }

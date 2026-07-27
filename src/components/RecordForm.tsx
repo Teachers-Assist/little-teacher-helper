@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -199,6 +199,26 @@ function GradeRow({
   const messages = useMessages();
   const [text, setText] = useState(value != null ? String(value) : '');
   const [error, setError] = useState('');
+  // 聚焦中不讓 props 覆蓋本地輸入；debounce 送出，避免逐鍵登記／逐鍵同步（A4）。
+  // focused 用 state（渲染期可讀）；timer 用 ref（僅事件處理／卸載清理時存取，不在渲染期讀）。
+  const [focused, setFocused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 未聚焦時，讓輸入框跟隨最新的 value（重連 refetch／他人登記回填才顯示得出來）。
+  // 用「渲染期調整 state」而非 effect —— 避免 setState-in-effect 的串聯渲染，且即時反映。
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue && !focused) {
+    setLastValue(value);
+    setText(value != null ? String(value) : '');
+  }
+
+  // 卸載時清掉未觸發的 debounce，避免對已卸載元件送出
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    []
+  );
 
   const commit = (raw: string) => {
     const trimmed = raw.trim();
@@ -220,6 +240,22 @@ function GradeRow({
     onChange(num);
   };
 
+  const scheduleCommit = (raw: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      commit(raw);
+    }, 500);
+  };
+
+  const flushCommit = (raw: string) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    commit(raw);
+  };
+
   return (
     <div className="flex min-h-[56px] items-center gap-3 rounded-xl border-2 border-black bg-white p-3">
       <SeatName seat={student.seatNumber} name={student.name} />
@@ -231,9 +267,14 @@ function GradeRow({
           placeholder={messages.record.gradePlaceholder}
           value={text}
           disabled={disabled}
+          onFocus={() => setFocused(true)}
           onChange={(e) => {
             setText(e.target.value);
-            commit(e.target.value);
+            scheduleCommit(e.target.value); // 停止輸入 500ms 後才登記
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            flushCommit(e.target.value); // 離開欄位立即送出未觸發的 debounce
           }}
         />
         {error && <span className="mt-0.5 text-xs font-medium text-red-600">{error}</span>}

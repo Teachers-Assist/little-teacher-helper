@@ -46,9 +46,10 @@ US1（FR-079）與 US9（FR-126）都假設「同步佇列（`syncQueue`）↔ �
 | **Overlay 模型** — 解「refetch 覆蓋」＝**臉 B**、「畫面靜默分歧／雙讀 reconciliation 的 record 覆蓋」＝**臉 C-record** | **US1 / US9 之前**（真前置） | 兩者都站在「佇列↔回填↔畫面」仲裁正確之上；FR-079 會把覆蓋競態放大成「每次開頁必發」。地基不先正確，US1 會被迫寫繞過競態的臨時 hack，且 US9 判斷「有無他人登過」的資料不穩 |
 | **版本戳 + 條件式套用** — 解「去重換 payload 卻沿用 id」＝**臉 A**、「雙讀 reconciliation 的 op ack/retry 誤判」＝**臉 C-op** | **併入 US1 同一次改** | US1（FR-077 ~ FR-079）本就重寫 `processSyncQueue` 的 conflict 解析與 reconciliation；版本戳改動同一段收尾。一起改，避免同一函式被 churn 兩次。錯誤碼分類沿用 FR-111 ~ FR-113，不自建文字比對 |
 | **`handleMarkComplete` 陳舊快照回捲修正** ＝ **臉 D** | **併入 US3 同一次改** | US3 FR-088 本就重寫 `handleMarkComplete`（加失敗回饋、按鈕復位）；此修正在同一函式，順手改掉「用 `await` 前的閉包 `task` 拼 `saveTask`」 |
-| **GradeRow 受控化 + debounce ＝ A4**、**requestSync 補跑旗標 ＝ B4**、**records/syncQueue 生命週期清理 ＝ P2-1** | **本 feature 之後**，另案 | 皆非 US1/US9 前置。GradeRow（A4）尤其：US3 AS6 明文「不改 GradeRow」，本 feature 完成後另案處理，避免與 AS6 抵觸 |
+| **GradeRow 受控化 + debounce ＝ A4**、**records/syncQueue 生命週期清理 ＝ P2-1** | ✅ 已完成 2026-07-27（提前於本 feature 收尾前） | 皆非 US1/US9 前置；A4 因 AS6 已改寫為只保護數字驗證而無 churn 衝突，故提前修（見 `offline-sync-remediation.md` §5） |
+| **requestSync 補跑旗標 ＝ B4** | **本 feature 之後**，另案（未做） | 非 US1/US9 前置，獨立低 churn |
 
-**一句話**：Overlay 先於 US1/US9；版本戳併入 US1；`handleMarkComplete` 修正併入 US3；其餘留待本 feature 之後。US1 / US9 的自動化驗收（SC-032、US1 AS7）MUST 在 Overlay 落地後才視為有效。
+**一句話**：Overlay 先於 US1/US9；版本戳併入 US1；`handleMarkComplete` 修正併入 US3；A4/P2-1 已提前完成（2026-07-27）；僅 B4 留待本 feature 之後。US1 / US9 的自動化驗收（SC-032、US1 AS7）MUST 在 Overlay 落地後才視為有效。
 
 ---
 
