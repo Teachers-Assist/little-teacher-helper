@@ -29,13 +29,23 @@ export function TasksView({ tasks }: { tasks: DashboardTask[] }) {
     CLOSED: { variant: 'neutral', label: messages.teacher.taskList.badgeClosed },
   };
 
-  const anomalyText = (anomalies: Anomaly[]): string =>
+  const anomalyText = (anomalies: Anomaly[], dueDate: string | null): string =>
     anomalies
-      .map((a) =>
-        a.type === 'ASSIGNED_SEAT_IDLE'
-          ? messages.teacher.classStatus.anomalyAssignedSeatIdle(a.assignedSeatNumber ?? 0)
-          : messages.teacher.classStatus.anomalyNoRecordsNearDue
-      )
+      .map((a) => {
+        if (a.type === 'TASK_STALLED') {
+          const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
+          return messages.teacher.classStatus.anomalyIdle(hours);
+        }
+        if (a.type === 'LOW_COMPLETION') {
+          return messages.teacher.classStatus.anomalyLowCompletion(
+            a.recordedCount ?? 0,
+            a.classStudentCount ?? 0
+          );
+        }
+        return messages.teacher.classStatus.anomalyNearDue(
+          dueDate ? new Date(dueDate).toLocaleDateString() : ''
+        );
+      })
       .join('；');
 
   // 空狀態（無進行中任務）：隱藏搜尋框（FR-054 / AS8）
@@ -70,7 +80,7 @@ export function TasksView({ tasks }: { tasks: DashboardTask[] }) {
               className="flex w-full items-center gap-3 rounded-lg border-2 border-black bg-white px-4 py-3 text-left transition-colors hover:bg-accent-100"
             >
               {task.isAnomaly && (
-                <span title={anomalyText(task.anomalies)}>
+                <span title={anomalyText(task.anomalies, task.dueDate)}>
                   <Icon name="lucide:alert-triangle" size={18} className="flex-shrink-0 text-red-500" />
                 </span>
               )}

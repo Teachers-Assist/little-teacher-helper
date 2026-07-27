@@ -292,6 +292,48 @@ const USED_ICONS = [
 
 ---
 
+## 警示 / 證據 / 回饋視覺規範（004 新增，對應 spec.md「三類訊息的判準」）
+
+004 把「系統要告訴人的事」分成三類，任何新增訊息都先歸類再套用視覺；決定新提示長怎樣時依此，避免把該安靜待查的做成主動打擾、或把失敗做成沉默。
+
+### 三類訊息的視覺語言
+
+| 類型 | 受眾 | 視覺原則 |
+|------|------|---------|
+| **警示** | 老師 | 主動打擾：紅色卡片（`border-red-200 bg-red-50 text-red-700`），列於班級狀況 tab / dashboard |
+| **證據（監視器）** | 老師 | 被動、不主動喊：中性 / 弱色標示（`slate-*`、`amber-*` 徽章），只在老師來查時可見 |
+| **提示** | 學生 | 操作當下即時回饋：toast / inline，兒童語氣、指向概念與下一步 |
+
+### 失敗態（`SyncIndicator`，US1 / FR-081）
+
+1. 同步指示器 MUST 有三態且視覺可區分：**同步中**（`amber-500` 脈動點）、**待上傳**（`amber-500` 靜止點）、**失敗**（`red-*`：`bg-red-50` + `red-500` 點 + `text-red-700`）。
+2. 失敗態**優先於**同步中 / 待上傳呈現（有送不出去的登記時蓋過其他態），文案指向「去找老師」（`sync.failed`）。資料仍在佇列、重整會再試（不呈現為資料消失）。
+3. 失敗態沿用「危險狀態」紅色 token，**不自創** rose / 其他原始色。
+
+### 無法確認狀態（老師端，US2 / FR-083-086）
+
+1. monitoring / dashboard 載入失敗時 MUST NOT 呈現「一切正常」空狀態或「還沒有班級」——改呈現**無法確認**：`lucide:cloud-off` + 標題 + 成因說明 + **重試**按鈕。
+2. MUST 區分兩種成因兩種文案：**連線問題**（老師自己離線，`classStatus.unavailableNetwork`）vs **伺服器錯誤**（`classStatus.unavailableServer`）；離線先以 `navigator.onLine` 擋。
+3. dashboard 異常統計數在無法取得時顯示 **`—`**（`classStatus.unknownCount`），MUST NOT 顯示 `0` 或過期值。
+
+### 學生端陳述句 toast（US4 覆蓋 / US9 載入）
+
+1. **覆蓋他人紀錄**（FR-096）：以 **info toast**（非警告色）、**800ms 自動消失**、不阻擋、不需手動關閉，陳述「這一筆原本是 N 號登的」。**MUST NOT** 用紅 / 黃警告色，MUST NOT 要求確認——系統不替老師預判（可能是受指示前來更正）。
+2. **載入時已有人登過**（US9）：以 `ConfirmDialog` 陳述「座號 X 已登 N/M，要接手嗎」+ 兩出路（接手繼續 / 返回任務清單），**MUST NOT** 硬性阻擋（選接手即關閉續登）。只在載入 / 重連時判一次，非即時 presence。
+3. 兩者皆為**陳述句非道德說教**（沿用 003「視覺事實取代說教」）。
+
+### 監視器留痕視覺（老師端任務細節頁，US4 / FR-094-095, FR-097a）
+
+1. **多人經手**：紀錄的順序處理者名單含 ≥ 2 個不同座號時，MUST 有可辨識標示——琥珀色徽章（`bg-amber-100 text-amber-700` + `lucide:users`）可展開完整順序名單（各座號 + 時間）。琥珀＝「值得注意但非違規」，比紅色警示弱一階（證據非警示）。
+2. **封存後才進來的登記**（FR-097a）：中性灰標示（`bg-slate-100 text-slate-500` + `lucide:archive`），證據級、被動可見、**不用警告色、不主動喊**。
+3. 登記者資訊視覺重量 MUST 足以讓老師一眼掃出「誰登的、有無混登、哪幾筆被不只一人動過」。
+
+### 失敗態 vs 離線態的視覺優先序（Edge Case）
+
+同時存在多個狀態時（如離線 + 佇列有不可重試項）MUST 定義單一優先呈現，避免多個 banner 相疊塞滿畫面（參照 003 FR-070 色塊相疊問題）：**失敗態 > 同步中 > 待上傳**；連線問題與失敗態擇一主呈現。
+
+---
+
 ## 檔案位置索引
 
 | 用途 | 路徑 |
@@ -307,3 +349,8 @@ const USED_ICONS = [
 | 進場過場 / 自我聲明印章（003） | `src/components/JoinTransition.tsx`、`src/components/IdentityStamp.tsx` |
 | 登記者身份 badge（003） | `src/components/RecorderBadge.tsx` |
 | 失敗計數 / haptic hook（003） | `src/hooks/useFailureCounter.ts`、`src/hooks/useHaptic.ts` |
+| 同步指示器（失敗態，004） | `src/components/SyncIndicator.tsx` |
+| 班級狀況警示 / 無法確認（004） | `src/components/MonitoringAlerts.tsx`、`src/app/teacher/rooms/[id]/page.tsx` |
+| 經手鏈查閱 / 封存後標示（004） | `src/components/TaskResultView.tsx` |
+| Overlay 疊加 / reconciliation（004） | `src/lib/offline/overlay.ts`、`src/lib/offline/queue.ts` |
+| 異常偵測純函式 / 時區工具（004） | `src/lib/anomalyDetection.ts`、`src/lib/timezone.ts` |

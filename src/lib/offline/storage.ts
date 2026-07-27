@@ -96,19 +96,24 @@ export function getOfflineData(): OfflineData {
  * 由於所有寫入函式（saveX / queueRecordUpdate / processSyncQueue）最終都會
  * 呼叫此函式，訂閱者因此能對任何離線資料變動即時反應。
  */
-export function saveOfflineData(data: OfflineData): void {
-  if (typeof window === 'undefined') return;
+export function saveOfflineData(data: OfflineData): boolean {
+  if (typeof window === 'undefined') return true;
 
+  let ok = true;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
+    // localStorage 寫入失敗（無痕模式 / 配額爆掉）：MUST NOT 只 console.error 後吞掉（FR-089）。
+    // 回傳失敗訊號供上層告知使用者（FR-090）；但仍更新記憶體快照並通知，讓操作在畫面上照常
+    // 發生、不阻擋（FR-091）——只是這次無法持久化，重整後會遺失。
     console.error('Failed to save offline data:', error);
-    return;
+    ok = false;
   }
 
   // 採用剛寫入的物件作為新快照（每次寫入皆為新參照 → 觸發重新渲染）
   cache = data;
   emitChange();
+  return ok;
 }
 
 /**
@@ -203,39 +208,6 @@ export function saveTask(roomId: string, task: Task): void {
 }
 
 /**
- * 寫入一筆登記記錄到本機快取（標記為待同步）。
- * 僅用於「有登記」的記錄；取消登記請改用 removeRecord。
- */
-export function saveRecord(
-  taskId: string,
-  studentId: string,
-  entry: Omit<OfflineRecordEntry, 'updatedAt' | 'synced'>,
-  synced: boolean = false
-): void {
-  const data = getOfflineData();
-  if (!data.records[taskId]) {
-    data.records[taskId] = {};
-  }
-  data.records[taskId][studentId] = {
-    ...entry,
-    updatedAt: new Date().toISOString(),
-    synced,
-  };
-  saveOfflineData(data);
-}
-
-/**
- * 從本機快取移除一筆登記記錄（取消勾選 / 清空成績 → 回到「沒登記過」）。
- */
-export function removeRecord(taskId: string, studentId: string): void {
-  const data = getOfflineData();
-  if (data.records[taskId]?.[studentId]) {
-    delete data.records[taskId][studentId];
-    saveOfflineData(data);
-  }
-}
-
-/**
  * 取得某任務在本機的所有登記記錄
  */
 export function getRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
@@ -268,7 +240,6 @@ export function cacheSyncedRecords(
       recorderSeatNumber: r.recorderSeatNumber,
       isAssignedRecorder: r.isAssignedRecorder,
       updatedAt: r.updatedAt ?? new Date().toISOString(),
-      synced: true,
     };
   });
   data.records[taskId] = map;

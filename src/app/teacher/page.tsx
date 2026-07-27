@@ -16,10 +16,12 @@ const VIEW_KEY = 'dashboardView';
 
 export default function TeacherDashboard() {
   const messages = useMessages();
-  const [, setTeacherId] = useState<string | null>(null);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState('');
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // US2：區分「真的沒有班級」與「讀不到資料」。null=正常；否則為無法確認的成因。
+  const [loadError, setLoadError] = useState<'network' | 'server' | null>(null);
   const [showCreateTeacher, setShowCreateTeacher] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -39,18 +41,29 @@ export default function TeacherDashboard() {
   }, []);
 
   const fetchDashboard = async (id: string) => {
+    setIsLoading(true);
+    setLoadError(null);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoadError('network');
+      setIsLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/teachers/${id}/dashboard`);
-      if (res.ok) {
-        const d = (await res.json()) as DashboardData;
-        setData(d);
-        // 預設 tab：1 班 → 按任務；≥2 班 → 按班級（FR-052）。
-        // 使用者主動切換暫存於 sessionStorage（不持久化）。
-        const stored = sessionStorage.getItem(VIEW_KEY) as View | null;
-        setView(stored ?? (d.stats.roomCount >= 2 ? 'classes' : 'tasks'));
+      if (!res.ok) {
+        // 讀不到資料時 MUST NOT 落入「0 班 / 一切正常」，否則老師會誤信（FR-086 / SC-020）
+        setLoadError('server');
+        return;
       }
+      const d = (await res.json()) as DashboardData;
+      setData(d);
+      // 預設 tab：1 班 → 按任務；≥2 班 → 按班級（FR-052）。
+      // 使用者主動切換暫存於 sessionStorage（不持久化）。
+      const stored = sessionStorage.getItem(VIEW_KEY) as View | null;
+      setView(stored ?? (d.stats.roomCount >= 2 ? 'classes' : 'tasks'));
     } catch (error) {
       console.error('Failed to fetch dashboard:', error);
+      setLoadError('network');
     } finally {
       setIsLoading(false);
     }
@@ -152,7 +165,29 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="page-body space-y-5">
-        {roomCount === 0 ? (
+        {loadError && !data ? (
+          // US2：讀不到資料——MUST NOT 顯示「還沒有班級」（老師會誤以為班級不見了）
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
+            <Icon name="lucide:cloud-off" size={32} className="text-slate-400" />
+            <div>
+              <p className="text-base font-semibold text-slate-700">
+                {messages.teacher.dashboard.loadFailed}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {loadError === 'network'
+                  ? messages.teacher.classStatus.unavailableNetwork
+                  : messages.teacher.classStatus.unavailableServer}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => teacherId && fetchDashboard(teacherId)}
+            >
+              {messages.teacher.classStatus.retry}
+            </Button>
+          </div>
+        ) : roomCount === 0 ? (
           <div className="rounded-xl border border-dashed border-[#cabdff] bg-white py-16 text-center">
             <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary-50">
               <Icon name="lucide:school" size={28} className="text-primary-400" />

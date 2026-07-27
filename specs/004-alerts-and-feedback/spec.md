@@ -23,6 +23,35 @@
 
 ---
 
+## 前置依賴（已知同步正確性缺陷，須於本 feature 實作前／中修正）
+
+US1（FR-079）與 US9（FR-126）都假設「同步佇列（`syncQueue`）↔ 本機回填（`cacheSyncedRecords`）↔ 畫面（`useOfflineRecords`）」三者的仲裁是正確的。目前此仲裁有一組**共用根因**的缺陷 —— 離線資料是 localStorage 單一 blob，而 `queueRecordUpdate` / `processSyncQueue` / `cacheSyncedRecords` 各自 read-modify-write、彼此**無序列化**，導致：
+
+- **重連 refetch 覆蓋未同步的本機登記** —— `cacheSyncedRecords` 以伺服器資料整份取代 `data.records[taskId]`；離線登的、尚未上傳的那幾筆從畫面消失（畫面回退。與下一項疊加時升級為真·靜默分歧）
+- **佇列去重就地換 payload 卻沿用同一 op id** —— `isSyncing` 期間的新編輯可能被連同已上傳的舊 op 一起以 id 濾除 → 伺服器存舊值、畫面顯示新值、指示器卻說已同步
+- **`processSyncQueue` 自身雙讀競態** —— `pending`（讀一次）與收尾 `data`（再讀一次）之間的編輯，會被 reconciliation 覆蓋（單人、單裝置即可觸發，證明根因是無序列化的 read-modify-write，而非單純「refetch 覆蓋」）
+
+**這些是 code bug（違反 `vision.md` 原則四「非人為錯誤不會發生」的承諾），非本 feature 的 User Story** —— 依本 feature「刷除規則」：成因為「程式沒寫好」者不進 US。其根因修正（**序列化離線寫入路徑**，或**讓佇列成為未同步狀態的唯一真相、讓畫面從佇列而非 records 快取推導**）追蹤於**獨立的同步正確性修正計畫**，不在本 feature 的 FR 內。
+
+**但依賴為真，且本 feature 會放大它**：FR-079 要求「每次頁面載入重置並觸發一次同步」，而登記頁 `load()` 在同一時機 refetch `/api/records` —— US1 上線後，上述覆蓋競態從「reconnect 偶發」變成「**每次進登記頁必發**」。因此該修正 MUST 於本 feature 實作前或同時完成；US1 / US9 的驗收 MUST 在修正後進行，否則 SC-032（US9 提示正確性）與 US1 AS7（重整後資料保留）會因底層競態而不穩定（偽陽／偽陰）。
+
+### 執行順序（與本 feature 交錯，非整包前置或整包延後）
+
+修正計畫的完整根因分析與藥方見 `specs/offline-sync-remediation.md`；該文件「執行順序」表與下表為同一決策的兩個副本，二者 MUST 保持一致。「Overlay 模型」＝讓佇列成為未同步狀態的唯一真相、畫面從佇列而非 records 快取推導；「版本戳」＝送出的 op 帶版本號，回應到達時只 ack 版本未變者（樂觀並行控制）。
+
+> 「臉 X」「A4/B4/P2-1」為 `specs/offline-sync-remediation.md` 的修正項代號（該文件把單一根因拆成「四張臉」臉 A/B/C/D，另有獨立項 A4/B4/P2-1）。此欄標注僅為交叉引用，該文件為代號的單一真相。
+
+| 修正項（remediation 代號） | 相對本 feature 的時機 | 為何是這個時機 |
+| --- | --- | --- |
+| **Overlay 模型** — 解「refetch 覆蓋」＝**臉 B**、「畫面靜默分歧／雙讀 reconciliation 的 record 覆蓋」＝**臉 C-record** | **US1 / US9 之前**（真前置） | 兩者都站在「佇列↔回填↔畫面」仲裁正確之上；FR-079 會把覆蓋競態放大成「每次開頁必發」。地基不先正確，US1 會被迫寫繞過競態的臨時 hack，且 US9 判斷「有無他人登過」的資料不穩 |
+| **版本戳 + 條件式套用** — 解「去重換 payload 卻沿用 id」＝**臉 A**、「雙讀 reconciliation 的 op ack/retry 誤判」＝**臉 C-op** | **併入 US1 同一次改** | US1（FR-077 ~ FR-079）本就重寫 `processSyncQueue` 的 conflict 解析與 reconciliation；版本戳改動同一段收尾。一起改，避免同一函式被 churn 兩次。錯誤碼分類沿用 FR-111 ~ FR-113，不自建文字比對 |
+| **`handleMarkComplete` 陳舊快照回捲修正** ＝ **臉 D** | **併入 US3 同一次改** | US3 FR-088 本就重寫 `handleMarkComplete`（加失敗回饋、按鈕復位）；此修正在同一函式，順手改掉「用 `await` 前的閉包 `task` 拼 `saveTask`」 |
+| **GradeRow 受控化 + debounce ＝ A4**、**requestSync 補跑旗標 ＝ B4**、**records/syncQueue 生命週期清理 ＝ P2-1** | **本 feature 之後**，另案 | 皆非 US1/US9 前置。GradeRow（A4）尤其：US3 AS6 明文「不改 GradeRow」，本 feature 完成後另案處理，避免與 AS6 抵觸 |
+
+**一句話**：Overlay 先於 US1/US9；版本戳併入 US1；`handleMarkComplete` 修正併入 US3；其餘留待本 feature 之後。US1 / US9 的自動化驗收（SC-032、US1 AS7）MUST 在 Overlay 落地後才視為有效。
+
+---
+
 ## 對應原則（簡述，完整內容見 `specs/vision.md`）
 
 - **鷹架不是黑盒**（原則三）→ 失敗必須可見，且提示要指向概念而非只指向行動
@@ -88,6 +117,7 @@
 | `persist()` 同檔                                                         | `queueRecordUpdate` 回 `{ok:false}` 時直接 return，無任何回饋    | US3     |
 | `SyncIndicator.tsx`                                                      | 只有「同步中 / N 筆待上傳」兩態，**無失敗態**                     | US1     |
 | 任務被刪 / 載入失敗 → 皆顯示 `messages.room.notFoundTitle`「找不到這個班級」 | 三種不同成因（任務被收、網路不通、真的沒加入班級）共用一句文案   | US5     |
+| helper 頁載入時已 fetch `/api/records`（回全任務記錄含 `recorderSeatNumber`） | 有「誰登過、登了幾筆」的資料，但**進任務前不告知已有他人登過** → 兩小老師重工／覆蓋彼此（US4 只在覆蓋當下 toast，且不留前值、覆蓋掉的值找不回） | US9     |
 
 ### 象限四｜學生端・系統缺乏偵測或 catch
 
@@ -169,7 +199,7 @@
 3. **Given** 學生按下「我登記完了」且請求拋錯（斷線）, **When** catch 觸發, **Then** 比照 AS2 顯示回饋，文案 MUST 區分「沒網路」與「其他錯誤」【文案待定稿】
 4. **Given** `localStorage.setItem` 拋錯（無痕模式 / 配額不足）, **When** `saveOfflineData` catch, **Then** MUST 向上傳遞失敗訊號（不得僅 `console.error` 後 return），且 MUST 顯示提示告知資料存不下來 + 指向找老師
 5. **Given** AS4 之提示顯示中, **When** 學生繼續操作, **Then** 系統 MUST NOT 阻擋操作（維持 vision「不剝奪承擔後果的機會」），但提示 MUST 持續可見直到問題解除
-6. **Given** 成績欄位輸入非數字, **When** 現有 `GradeRow` 驗證觸發, **Then** 維持既有 `record.numberOnly` / `gradeRange` 行為不變（此處已符合設計，本 US 不改動）
+6. **Given** 成績欄位輸入非數字, **When** 現有 `GradeRow` 驗證觸發, **Then** 維持既有 `record.numberOnly` / `gradeRange` 行為不變 —— **本句僅指「數字驗證」這一項符合設計、本 US 不改動，不代表 `GradeRow` 整體無缺陷**。已知另有一項與本 US 無關的缺陷：`GradeRow` 的 `text` 狀態只在 mount 時從 `value` prop 初始化、之後不隨 prop 變動回填（重連 refetch 改了 `value` 時輸入框仍顯示舊字），此缺陷留待同步正確性修正計畫處理，非本 US 範圍
 
 ---
 
@@ -302,6 +332,34 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 
 ---
 
+### User Story 9 - 進任務前，先知道有沒有人做過 (Priority: P3)
+
+小老師打開一個任務時，若這個任務已經有**別的座號**登過記錄，系統 MUST 在他開始登記前用陳述句告知（例：「這個任務座號 8 已經登了 20/30，你要接手嗎?」），減少兩個小老師重工、以及覆蓋彼此的記錄。這是「載入／重連當下」的提示，**不是即時 presence**。
+
+**前提已查證（決定本 US 可行）**：helper 登記頁載入時（`isOnline` 分支）已呼叫 `/api/records?taskId=X`，該 GET 回傳整個任務的全部記錄（不分座號／裝置，含 `recorderSeatNumber`），並經 `cacheSyncedRecords` 寫入本機；另有 `/api/tasks/...` 回 `recordedCount` / `totalCount`。**本 US 用既有 endpoint 即可判斷「有沒有人登過、是誰、登了幾筆」，不新增資料流。**
+
+**明確的邊界（誠實寫入）**：
+
+- **只在載入／重連時點判斷**，非持續監看。若他人在本人已進入後才登記，本 US 不涵蓋，落回 US4 事後覆蓋 toast。
+- **A 離線且本機無此任務快取（冷啟動離線）時無法顯示** —— 此時 client 沒有任何資料可判斷，MUST NOT 阻擋進入，改由 US4 事後可見接住。
+- **真·即時互斥 / presence（兩人同時離線編輯、彼此預先知情）為原理限制，明確不在範圍** —— 離線裝置不產生資料、無法被觀測，同 US6 的心跳討論。
+
+**Why this priority**: US4 讓覆蓋「可見」，但 004 決議不留前值 —— 一旦兩人先後登同一筆，被覆蓋掉的原值找不回。本 US 在**碰撞發生前**攔一次，減少那個 US4 補不回的損失，也省下重工。列 P3：屬體驗與錯誤預防，不涉及資料遺失（資料安全由 US4 / US1 保障），且用既有 endpoint、成本低。
+
+**Independent Test**: B 在裝置二登記任務 T 的 20 筆並同步 → A 在裝置一上線打開任務 T → A MUST 在開始登記前看到「已有座號 8 登過（20/30），要接手嗎?」＋「接手 / 返回」出路 → 選返回回任務清單、選接手正常進入；另一任務 A 打開時只有自己座號登過或全新無記錄 → MUST NOT 顯示提示；A 離線且無此任務快取時打開 → MUST NOT 顯示、MUST NOT 阻擋進入。
+
+**Acceptance Scenarios**:
+
+1. **Given** 任務已有「非自己座號」登記的記錄且 A 上線載入, **When** 進入任務登記頁, **Then** MUST 在開始登記前顯示陳述句提示，指出已有座號 X 登了 N/M【文案待定稿】
+2. **Given** 提示顯示, **When** 呈現, **Then** MUST 提供「接手繼續」與「返回任務清單」兩條出路；MUST NOT 硬性阻擋進入或登記（原則一：可逆操作只提示後果，讓學生自己判斷）
+3. **Given** 任務全新無記錄，或既有記錄全部由 A 自己座號所登, **When** 載入, **Then** MUST NOT 顯示提示（只有「別人動過」才提示，避免「一律彈確認」反例）
+4. **Given** A 是該任務的指定小老師且已有他人代登記錄, **When** 載入, **Then** 仍 MUST 顯示提示（指定者同樣可能與代登者重工）；文案語氣可帶「你是指定小老師」【文案待定稿，實作時定】
+5. **Given** A 離線且本機無此任務記錄快取, **When** 載入, **Then** MUST NOT 顯示提示、MUST NOT 阻擋進入；此情境的覆蓋由 US4 **老師端** RecordHandler 名單於同步後可見接住（學生端 toast 不觸發，見 FR-096）
+6. **Given** A 已在任務中登記途中、B 於同時在另一裝置登記, **When** A 未重新載入, **Then** 本 US 不涵蓋（非載入時點）；落到 US4 事後 toast —— 真·即時感知為原理限制（同 US6）
+7. **Given** 提示以「非自己座號有記錄」判定, **When** 他人以冒用座號登記, **Then** 本 US 沿用承諾裝置的 honor-code 限制 —— 假座號會繞過此判定，不在本 US 解（與 vision 承諾裝置一致）
+
+---
+
 ### Edge Cases
 
 - **失敗態與離線態同時存在**：學生離線 + 佇列中已有不可重試的衝突項目。兩種狀態的視覺優先順序需定義，避免兩個 banner 疊在一起把畫面塞滿（參照 003 FR-070 已遇過的「色塊相疊互相干擾」問題）
@@ -327,6 +385,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 - **規則三與繳交類的低繳交誤報（已知並接受）**：固定 50% 對「本來就低繳交」的項目（自願性同意書等）會誤報。**決議：接受**（2026-07-21），不引入班級基準法（需歷史資料、難向老師解釋）；老師點進任務即可辨識，且低繳交本身多半也值得老師知道。詳見 `anomaly-rules.md` 規則三「已知限制」
 - **規則三與 CLOSED**：老師結案（`CLOSED`）後 MUST NOT 再判規則三 —— 老師已親自處理過等於已介入，再喊無意義。規則三只判 `HELPER_COMPLETED`，此點自然成立
 - **US7 略過後由 US8 接住**：小老師在 US7 提示選「繼續完成」（登記率 < 100%）→ 若登記率同時 < 50%，US8 規則三 MUST 在老師端接住；若在 50% ~ 100% 之間，則不升為老師警示（兩閾值的中間地帶刻意留白，交由老師主動查看完成度資訊）
+- **離線覆蓋的可見性只到老師端**：學生離線改到他人已登的紀錄時，本機沒有他人記錄可比對 → FR-096 的學生端 toast 不觸發。**這不是缺陷**：覆蓋的問責由 US4 老師端 RecordHandler 名單於同步後保留（FR-092／097），老師查得到誰覆蓋了誰、第幾手；學生端當下不被告知是離線的必然（無資料可判），且**刻意不做**同步後補告知（避免為一個 nicety 增加流程）。對應 vision 原則四：系統保證「證據存在、老師可查、可補救」，不保證「學生當下知道」。（此為前述「盤點缺口」討論中交互作用 #3 的定案）
 
 ---
 
@@ -366,7 +425,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 - **FR-093**【補機制】: 同一座號**連續**修改自己剛登的紀錄 MUST NOT 在名單追加相鄰重複項（避免正常修正灌爆名單）；被其他座號穿插後的同座號再次修改仍各自記錄
 - **FR-094**【補文案】: 老師端任務細節頁 MUST 對名單含 ≥ 2 個不同座號的紀錄提供可辨識標示，並 MUST 能展開顯示完整順序名單（各座號 + 時間）
 - **FR-095**【補文案】: 老師端任務細節頁的登記者資訊視覺重量 MUST 提升至可一眼辨識「誰登的、有無混登、哪幾筆被不只一人動過」
-- **FR-096**【補文案】: 學生覆蓋他人紀錄時 MUST 以陳述句告知原登記者（名單第一筆）；呈現形式為**右上角 toast、800ms 自動消失**；MUST NOT 使用警告色、MUST NOT 阻擋、MUST NOT 要求確認或手動關閉
+- **FR-096**【補文案】: 學生覆蓋他人紀錄時 MUST 以陳述句告知原登記者（名單第一筆）；呈現形式為**右上角 toast、800ms 自動消失**；MUST NOT 使用警告色、MUST NOT 阻擋、MUST NOT 要求確認或手動關閉。**前提：此 toast 依賴本機已有他人記錄可比對（線上載入／已快取）；離線且無他人記錄快取時系統無從得知這是覆蓋，故 toast 不觸發** —— 此情境的問責改由 US4 老師端 RecordHandler 名單於同步後承接（FR-092／097），學生端**不做**同步後補告知（見 Edge Cases「離線覆蓋的可見性只到老師端」）
 - **FR-097**【補機制】: 離線期間產生的處理紀錄（座號, 時間）MUST 隨同步一併送出並依正確順序併入名單
 - **FR-097a**【補文案】: 封存後才同步進來的登記，老師端 MUST 以證據級標示（被動可見、不主動喊），讓老師能看出「這筆是任務封存後才進來的」；沿用 002 L232「接受寫入」不變
 
@@ -416,6 +475,13 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 - **FR-124**【補文案】: 規則三的異常卡片 MUST 顯示登記率與班級人數（例：已登記 10/30），並提供進入任務詳情的入口；文案 MUST 描述「完成但登記偏少」，MUST NOT 沿用停擺或截止的語意【文案待定稿】
 - **FR-125**: 規則三閾值 50% 為待觀察調整的參數（如同規則一的 24 小時）。若上線後過吵，優先調整閾值或改用班級基準法，MUST NOT 直接移除規則三 —— 否則 `HELPER_COMPLETED` 空窗重現
 
+**US9 — 載入時「已有人登過」提示（學生端）**
+
+- **FR-126**【補文案】: 小老師進入任務登記頁時，若本機／剛同步的資料顯示該任務已有「非自己座號」登記的記錄，MUST 在開始登記前顯示陳述句提示，指出已有座號 X 登了 N/M。資料來源沿用既有 `/api/records`（含 `recorderSeatNumber`）與 `/api/tasks`（`recordedCount` / `totalCount`），MUST NOT 新增 endpoint 或資料流
+- **FR-127**: 提示 MUST 提供「接手繼續」與「返回任務清單」兩條出路，MUST NOT 阻擋進入或登記（原則一：可逆操作只提示後果）。呈現形式（進入前 dialog 或常駐 banner）屬 UI 細節，交由 `ui-spec.md` / plan 定，但 MUST 不阻斷
+- **FR-128**: 任務全新無記錄、或既有記錄全部由本人座號所登時 MUST NOT 顯示提示 —— 只在「別人動過」時才提示，避免「一律彈確認」反例
+- **FR-129**: A 離線且本機無此任務記錄快取時 MUST NOT 顯示、MUST NOT 阻擋進入；此情境的覆蓋由 US4 事後可見接住。真·即時 presence（兩人同時離線編輯的預先互斥）為原理限制（離線裝置無法被觀測，同 US6），明確不在本 feature 範圍
+
 ### Non-Functional Requirements
 
 - **NFR-011**: 所有新增使用者可見文字 MUST 集中於 `src/messages/`，元件內不得硬寫字串（沿用 NFR-001）
@@ -447,13 +513,13 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 
 > **實作注意**：monitoring route 目前用 `task._count.records`（原始筆數，含移除學生的紀錄）當 `recordedCount`。FR-104 要求分子排除移除學生，因此此處 MUST 改為過濾後的計數（例如 `_count` 加 `where: { student: { isRemoved: false } }`），dashboard endpoint 同理。純函式 `detectAnomalies` 本身不查 DB，兩個 endpoint 都要負責傳入已過濾的數值。
 
-**無新增 entity。** 其餘 US（1、2、3、5、7、8）為純 UI / 流程 / 錯誤處理層改動。US7、US8 皆不新增任何欄位：US7 在 `handleMarkComplete` 送出前讀取既有的登記筆數與班級人數做比對；US8 在 `detectAnomalies` 沿用同一組輸入（班級學生總數、登記筆數、`task.status`／`task.type`），僅要求 endpoint 把 `HELPER_COMPLETED` 任務也傳入（FR-122）。
+**無新增 entity。** 其餘 US（1、2、3、5、7、8、9）為純 UI / 流程 / 錯誤處理層改動。US7、US8、US9 皆不新增任何欄位：US7 在 `handleMarkComplete` 送出前讀取既有的登記筆數與班級人數做比對；US8 在 `detectAnomalies` 沿用同一組輸入（班級學生總數、登記筆數、`task.status`／`task.type`），僅要求 endpoint 把 `HELPER_COMPLETED` 任務也傳入（FR-122）；US9 沿用既有 `/api/records`（含 `recorderSeatNumber`）與 `/api/tasks` 回傳的資料，僅在載入時點多做一次「有無非本人座號記錄」的判斷與提示。
 
 ---
 
 ## Success Criteria _(mandatory)_
 
-- **SC-019**: 學生的登記在任何情境下都不會靜默消失 —— 程式碼中 MUST NOT 存在「從同步佇列移除但未通知使用者」的路徑
+- **SC-019**: 學生的登記在任何情境下既不**靜默消失**也不**靜默分歧** ——（不遺失）程式碼中 MUST NOT 存在「從同步佇列移除但未通知使用者」的路徑；（不分歧）MUST NOT 在 op 於飛行期間被改、伺服器卻 ack 舊版本時把該筆標記為已同步（remediation 臉 A）。實作對應：`reconcileSync` 只 ack `rev` 未變者、不可重試 / 重試耗盡一律保留並標記（`nonRetryable` / `retryCount`），失敗態由 `SyncIndicator` 呈現（`isOpFailed`）。〔2026-07-26 依 `offline-sync-remediation.md` 第 6 節回饋，由原本只涵蓋「不遺失」擴寫為同時涵蓋「不分歧」〕
 - **SC-020**: 老師端在資料無法取得時，畫面 MUST NOT 出現任何形式的「一切正常」表述（可用測試斷言：mock monitoring 回 500，斷言畫面不含 `classStatus.empty` 文案）
 - **SC-021**: 程式碼搜尋 `messages.record.saveFailed` MUST 出現於元件中而非僅定義處（dead string 清除驗證）
 - **SC-022**: 學生端所有 `catch` 區塊 MUST NOT 僅含 `console.error` —— 每個 catch 都要有對應的使用者可見結果或明確註明為何不需要
@@ -466,6 +532,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 - **SC-029**: 登記已達班級人數時標記完成 MUST NOT 出現提示、繳交類任務標記完成 MUST NOT 出現此提示（「一律彈確認」反例與假陽性雙重驗證）
 - **SC-030**: 任務被小老師標記完成但登記率 < 50% 時，老師 MUST 能從班級狀況 tab 察覺（規則三驗證）；登記率 ≥ 50% MUST NOT 觸發（閾值驗證）
 - **SC-031**: 繳交類任務同樣受規則三涵蓋 —— `HELPER_COMPLETED` 且繳交率 < 50% MUST 判異常（繳交類納入驗證，確認與規則一、二的排除相反）
+- **SC-032**: B 於另一裝置登記並同步後，A 上線進入同任務 MUST 先看到「已有人登過」提示（載入時感知驗證）；A 只有自己登過或任務全新 MUST NOT 顯示（不擾驗證）；A 離線冷啟動 MUST NOT 阻擋進入（不擋驗證）
 
 ---
 
@@ -482,6 +549,9 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 - US7 的承諾核對只在承諾動作（標記完成）發生時介入，補的是「HELPER_COMPLETED 後異常規則停判」這一個空窗；它**不是**取代主動通知，老師仍需主動查閱任務細節頁才會看到最終完成度。真正讓老師「被通知後決策」仍待後續 feature 的通知通道（本 feature 明確排除）
 - 50% 是規則三的合理起點，屬待觀察調整的參數（如同規則一的 24 小時）。若上線後過吵，優先調整閾值或改用班級基準法，而非移除規則三（US8 / FR-125）
 - 老師收到規則三警示時，不需系統告知「是誤觸還是真的很多人沒交」即可行動 —— 沿用規則一「共用訊號、成因不影響行動」的假設（US8）
+- US9 的提示只需接住「打開別人已經做過的任務」這個**最常見**的碰撞即有價值；「兩人剛好同時離線做同一任務」的罕見尾巴交由 US4 事後接住，不追求即時互斥（US9）
+- US9 以「非本人座號有記錄」判定他人已登，此判定的可信度上限＝座號自報的誠實度（承諾裝置 honor-code）；假座號會繞過，屬已接受的限制（US9 AS7）
+- US1（FR-079）與 US9（FR-126）的驗收前提是「同步佇列↔回填仲裁」已修正 —— 見開頭「前置依賴」。在修正前，兩者的自動化測試可能因底層競態偽陽／偽陰，不代表 spec 行為錯誤
 
 ---
 
@@ -498,8 +568,8 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 | `src/app/api/rooms/[id]/monitoring/route.ts`、dashboard endpoint | 查詢範圍納入 `HELPER_COMPLETED` 任務，供規則三判斷（US8 FR-122）；沿用純函式 `detectAnomalies` 共用 |
 | `src/components/TaskForm.tsx`           | `T23:59:59` 改為 `T17:00`                                                                            |
 | `specs/ui-spec.md`                      | 新增「三類訊息判準」「失敗態視覺規範」「無法確認狀態」段落                                            |
-| `src/messages/zh-TW.ts`、`en.ts`        | 新增同步失敗、無法確認、本機儲存失敗、覆蓋陳述句、任務已收起、標記完成前承諾確認等文案；**刪除** dead string `qr.joinFailedRetry`（與 `join.roomNotFound` 重疊）  |
-| `src/app/helper/[roomId]/[taskId]/page.tsx` | `handleMarkComplete` 送出 `HELPER_COMPLETED` 前，加入登記率比對與承諾確認提示（US7 FR-114 ~ FR-119）；口徑沿用 US6 FR-104 |
+| `src/messages/zh-TW.ts`、`en.ts`        | 新增同步失敗、無法確認、本機儲存失敗、覆蓋陳述句、任務已收起、標記完成前承諾確認、載入時「已有人登過」提示等文案；**刪除** dead string `qr.joinFailedRetry`（與 `join.roomNotFound` 重疊）  |
+| `src/app/helper/[roomId]/[taskId]/page.tsx` | `handleMarkComplete` 送出 `HELPER_COMPLETED` 前，加入登記率比對與承諾確認提示（US7 FR-114 ~ FR-119）；口徑沿用 US6 FR-104。載入時（`load()` 後）判斷是否已有非本人座號記錄並顯示「已有人登過」提示（US9 FR-126 ~ FR-129），沿用既有 `/api/records` 回傳的 `recorderSeatNumber`，不新增資料流 |
 | `src/i18n/errorCodes.ts`                | 新增 `/api/records`、`/api/sync` 的錯誤碼（任務鎖定、找不到任務、資料驗證等）；FR-111 ~ FR-113        |
 | `src/app/api/records/route.ts`、`src/app/api/sync/route.ts` | 錯誤回應改走 `ERROR_CODES`，含 `conflicts[].reason` / `errors[].reason`（FR-111 ~ FR-113）            |
 | `prisma/schema.prisma`                  | 新增子表 `RecordHandler`（`recordId`, `seatNumber`, `handledAt`）承載順序處理者名單 + migration            |
@@ -512,7 +582,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 ## 待確認清單 _(寫入 plan.md 前需收斂)_
 
 1. **所有標記【文案待定稿】的具體字句**（清單見下方「文案待定稿一覽」）
-> 已收斂：重試策略 → FR-079 重置後降為調參（FR-080）；dashboard 無法確認 → 顯示 `—`（FR-086）；無法確認文案 → 區分連線 / 伺服器錯誤，學生端伺服器錯誤用「網頁出現問題」（US2 AS6-7 / FR-084）；覆蓋陳述句 → 右上 toast 800ms（FR-096）；封存離線寫入 → 老師端證據級標示（FR-097a）、學生端算成功 + 「已收起」文案（FR-101a）；停擺分子分母 → 排除 `isRemoved`（FR-104）；延長截止 → 17:00（FR-108）；`anomalyAssignedSeatIdle` 文案 → 待實作後調整（FR-110）；門禁深度 → 順序處理者名單（座號+時間、不留前值）（US4 / FR-092）；`qr.joinFailedRetry` → 刪除；US7 承諾核對 → 學生端確認提示（僅成績類、登滿不擾、繳交類不觸發、口徑沿用 FR-104）（FR-114 ~ FR-119）；US8 規則三 → 完成但登記率 < 50% 升老師端警示（成績＋繳交皆納入、專判 `HELPER_COMPLETED`、閾值 50% 待觀察）（FR-120 ~ FR-125）；US7／US8 兩閾值分工（學生端任何不足即輕推、老師端 < 50% 才升級）。
+> 已收斂：重試策略 → FR-079 重置後降為調參（FR-080）；dashboard 無法確認 → 顯示 `—`（FR-086）；無法確認文案 → 區分連線 / 伺服器錯誤，學生端伺服器錯誤用「網頁出現問題」（US2 AS6-7 / FR-084）；覆蓋陳述句 → 右上 toast 800ms（FR-096）；封存離線寫入 → 老師端證據級標示（FR-097a）、學生端算成功 + 「已收起」文案（FR-101a）；停擺分子分母 → 排除 `isRemoved`（FR-104）；延長截止 → 17:00（FR-108）；`anomalyAssignedSeatIdle` 文案 → 待實作後調整（FR-110）；門禁深度 → 順序處理者名單（座號+時間、不留前值）（US4 / FR-092）；`qr.joinFailedRetry` → 刪除；US7 承諾核對 → 學生端確認提示（僅成績類、登滿不擾、繳交類不觸發、口徑沿用 FR-104）（FR-114 ~ FR-119）；US8 規則三 → 完成但登記率 < 50% 升老師端警示（成績＋繳交皆納入、專判 `HELPER_COMPLETED`、閾值 50% 待觀察）（FR-120 ~ FR-125）；US7／US8 兩閾值分工（學生端任何不足即輕推、老師端 < 50% 才升級）；US9 → 載入／重連時若已有非本人座號登過即提示（用既有 `/api/records`、不新增資料流、離線冷啟動不顯示、真 presence 為原理限制排除）（FR-126 ~ FR-129）。
 
 ### 文案待定稿一覽
 
@@ -533,3 +603,4 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 | 11 | FR-110 | 停擺異常（老師端卡片） | 由「指定座號 N…」改為任務層級停擺描述（待實作後） |
 | 12 | US7 AS2 / FR-115 | 標記完成前承諾確認 | 「還有 N 個同學沒登記，完成後就不能自己改囉，確定嗎?」＋兩出路（繼續完成 / 回去補登）；陳述、非警告 |
 | 13 | US8 AS5 / FR-124（**老師端**） | 完成但登記偏少的異常卡片 | 「這個任務標完成了，但只登了 10/30」＋進任務詳情入口；描述登記偏少，非停擺／截止 |
+| 14 | US9 AS1 / FR-126 | 載入時「已有人登過」提示 | 「這個任務座號 8 已經登了 20/30，你要接手嗎?」＋兩出路（接手 / 返回）；陳述、非警告、不阻擋 |

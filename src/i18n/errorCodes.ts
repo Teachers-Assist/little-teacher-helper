@@ -21,7 +21,27 @@ export const ERROR_CODES = {
   STUDENT_SEAT_DUPLICATE_IN_LIST: 'student.seatDuplicateInList',
   STUDENT_SEAT_DUPLICATE_EXISTING: 'student.seatDuplicateExisting',
   STUDENT_BATCH_FAILED: 'student.batchFailed',
+
+  // 同步 / 登記衝突（004 US1；供 client 分類可重試 / 不可重試，見 FR-078）
+  // 以下皆為「不可重試」：任務鎖定、任務不存在、學生已移除、資料驗證失敗——
+  // 重送也不會成功，client 應停止重試並進入告知流程。
+  TASK_LOCKED: 'sync.taskLocked',
+  TASK_NOT_FOUND: 'sync.taskNotFound',
+  STUDENT_NOT_IN_ROOM: 'sync.studentRemoved',
+  RECORD_VALIDATION_FAILED: 'record.saveFailed',
 } as const;
+
+/**
+ * 不可重試的錯誤碼集合（004 FR-078）：這些成因重送也不會成功，
+ * client 端 MUST 停止重試、直接進入告知流程。其餘（如網路層失敗）視為可重試。
+ * 分類 MUST 依碼值判斷，MUST NOT 以錯誤訊息的中文文字比對。
+ */
+export const NON_RETRYABLE_ERROR_CODES: ReadonlySet<ErrorCode> = new Set([
+  ERROR_CODES.TASK_LOCKED,
+  ERROR_CODES.TASK_NOT_FOUND,
+  ERROR_CODES.STUDENT_NOT_IN_ROOM,
+  ERROR_CODES.RECORD_VALIDATION_FAILED,
+]);
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 

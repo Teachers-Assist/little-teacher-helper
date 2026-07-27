@@ -114,6 +114,7 @@
 | dueDate | DateTime | Optional | 截止時間（到期後自動鎖定，老師可手動解除）。**寫入慣例（004）**：老師只選日期，系統補時間為當天 **17:00**（放學）；取代 001 的 `23:59:59`。同影響「延長截止」。既有 23:59:59 舊資料不 migration |
 | status | Enum | Default: ACTIVE | 任務狀態（見下方說明） |
 | isArchived | Boolean | Default: false | 是否已封存（soft archive，002 引入；封存後主清單不顯示，但歷史登記記錄保留；與 status 欄位獨立） |
+| archivedAt | DateTime | Optional | 最近一次封存時間（004 FR-097a）；封存時設為 now、還原時清為 null。用於辨識「封存後才同步進來」的登記 |
 | createdAt | DateTime | Auto | 建立時間 |
 | updatedAt | DateTime | Auto | 更新時間 |
 
@@ -279,6 +280,7 @@ model Task {
   dueDate             DateTime?
   status              TaskStatus @default(ACTIVE)
   isArchived          Boolean    @default(false)
+  archivedAt          DateTime?  // 004 FR-097a：最近一次封存時間
   records             Record[]
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
@@ -386,7 +388,8 @@ interface OfflineData {
         recorderSeatNumber: number;
         isAssignedRecorder: boolean;
         updatedAt: string;    // ISO timestamp
-        synced: boolean;
+        // 「是否已同步」不存於此——改由「該 (taskId, studentId) 是否還在 syncQueue」派生
+        // （overlay 模型；004 S3 移除原 synced 欄位）
       };
     };
   };
@@ -401,13 +404,23 @@ interface OfflineData {
       submissionStatus?: 'SUBMITTED' | 'NOT_SUBMITTED';
       gradeValue?: number;
       recorderSeatNumber: number;
-      isAssignedRecorder: boolean;
+      // isAssignedRecorder 不在 payload——由 server 依 recorderSeatNumber 派生
+      // （computeIsAssignedRecorder）；handledAt 用 op 的 timestamp 送出（FR-097）
     };
     createdAt: string;
     retryCount: number;
+    rev: number;          // 樂觀並行控制版本戳（004 S9）：新建=0，去重換 payload 時 +1
+    nonRetryable?: boolean; // 不可重試標記（004 S10）；session 範圍、載入時重置，不視為持久判定
   }[];
 }
 ```
+
+> **004 交錯的同步正確性修正（`specs/offline-sync-remediation.md`）**：
+> - **Overlay 模型（S1–S3 已落地）**：畫面為 `records`（base，伺服器鏡像）⊕ `syncQueue`（overlay，未同步變更集）的**派生**值，兩層各一個寫入者。原 `records[].synced` 欄位**已移除**（S3），未同步狀態改由「該筆是否還在佇列」派生。`queueRecordUpdate` 不再寫 `records` 快取。
+> - **版本戳（rev 欄位 S9 已加；條件式 ack S10 待落地）**：`syncQueue[]` 已有 `rev: number`（樂觀並行控制）。S10 將於 `processSyncQueue` 送出前記 `sentRev`、回應到達時只 ack `rev` 未變者，避免飛行期間被改的新值被舊回應誤 ack 而蒸發。`/api/sync` 無需改動（`rev` 為純 client 端）。
+> - **離線經手鏈（S29，待落地）**：`syncQueue[].payload` 送出時一併帶 `handledAt`，供 server 併入 `RecordHandler` 名單（004 FR-097）。
+>
+> 上述屬 remediation 交錯項，尚未實作；本結構待 004 對應 task（T301/T313/T350）落地後同步更新為最終樣貌。未送出的佇列資料在任何情況下都持久保留（NFR-013）。
 
 ---
 

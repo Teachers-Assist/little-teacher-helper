@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo, useRef } from 'react';
+import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -86,6 +86,8 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     warnings: MonitoringWarning[];
   } | null>(null);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
+  // US2：區分「已確認無異常」與「無法確認」。null=正常；'network'=老師離線；'server'=伺服器錯誤。
+  const [monitoringError, setMonitoringError] = useState<'network' | 'server' | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,24 +132,36 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     return () => clearTimeout(t);
   }, [editingStudent, editingTask]);
 
-  // US4：開啟班級狀況 tab 時載入 monitoring（每次開啟都重新抓最新狀態）
+  // US4/US2：載入 monitoring。失敗時區分「連線問題」與「伺服器錯誤」，不落入空狀態（誠實呈現）。
+  const loadMonitoring = useCallback(async () => {
+    setMonitoringLoading(true);
+    setMonitoringError(null);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setMonitoringError('network');
+      setMonitoringLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/rooms/${id}/monitoring`);
+      if (!res.ok) {
+        setMonitoringError('server');
+        return;
+      }
+      setMonitoring(await res.json());
+    } catch (e) {
+      // fetch 拋錯通常是連線問題
+      console.error('Failed to load monitoring:', e);
+      setMonitoringError('network');
+    } finally {
+      setMonitoringLoading(false);
+    }
+  }, [id]);
+
+  // 開啟班級狀況 tab 時載入（每次開啟都重新抓最新狀態）
   useEffect(() => {
     if (activeTab !== 'report') return;
-    let active = true;
-    setMonitoringLoading(true);
-    fetch(`/api/rooms/${id}/monitoring`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (active && data) setMonitoring(data);
-      })
-      .catch((e) => console.error('Failed to load monitoring:', e))
-      .finally(() => {
-        if (active) setMonitoringLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [activeTab, id]);
+    loadMonitoring();
+  }, [activeTab, loadMonitoring]);
 
   // ── 學生 handlers ────────────────────────────────────────────
   const handleStudentSaved = (student: Student, mode: 'add' | 'edit') => {
@@ -587,8 +601,26 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         {/* US4：班級狀況 tab —— 全寬統計 + 警告（取代原報表 tab） */}
         {activeTab === 'report' && (
           <div className="space-y-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-            {monitoringLoading && !monitoring ? (
+            {monitoringLoading && !monitoring && !monitoringError ? (
               <p className="py-10 text-center text-sm text-slate-400">{messages.common.loading}</p>
+            ) : monitoringError ? (
+              // US2：無法確認狀態——MUST NOT 呈現「一切正常」，區分連線 / 伺服器錯誤 + 重試
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                <Icon name="lucide:cloud-off" size={36} className="text-slate-400" />
+                <div>
+                  <p className="text-sm font-bold text-slate-700">
+                    {messages.teacher.classStatus.unavailableTitle}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {monitoringError === 'network'
+                      ? messages.teacher.classStatus.unavailableNetwork
+                      : messages.teacher.classStatus.unavailableServer}
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={loadMonitoring}>
+                  {messages.teacher.classStatus.retry}
+                </Button>
+              </div>
             ) : monitoring ? (
               <>
                 <MonitoringStats stats={monitoring.stats} />

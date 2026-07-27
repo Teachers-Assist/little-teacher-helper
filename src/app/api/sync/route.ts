@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
+import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
+import { writeRecordWithHandler } from '@/lib/recordWrite';
 
 interface SyncOperation {
   id: string;
@@ -24,7 +26,8 @@ export async function POST(request: Request) {
     };
 
     if (!operations || !Array.isArray(operations) || operations.length === 0) {
-      return NextResponse.json({ error: '請提供要同步的操作' }, { status: 400 });
+      // 請求本身格式錯誤（client bug，不會逐筆呈現給學生）→ 通用碼
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 400 });
     }
 
     // 一次撈出涉及任務，供類型驗證與鎖定判斷
@@ -32,12 +35,24 @@ export async function POST(request: Request) {
     const tasks = await prisma.task.findMany({ where: { id: { in: taskIds } } });
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
+    // 涉及班級的「在籍座號」集合，供辨識「登記者（小老師）座號已被老師移除」（AS8）。
+    // 封存任務不在此擋——沿用 FR-101a：封存後離線登記照常寫入、由學生端告知「已收起」。
+    const roomIds = [...new Set(tasks.map((t) => t.roomId))];
+    const activeStudents = await prisma.student.findMany({
+      where: { roomId: { in: roomIds }, isRemoved: false },
+      select: { roomId: true, seatNumber: true },
+    });
+    const activeSeatSet = new Set(activeStudents.map((s) => `${s.roomId}:${s.seatNumber}`));
+
     const syncedIds: string[] = [];
-    const conflicts: Array<{ operationId: string; reason: string }> = [];
+    // reason 一律為 ERROR_CODES 碼值（FR-112），供 client 依碼分類可重試 / 不可重試（FR-078），
+    // MUST NOT 回硬編中文。
+    const conflicts: Array<{ operationId: string; reason: ErrorCode }> = [];
 
     for (const operation of operations) {
       if (operation.type !== 'UPDATE_RECORD') {
-        conflicts.push({ operationId: operation.id, reason: '不支援的操作類型' });
+        // 不支援的操作類型：資料問題，重送也不會過 → 不可重試
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
@@ -45,17 +60,22 @@ export async function POST(request: Request) {
       const task = taskMap.get(taskId);
 
       if (!task) {
-        conflicts.push({ operationId: operation.id, reason: '找不到該任務' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.TASK_NOT_FOUND });
+        continue;
+      }
+      // 登記者座號已不屬於任何在籍學生（老師移除了該小老師）→ 不可重試，讓學生看見（AS8）
+      if (!activeSeatSet.has(`${task.roomId}:${recorderSeatNumber}`)) {
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.STUDENT_NOT_IN_ROOM });
         continue;
       }
       if (getTaskLockReason(task) !== null) {
-        conflicts.push({ operationId: operation.id, reason: '任務已鎖定，無法登記' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.TASK_LOCKED });
         continue;
       }
 
       const mutation = resolveRecordMutation(task.type, operation.payload);
       if (!mutation.ok) {
-        conflicts.push({ operationId: operation.id, reason: mutation.error });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.RECORD_VALIDATION_FAILED });
         continue;
       }
 
@@ -72,28 +92,24 @@ export async function POST(request: Request) {
           recorderSeatNumber
         );
 
-        await prisma.record.upsert({
-          where: { taskId_studentId: { taskId, studentId } },
-          update: {
-            ...mutation.data,
-            recorderSeatNumber,
-            isAssignedRecorder,
-            syncedAt: new Date(),
-          },
-          create: {
-            taskId,
-            studentId,
-            ...mutation.data,
-            recorderSeatNumber,
-            isAssignedRecorder,
-            syncedAt: new Date(),
-          },
+        // 寫入紀錄並維護順序處理者名單（US4）。handledAt 用操作原始時間，使離線經手鏈
+        // 依正確順序併入（FR-097）；timestamp 無效時退回 now。
+        const handledAt = operation.timestamp ? new Date(operation.timestamp) : new Date();
+        await writeRecordWithHandler({
+          taskId,
+          studentId,
+          submissionStatus: mutation.data.submissionStatus,
+          gradeValue: mutation.data.gradeValue,
+          recorderSeatNumber,
+          isAssignedRecorder,
+          handledAt: isNaN(handledAt.getTime()) ? new Date() : handledAt,
         });
 
         syncedIds.push(operation.id);
       } catch (error) {
+        // DB 寫入等暫時性失敗：可重試 → 通用碼（不在 NON_RETRYABLE 集合內）
         console.error('Failed to sync operation:', operation.id, error);
-        conflicts.push({ operationId: operation.id, reason: '同步失敗' });
+        conflicts.push({ operationId: operation.id, reason: ERROR_CODES.INTERNAL_ERROR });
       }
     }
 
@@ -114,6 +130,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ synced: syncedIds.length, operationIds: syncedIds });
   } catch (error) {
     console.error('Sync failed:', error);
-    return NextResponse.json({ error: '同步失敗' }, { status: 500 });
+    return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }

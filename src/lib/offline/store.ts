@@ -3,6 +3,8 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { OfflineData, OfflineRecordEntry, Student, Task } from '@/types';
 import { subscribe, getSnapshot, getServerSnapshot } from './storage';
+import { mergeRecords } from './overlay';
+import { isOpFailed } from './queue';
 import {
   subscribeSync,
   getSyncRuntime,
@@ -58,10 +60,23 @@ export function useOfflineTask(roomId: string, taskId: string): Task | null {
 
 /**
  * 某任務在本機的所有登記記錄（key 為被登記學生 id）。
+ *
+ * 值為 overlay 疊加的派生結果：records 快取（base，伺服器鏡像）疊上 syncQueue 中此任務的
+ * 待送 op（overlay，未同步變更集）。因此重連 refetch 整包覆蓋 base 時，未同步登記仍顯示。
+ * 見 `overlay.ts` 的 `mergeRecords`。
  */
-export function useOfflineRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
+export function useOfflineRecords(
+  taskId: string,
+  assignedSeatNumber?: number | null
+): { [studentId: string]: OfflineRecordEntry } {
   const data = useOfflineData();
-  return useMemo(() => data.records[taskId] ?? EMPTY_RECORDS, [data, taskId]);
+  return useMemo(() => {
+    const base = data.records[taskId] ?? EMPTY_RECORDS;
+    const taskOps = data.syncQueue.filter(
+      (op) => op.type === 'UPDATE_RECORD' && op.payload.taskId === taskId
+    );
+    return mergeRecords(base, taskOps, assignedSeatNumber);
+  }, [data, taskId, assignedSeatNumber]);
 }
 
 /**
@@ -73,8 +88,13 @@ export function useSyncStatus() {
   const runtime = useSyncExternalStore(subscribeSync, getSyncRuntime, getSyncRuntimeServer);
   const { isOnline } = useNetworkStatus();
 
+  // 失敗態（004 US1）：不可重試或重試耗盡的 op 數。這些 op 仍在佇列（未靜默移除），
+  // 重整會重置判定並再試一次（S11）。
+  const failedCount = data.syncQueue.filter(isOpFailed).length;
+
   return {
     pendingCount: data.syncQueue.length,
+    failedCount,
     isSyncing: runtime.isSyncing,
     lastSyncTime: runtime.lastSyncTime,
     isOnline,

@@ -16,6 +16,11 @@ import {
 import { formatDateTime } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
 
+interface RecordHandlerEntry {
+  seatNumber: number;
+  handledAt: string;
+}
+
 interface RecordWithStudent {
   studentId: string;
   submissionStatus?: SubmissionStatus | null;
@@ -25,12 +30,64 @@ interface RecordWithStudent {
   createdAt: string;
   updatedAt: string;
   student: { id: string; name: string; seatNumber: number; isRemoved: boolean };
+  handlers?: RecordHandlerEntry[];
 }
 
 interface TaskResultViewProps {
   task: Task;
   roomName: string;
   students: Student[];
+}
+
+/**
+ * 登記者資訊 + 經手鏈（US4 / FR-094-095）：顯示最後一手座號與時間；名單含 ≥2 個不同座號時
+ * 標「多人經手」（琥珀色，一眼可辨混登）並可展開完整順序名單（各座號 + 時間）。
+ */
+function HandlerTrail({ rec, late = false }: { rec: RecordWithStudent; late?: boolean }) {
+  const messages = useMessages();
+  const [open, setOpen] = useState(false);
+  const handlers = rec.handlers ?? [];
+  const multi = new Set(handlers.map((h) => h.seatNumber)).size >= 2;
+
+  return (
+    <div className="w-full text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-slate-400">
+        <span>{messages.teacher.taskDetail.recordedBy(rec.recorderSeatNumber)}</span>
+        <span>·</span>
+        <span>{formatDateTime(new Date(rec.updatedAt))}</span>
+        {/* FR-097a：封存後才同步進來的登記——證據級中性標示，不用警告色、不主動喊 */}
+        {late && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-500">
+            <Icon name="lucide:archive" size={12} />
+            {messages.teacher.taskDetail.archivedLateRecord}
+          </span>
+        )}
+        {multi && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700"
+          >
+            <Icon name="lucide:users" size={12} />
+            {messages.teacher.taskDetail.multiHandler}
+            <Icon name={open ? 'lucide:chevron-up' : 'lucide:chevron-down'} size={12} />
+          </button>
+        )}
+      </div>
+      {multi && open && (
+        <ol className="mt-1.5 space-y-0.5 border-l-2 border-amber-200 pl-3">
+          {handlers.map((h, i) => (
+            <li key={i} className="text-slate-500">
+              {messages.teacher.taskDetail.handlerChainAt(
+                h.seatNumber,
+                formatDateTime(new Date(h.handledAt))
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -62,6 +119,11 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
   }, [task.id]);
 
   const isGrade = task.type === TaskType.GRADE;
+
+  // FR-097a：任務封存後才「同步進來」（createdAt 晚於封存時間）的登記，證據級標示。
+  const archivedAtMs = task.isArchived && task.archivedAt ? new Date(task.archivedAt).getTime() : null;
+  const isLate = (rec: { createdAt: string }) =>
+    archivedAtMs != null && new Date(rec.createdAt).getTime() > archivedAtMs;
 
   const recordedStudentIds = useMemo(
     () => new Set((records ?? []).map((r) => r.studentId)),
@@ -247,11 +309,7 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
                     <span className="ml-auto text-sm font-bold text-slate-900">
                       {r.gradeValue ?? '—'}
                     </span>
-                    <span className="flex w-full items-center gap-2 text-xs text-slate-400">
-                      <span>{messages.teacher.taskDetail.recordedBy(r.recorderSeatNumber)}</span>
-                      <span>·</span>
-                      <span>{formatDateTime(new Date(r.updatedAt))}</span>
-                    </span>
+                    <HandlerTrail rec={r} late={isLate(r)} />
                   </li>
                 ))}
               </ul>
@@ -310,13 +368,7 @@ export function TaskResultView({ task, roomName, students }: TaskResultViewProps
                   >
                     {submitted ? messages.report.resultSubmitted : messages.report.resultNotSubmitted}
                   </StatusBadge>
-                  {row.rec && (
-                    <span className="flex w-full items-center gap-2 text-xs text-slate-400">
-                      <span>{messages.teacher.taskDetail.recordedBy(row.rec.recorderSeatNumber)}</span>
-                      <span>·</span>
-                      <span>{formatDateTime(new Date(row.rec.updatedAt))}</span>
-                    </span>
-                  )}
+                  {row.rec && <HandlerTrail rec={row.rec} late={isLate(row.rec)} />}
                 </li>
               );
             })}
