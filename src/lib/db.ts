@@ -19,14 +19,18 @@ const d1Clients = new WeakMap<D1Database, PrismaClient>();
 const globalForPrisma = globalThis as unknown as { __localPrisma?: PrismaClient };
 
 /**
- * 取得當前環境對應的 PrismaClient：
- * 線上回傳接 D1 adapter 的 client（依 binding 快取）；本機回傳原生 SQLite client。
+ * 是否跑在 Cloudflare Workers runtime。
+ * 用 Workers 專屬全域 `WebSocketPair`（Node 沒有）判斷——不依賴 process.env.NODE_ENV
+ * （Workers runtime 未必有設，靠它會誤判成 dev → 原生 engine → fs.readdir 500）。
  */
+function onCloudflareWorkers(): boolean {
+  return typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== 'undefined';
+}
+
 export async function getDb(): Promise<PrismaClient> {
-  // 本機 next dev（NODE_ENV !== 'production'）：直接用原生 SQLite，且「不呼叫」
-  // getCloudflareContext——因為 async 版會嘗試啟動 wrangler 的 workerd 平台代理，
-  // 而本機 Windows 上 workerd 會崩潰（access violation）。線上 build 時 NODE_ENV=production。
-  if (process.env.NODE_ENV !== 'production') {
+  // 本機 next dev：直接用原生 SQLite，且「不呼叫」getCloudflareContext——因為 async 版會
+  // 嘗試啟動 wrangler 的 workerd 平台代理，而本機 Windows 上 workerd 會崩潰（access violation）。
+  if (!onCloudflareWorkers()) {
     if (!globalForPrisma.__localPrisma) {
       globalForPrisma.__localPrisma = new PrismaClient();
     }
