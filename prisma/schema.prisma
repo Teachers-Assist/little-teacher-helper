@@ -1,9 +1,18 @@
 // prisma/schema.prisma
 
+// 本機 next dev 用：傳統 client（含原生 query engine，在本機 Node/Windows 可直接跑，
+// 不需 workerd、不需編譯原生 SQLite 模組）。
 generator client {
   provider = "prisma-client-js"
-  // Cloudflare Workers 上以 D1 driver adapter 連線。
-  // 註：Prisma 6 起 driver adapters 已轉正，不再需要 previewFeatures。
+}
+
+// 線上 Cloudflare Workers 用：新版 prisma-client generator，runtime=cloudflare 產生
+// edge 專用 client——不含 query engine、不呼叫 fs（解決 opennext 上的 fs.readdir 500）。
+// 查詢一律透過 D1 driver adapter。
+generator clientEdge {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "cloudflare"
 }
 
 datasource db {

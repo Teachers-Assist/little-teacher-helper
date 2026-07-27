@@ -59,3 +59,6 @@ public/workbox-*.js.map
 *.tmp
 *.log
 
+
+# Prisma 產生的 edge client（由 postinstall 的 prisma generate 重建）
+/src/generated/
