@@ -40,23 +40,24 @@ export async function writeRecordWithHandler(params: {
   } = params;
   const handledAt = params.handledAt ?? new Date();
 
-  await prisma.$transaction(async (tx) => {
-    const existing = await tx.record.findUnique({
-      where: { taskId_studentId: { taskId, studentId } },
-      include: { handlers: { orderBy: { handledAt: 'desc' }, take: 1 } },
-    });
-
-    const record = await tx.record.upsert({
-      where: { taskId_studentId: { taskId, studentId } },
-      update: { submissionStatus, gradeValue, recorderSeatNumber, isAssignedRecorder, syncedAt: new Date() },
-      create: { taskId, studentId, submissionStatus, gradeValue, recorderSeatNumber, isAssignedRecorder, syncedAt: new Date() },
-    });
-
-    const lastSeat = existing?.handlers[0]?.seatNumber ?? null;
-    if (shouldAppendHandler(lastSeat, recorderSeatNumber)) {
-      await tx.recordHandler.create({
-        data: { recordId: record.id, seatNumber: recorderSeatNumber, handledAt },
-      });
-    }
+  // 註：D1 不支援 Prisma 的 interactive transaction（$transaction(async (tx) => ...)），
+  // 故改為循序操作。Record 的 (taskId, studentId) 唯一約束保證同筆登記不會重複建立；
+  // 名單追加為附屬寫入，單機低併發下風險可接受（不再具備嚴格原子性）。
+  const existing = await prisma.record.findUnique({
+    where: { taskId_studentId: { taskId, studentId } },
+    include: { handlers: { orderBy: { handledAt: 'desc' }, take: 1 } },
   });
+
+  const record = await prisma.record.upsert({
+    where: { taskId_studentId: { taskId, studentId } },
+    update: { submissionStatus, gradeValue, recorderSeatNumber, isAssignedRecorder, syncedAt: new Date() },
+    create: { taskId, studentId, submissionStatus, gradeValue, recorderSeatNumber, isAssignedRecorder, syncedAt: new Date() },
+  });
+
+  const lastSeat = existing?.handlers[0]?.seatNumber ?? null;
+  if (shouldAppendHandler(lastSeat, recorderSeatNumber)) {
+    await prisma.recordHandler.create({
+      data: { recordId: record.id, seatNumber: recorderSeatNumber, handledAt },
+    });
+  }
 }
