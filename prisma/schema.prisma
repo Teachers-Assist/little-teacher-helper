@@ -1,11 +1,14 @@
 // prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Cloudflare Workers 上以 D1 driver adapter 連線，需開啟此 preview 功能
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "sqlite" // MVP: sqlite, Production: postgresql
+  // D1 相容於 SQLite；本機 next dev 走 wrangler 的 local D1，線上走 Cloudflare D1
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
