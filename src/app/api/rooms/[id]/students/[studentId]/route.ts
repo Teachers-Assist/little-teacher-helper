@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // PATCH：編輯學生（姓名 / 座號）。002 US2。
@@ -9,6 +9,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id: roomId, studentId } = await params;
     const body = await request.json();
     const { name, seatNumber } = body as { name?: string; seatNumber?: number };
@@ -63,6 +64,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id: roomId, studentId } = await params;
 
     await prisma.student.update({

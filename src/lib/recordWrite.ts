@@ -1,7 +1,7 @@
 // 登記寫入 + 順序處理者名單維護（004 US4）。/api/records 與 /api/sync 共用，
 // 確保兩條寫入路徑的留痕行為一致。
 
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { SubmissionStatus } from '@/types';
 
 /**
@@ -39,6 +39,7 @@ export async function writeRecordWithHandler(params: {
     isAssignedRecorder,
   } = params;
   const handledAt = params.handledAt ?? new Date();
+  const prisma = await getDb();
 
   // 註：D1 不支援 Prisma 的 interactive transaction（$transaction(async (tx) => ...)），
   // 故改為循序操作。Record 的 (taskId, studentId) 唯一約束保證同筆登記不會重複建立；

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id } = await params;
 
     const teacher = await prisma.teacher.findUnique({

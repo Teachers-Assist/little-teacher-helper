@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { TaskStatus, SubmissionStatus } from '@/types';
 
 export async function GET(
@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { taskId } = await params;
 
     const task = await prisma.task.findUnique({
@@ -47,6 +48,7 @@ export async function PATCH(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { taskId } = await params;
     const body = await request.json();
     const { name, assignedSeatNumber, dueDate, status, isArchived } = body;
@@ -122,6 +124,7 @@ export async function DELETE(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { taskId } = await params;
 
     // 刪除任務前先清掉其登記記錄（無 soft delete，直接移除）

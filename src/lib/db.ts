@@ -4,50 +4,47 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import type { D1Database } from '@cloudflare/workers-types';
 
 // 雙模式資料庫連線：
-//  - 線上（Cloudflare Workers）：沒有持久檔案系統，改用 Cloudflare D1（SQLite 相容）
-//    透過 Prisma driver adapter 連線。D1 binding（env.DB）只有請求進來時才拿得到，
-//    故以 Proxy 延遲解析、並依 binding 快取 client。
-//  - 本機開發（next dev，純 Node）：getCloudflareContext() 取不到綁定會丟例外，
-//    此時回退到原生 PrismaClient + DATABASE_URL(file:./dev.db)，完全不需 workerd。
+//  - 線上（Cloudflare Workers）：用 Cloudflare D1（SQLite 相容）+ Prisma driver adapter。
+//  - 本機 next dev（純 Node）：回退原生 PrismaClient + DATABASE_URL(file:./dev.db)，不需 workerd。
 //
-// 兩種模式下 route 都維持原本 `import prisma from '@/lib/db'`、`prisma.model.method()` 寫法。
+// 取 D1 綁定一律用 **async 版** getCloudflareContext({ async: true })：Next 16 + opennextjs 下
+// 同步版在 route handler 內取不到綁定會拋錯，若因此掉進原生 PrismaClient，會在 Workers 上呼叫
+// fs → 「fs.readdir is not implemented」而 500。
+//
+// 因為取綁定是 async，route/lib 需在使用前 `const prisma = await getDb()` 取得真正的 client，
+// 這樣 Prisma 的 PrismaPromise / $transaction([...]) 批次交易等語意才完全正確。
 
 const d1Clients = new WeakMap<D1Database, PrismaClient>();
-
 // 本機原生 client 以 globalThis 快取，避免 next dev HMR 重複建立連線。
 const globalForPrisma = globalThis as unknown as { __localPrisma?: PrismaClient };
 
-function getClient(): PrismaClient {
-  // 先嘗試取得 Cloudflare D1 綁定（線上／有綁定的環境）
-  try {
-    const { env } = getCloudflareContext();
-    const db = env?.DB;
-    if (db) {
-      let client = d1Clients.get(db);
-      if (!client) {
-        client = new PrismaClient({ adapter: new PrismaD1(db) });
-        d1Clients.set(db, client);
-      }
-      return client;
+/**
+ * 取得當前環境對應的 PrismaClient：
+ * 線上回傳接 D1 adapter 的 client（依 binding 快取）；本機回傳原生 SQLite client。
+ */
+export async function getDb(): Promise<PrismaClient> {
+  // 本機 next dev（NODE_ENV !== 'production'）：直接用原生 SQLite，且「不呼叫」
+  // getCloudflareContext——因為 async 版會嘗試啟動 wrangler 的 workerd 平台代理，
+  // 而本機 Windows 上 workerd 會崩潰（access violation）。線上 build 時 NODE_ENV=production。
+  if (process.env.NODE_ENV !== 'production') {
+    if (!globalForPrisma.__localPrisma) {
+      globalForPrisma.__localPrisma = new PrismaClient();
     }
-  } catch {
-    // 純 Node 的 next dev 下 getCloudflareContext() 會丟例外 → 落到本機 SQLite
+    return globalForPrisma.__localPrisma;
   }
 
-  // 本機開發：原生 Prisma（讀 DATABASE_URL，預設 file:./dev.db）
-  if (!globalForPrisma.__localPrisma) {
-    globalForPrisma.__localPrisma = new PrismaClient();
+  // 線上（Cloudflare Workers）：用 async 版取得 D1 綁定並接上 Prisma adapter。
+  const { env } = await getCloudflareContext({ async: true });
+  const db = env?.DB;
+  if (!db) {
+    throw new Error('D1 binding "DB" 不存在：請確認 wrangler.jsonc 的 d1_databases 綁定。');
   }
-  return globalForPrisma.__localPrisma;
+  let client = d1Clients.get(db);
+  if (!client) {
+    client = new PrismaClient({ adapter: new PrismaD1(db) });
+    d1Clients.set(db, client);
+  }
+  return client;
 }
 
-// 對外仍以 `prisma` 之名匯出；每次屬性存取都解析到當前環境對應的 client。
-export const prisma = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    const client = getClient();
-    const value = Reflect.get(client, prop, client);
-    return typeof value === 'function' ? value.bind(client) : value;
-  },
-});
-
-export default prisma;
+export default getDb;

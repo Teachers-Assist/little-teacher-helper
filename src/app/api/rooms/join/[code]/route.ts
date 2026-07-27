@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { code } = await params;
 
     const room = await prisma.room.findUnique({

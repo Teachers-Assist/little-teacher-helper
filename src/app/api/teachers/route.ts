@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getDb();
     const body = await request.json();
     const { name, email } = body;
 

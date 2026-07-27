@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 // 學生 Excel 批次匯入的「後端」endpoint（002 US1）。
 // 前端已完成格式驗證與檔案內衝突偵測，此處只收乾淨 JSON，負責：
@@ -29,6 +29,7 @@ interface Conflict {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const prisma = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const incoming = (body?.students ?? []) as ImportRow[];

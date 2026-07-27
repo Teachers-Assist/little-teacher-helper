@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { TaskType } from '@/types';
 
 export async function GET(
@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { roomId } = await params;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // 可選：依狀態過濾
@@ -36,6 +37,7 @@ export async function POST(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { roomId } = await params;
     const body = await request.json();
     const { name, type, assignedSeatNumber, dueDate } = body;
