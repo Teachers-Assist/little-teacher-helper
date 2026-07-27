@@ -31,8 +31,8 @@ export async function generateMetadata(): Promise<Metadata> {
       telephone: false,
     },
     icons: {
-      icon: '/icons/icon.svg',
-      apple: '/icons/icon.svg',
+      icon: '/icons/favicon.png',
+      apple: '/icons/favicon.png',
     },
   };
 }
