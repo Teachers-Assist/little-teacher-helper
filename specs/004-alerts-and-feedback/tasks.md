@@ -26,18 +26,18 @@
 
 ### (a) Overlay 模型 — remediation 藥方一（臉 B、臉 C-record）
 
-- [ ] T301 [REM] 在 `src/types/index.ts`：`OfflineRecordEntry` 移除 `synced` 欄位（改由「佇列裡有沒有待送 op」派生）；確認 `OfflineSyncQueueItem` 結構供 T313 加 `rev`
-- [ ] T302 [REM] 修改 `src/lib/offline/store.ts` 的 `useOfflineRecords`：由「回 `data.records[taskId]` 快取」改為**疊加 selector**——讀 `data.records`（base）＋ `data.syncQueue`（overlay），對每個 `(taskId, studentId)`：佇列有待送 op 顯示 op 值（刪除 op 顯示成「沒登記」），否則顯示 base（INV-3）
-- [ ] T303 [REM] 修改 `src/lib/offline/queue.ts` 的 `queueRecordUpdate`：**移除 `saveRecord`/`removeRecord` 呼叫**，改為只入佇列（`addToSyncQueue`）；`records` 快取自此只由 `cacheSyncedRecords` 寫入（INV-3）
-- [ ] T304 [REM] 清理 `src/lib/offline/storage.ts`：`saveRecord`/`removeRecord` 若僅服務登記路徑則移除；`cacheSyncedRecords` **保留**（base 唯一寫入者，仍可整包覆蓋鏡像）
-- [ ] T304a [REM] **同步正確性驗證（RC-2 / RC-3）**：離線登記數筆 → 觸發 refetch（`cacheSyncedRecords` 整包覆蓋 base）→ 畫面 MUST 仍顯示離線登記值、取消登記 MUST NOT 被「復活」；送出期間持續 `saveRecord`/`addToSyncQueue` → reconciliation MUST NOT 把新值標為已同步。**未過不得進 Phase 2**
+- [x] T301 [REM] 在 `src/types/index.ts`：`OfflineRecordEntry` 移除 `synced` 欄位（改由「佇列裡有沒有待送 op」派生）；確認 `OfflineSyncQueueItem` 結構供 T313 加 `rev` <!-- 2026-07-27 已實作 -->
+- [x] T302 [REM] 修改 `src/lib/offline/store.ts` 的 `useOfflineRecords`：由「回 `data.records[taskId]` 快取」改為**疊加 selector**——讀 `data.records`（base）＋ `data.syncQueue`（overlay），對每個 `(taskId, studentId)`：佇列有待送 op 顯示 op 值（刪除 op 顯示成「沒登記」），否則顯示 base（INV-3） <!-- 2026-07-27 已實作（mergeRecords） -->
+- [x] T303 [REM] 修改 `src/lib/offline/queue.ts` 的 `queueRecordUpdate`：**移除 `saveRecord`/`removeRecord` 呼叫**，改為只入佇列（`addToSyncQueue`）；`records` 快取自此只由 `cacheSyncedRecords` 寫入（INV-3） <!-- 2026-07-27 已實作 -->
+- [x] T304 [REM] 清理 `src/lib/offline/storage.ts`：`saveRecord`/`removeRecord` 若僅服務登記路徑則移除；`cacheSyncedRecords` **保留**（base 唯一寫入者，仍可整包覆蓋鏡像） <!-- 2026-07-27 已實作（saveRecord/removeRecord 已移除） -->
+- [ ] T304a [REM] **同步正確性驗證（RC-2 / RC-3）**：離線登記數筆 → 觸發 refetch（`cacheSyncedRecords` 整包覆蓋 base）→ 畫面 MUST 仍顯示離線登記值、取消登記 MUST NOT 被「復活」；送出期間持續 `saveRecord`/`addToSyncQueue` → reconciliation MUST NOT 把新值標為已同步。**未過不得進 Phase 2** <!-- 邏輯已由 overlay.test.ts/queue.test.ts 覆蓋；瀏覽器手動走查未跑，故維持未勾 -->
 
 ### (b) API 錯誤碼統一（FR-111 ~ FR-113）
 
-- [ ] T305 [P] 在 `src/i18n/errorCodes.ts` 的 `ERROR_CODES` 新增：`TASK_LOCKED`、`TASK_NOT_FOUND`、`RECORD_VALIDATION_FAILED`、`STUDENT_NOT_IN_ROOM`（message 路徑見 plan §3.3；學生端可見者指向兒童語氣文案，`RECORD_VALIDATION_FAILED` 沿用既有 `record.saveFailed`）
-- [ ] T306 修改 `src/app/api/sync/route.ts`：所有錯誤回應改走 `ERROR_CODES`——`conflicts[].reason` MUST 回碼值（供 FR-078 分類）、各 400/404/500 的 `error` 欄位不得回硬編中文
-- [ ] T307 修改 `src/app/api/records/route.ts`：`errors[].reason` 與各錯誤 `error` 欄位改走 `ERROR_CODES`（同 T306）
-- [ ] T308 [P] 在 `src/messages/zh-TW.ts` 與 `en.ts` 補上 T305 新碼對應的兒童語氣文案（`sync.taskLocked` / `sync.taskNotFound` / `sync.studentRemoved` 等），確認 `resolveError()`（`src/i18n/resolveError.ts`）可解析
+- [x] T305 [P] 在 `src/i18n/errorCodes.ts` 的 `ERROR_CODES` 新增：`TASK_LOCKED`、`TASK_NOT_FOUND`、`RECORD_VALIDATION_FAILED`、`STUDENT_NOT_IN_ROOM`（message 路徑見 plan §3.3；學生端可見者指向兒童語氣文案，`RECORD_VALIDATION_FAILED` 沿用既有 `record.saveFailed`） <!-- 2026-07-27 已實作（含 NON_RETRYABLE_ERROR_CODES 集合） -->
+- [x] T306 修改 `src/app/api/sync/route.ts`：所有錯誤回應改走 `ERROR_CODES`——`conflicts[].reason` MUST 回碼值（供 FR-078 分類）、各 400/404/500 的 `error` 欄位不得回硬編中文 <!-- 2026-07-27 已實作 -->
+- [x] T307 修改 `src/app/api/records/route.ts`：`errors[].reason` 與各錯誤 `error` 欄位改走 `ERROR_CODES`（同 T306） <!-- 2026-07-27 已實作 -->
+- [x] T308 [P] 在 `src/messages/zh-TW.ts` 與 `en.ts` 補上 T305 新碼對應的兒童語氣文案（`sync.taskLocked` / `sync.taskNotFound` / `sync.studentRemoved` 等），確認 `resolveError()`（`src/i18n/resolveError.ts`）可解析 <!-- 2026-07-27 已實作（zh-TW + en 皆有） -->
 
 ### (c) RecordHandler schema（US4 前置）
 
@@ -48,7 +48,7 @@
 ### (d) 異常偵測介面骨架 + 時區工具（US6/US8 前置）
 
 - [ ] T312 [P] 新增 `src/lib/timezone.ts`：`taipeiDayStartAt(date, hour)` 回傳「該日期台北時區 hour:00」對應的 UTC `Date`（固定 +08:00、無 DST）；供規則二（hour=8）與截止寫入（hour=17）共用（NFR-016）
-- [ ] T313 [REM] 在 `src/types/index.ts` 為 `OfflineSyncQueueItem` 新增 `rev: number`（新建 op = 0；供 US1 版本戳用）
+- [x] T313 [REM] 在 `src/types/index.ts` 為 `OfflineSyncQueueItem` 新增 `rev: number`（新建 op = 0；供 US1 版本戳用） <!-- 2026-07-27 已實作（另含 nonRetryable） -->
 
 **Checkpoint**: Overlay 地基綠燈（T304a 通過）、錯誤碼可分類、schema 就緒、時區工具可用 —— 可開始 User Story
 
@@ -62,24 +62,24 @@
 
 ### 佇列與同步邏輯（版本戳併入）
 
-- [ ] T314 [US1][REM] 重寫 `src/lib/offline/queue.ts` 的 `processSyncQueue` reconciliation（**一次改到位，避免雙 churn**）：
+- [x] T314 [US1][REM] 重寫 `src/lib/offline/queue.ts` 的 `processSyncQueue` reconciliation（**一次改到位，避免雙 churn**）： <!-- 2026-07-27 已實作（reconcileSync 純函式：sentRev/attemptedIds/rev 條件式套用 + conflicts 分類） -->
   - 解析 `/api/sync` 回傳的 `conflicts`（207 與 409 皆是），MUST NOT 只讀 `operationIds`（FR-077）
   - 依 `ERROR_CODES` 碼值分類可重試／不可重試（FR-078），MUST NOT 用中文文字比對；不可重試立即停止重試
   - **版本戳條件式套用**：送出前記 `sentRev` 對照表；回應到達時只有 `op.rev === sentRev[op.id]` 才 ack 移出，否則保留待下輪送最新 payload（INV-4/INV-5）
   - `addToSyncQueue` 去重就地換 payload 時 `rev++`（臉 A 藥方）
   - 兩次讀取合併為「送出前記 sentRev 快照 → 送出 → 回應後以當前 `getOfflineData()` + sentRev 比對套用」（臉 C-op）
-- [ ] T315 [US1] 修改 `processSyncQueue` 的放棄路徑（FR-079）：重試達上限或不可重試者 MUST NOT 靜默從佇列濾除（INV-1）；MUST 保留並標記狀態供 UI 讀取
-- [ ] T316 [US1] 修改 `src/lib/offline/syncController.ts` 與登記頁 `load()`：頁面載入時**重置** `retryCount` 與不可重試標記並觸發一次重試（FR-079 / INV-2）；**未送出的佇列資料不清除**（NFR-013）—— 支援老師重新開放任務後學生重整即自動恢復（Edge Case）
-- [ ] T317 [US1] `/api/sync`（`src/app/api/sync/route.ts`）確認對「已移除學生 / 已封存或刪除任務」回傳對應衝突碼（FR-078 / AS8），走上述流程被學生看見而非靜默丟棄
+- [x] T315 [US1] 修改 `processSyncQueue` 的放棄路徑（FR-079）：重試達上限或不可重試者 MUST NOT 靜默從佇列濾除（INV-1）；MUST 保留並標記狀態供 UI 讀取 <!-- 2026-07-27 已實作（reconcileSync 一律保留、標 nonRetryable/retryCount；isOpFailed 供 UI） -->
+- [x] T316 [US1] 修改 `src/lib/offline/syncController.ts` 與登記頁 `load()`：頁面載入時**重置** `retryCount` 與不可重試標記並觸發一次重試（FR-079 / INV-2）；**未送出的佇列資料不清除**（NFR-013）—— 支援老師重新開放任務後學生重整即自動恢復（Edge Case） <!-- 2026-07-27 已實作（resetRetryJudgment 於 page.tsx load() 呼叫） -->
+- [x] T317 [US1] `/api/sync`（`src/app/api/sync/route.ts`）確認對「已移除學生 / 已封存或刪除任務」回傳對應衝突碼（FR-078 / AS8），走上述流程被學生看見而非靜默丟棄 <!-- 2026-07-27 已實作（STUDENT_NOT_IN_ROOM / TASK_LOCKED / TASK_NOT_FOUND conflicts） -->
 
 ### UI（失敗態）
 
-- [ ] T318 [US1] 修改 `src/components/SyncIndicator.tsx`：新增**失敗態**（與「同步中」「待上傳」視覺可區分），顯示受影響筆數（FR-081）；失敗態文案指向「去找老師」（沿用 003 FR-065 升級模式，FR-082）
-- [ ] T319 [P] [US1] 在 `src/messages/zh-TW.ts`、`en.ts` 新增同步失敗態文案（指出 N 筆送不出去 + 下一步找老師；文案定稿 #1）
+- [x] T318 [US1] 修改 `src/components/SyncIndicator.tsx`：新增**失敗態**（與「同步中」「待上傳」視覺可區分），顯示受影響筆數（FR-081）；失敗態文案指向「去找老師」（沿用 003 FR-065 升級模式，FR-082） <!-- 2026-07-27 已實作（failedCount 優先態 + messages.sync.failed） -->
+- [x] T319 [P] [US1] 在 `src/messages/zh-TW.ts`、`en.ts` 新增同步失敗態文案（指出 N 筆送不出去 + 下一步找老師；文案定稿 #1） <!-- 2026-07-27 已實作（sync.failed，zh-TW + en） -->
 
 ### 同步正確性驗證
 
-- [ ] T320 [US1][REM] **手動驗證（RC-1 / RC-4 前置）**：成績類任務，同步飛行中連續改 v1→v2、mock `/api/sync` 慢回 v1 成功 → 佇列 MUST 仍保有 v2 並於下輪送出、伺服器最終值 MUST 為 v2、指示器 MUST NOT 在 v2 未送出時顯示「已同步」（INV-5）；重整後未送出資料仍在（US1 AS7）
+- [ ] T320 [US1][REM] **手動驗證（RC-1 / RC-4 前置）**：成績類任務，同步飛行中連續改 v1→v2、mock `/api/sync` 慢回 v1 成功 → 佇列 MUST 仍保有 v2 並於下輪送出、伺服器最終值 MUST 為 v2、指示器 MUST NOT 在 v2 未送出時顯示「已同步」（INV-5）；重整後未送出資料仍在（US1 AS7） <!-- 邏輯已由 queue.test.ts 覆蓋；瀏覽器手動走查未跑，故維持未勾 -->
 
 **Checkpoint**: 資料不再靜默消失、也不靜默分歧；失敗有出口
 
@@ -133,7 +133,7 @@
 - [ ] T336 [P] [US3] 在 `src/messages/zh-TW.ts`、`en.ts` 補標記完成失敗、本機存不下來文案
 - [ ] T336a [US3][REM] **手動驗證（RC-4）**：`handleMarkComplete` 送出期間 `load()` 寫入新 task → 完成後 task MUST NOT 被舊快照回捲
 
-> **注意（AS6）**：`GradeRow` 的數字驗證維持現狀、本 US 不改。已知 `GradeRow` 另有「`text` 只在 mount 初始化、不隨 prop 回填」缺陷（remediation A4）——**不在本 US 範圍**，留待 004 之後另案
+> **注意（AS6）**：`GradeRow` 的數字驗證維持現狀、本 US 不改。已知 `GradeRow` 另有「`text` 只在 mount 初始化、不隨 prop 回填」缺陷（remediation A4）——**不在本 US 範圍**；已於 2026-07-27 提前另案修復（見 `offline-sync-remediation.md` §5 A4）
 
 **Checkpoint**: 學生端所有 catch 都有使用者可見結果（SC-022）；dead string 已接線（SC-021）
 
@@ -281,7 +281,7 @@ Phase 11 文件對齊 T367–T374 ◄── 全部
 - **US6（Phase 4）是 US7/US8 的口徑前置**：登記率分子分母排除 `isRemoved` 的算法由 FR-104 定，US7/US8 沿用不另立
 - **RecordHandler schema（T309–T311）提前到 Phase 1**（雖 US4 為 P3）：schema 越晚做舊紀錄越補不回門禁資訊，migration 越痛；UI 消費留 Phase 8
 - US2（Phase 3）不碰同步層，可與任一 Phase 平行
-- A4（GradeRow）、B4（requestSync 補跑）、P2-1（生命週期清理）為 remediation 留待 **004 之後**的另案，不在本 tasks 範圍
+- A4（GradeRow）、P2-1（生命週期清理）原為 remediation 留待 004 之後的另案，**已於 2026-07-27 提前完成**（見 `offline-sync-remediation.md` §5）；**B4（requestSync 補跑）仍未做**，留待 004 之後。三者皆不在本 tasks 範圍
 
 ---
 

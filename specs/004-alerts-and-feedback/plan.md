@@ -22,10 +22,11 @@
 | **Overlay 模型**（臉 B、臉 C-record） | **US1 / US9 之前**（真前置） | Phase 1（T301~T304） | US9 的資料判斷、US1 被 FR-079 放大成「每次開頁必發」的覆蓋競態，都站在「佇列↔回填↔畫面」仲裁正確之上。地基不先正確，US1 會被迫寫繞過競態的臨時 hack、US9 判斷「有無他人登過」的資料不穩 |
 | **版本戳 + 條件式套用**（臉 A、臉 C-op） | **併入 US1 同一次改** | Phase 3（T314） | US1（FR-077~079）本就重寫 `processSyncQueue` 的 conflict 解析與 reconciliation；版本戳改動同一段收尾。一起改，避免同一函式被 churn 兩次 |
 | **臉 D**（`handleMarkComplete` 陳舊快照回捲） | **併入 US3 同一次改** | Phase 6（T332） | US3 FR-088 本就重寫 `handleMarkComplete`（加失敗回饋、按鈕復位）；臉 D 在同一函式，順手改掉「用 await 前的閉包 `task` 拼 `saveTask`」 |
-| **A4**（GradeRow 受控化 + debounce） | **本 feature 之後**，另案 | 不在本 plan | US3 AS6 明文「不改 GradeRow」→ 004 完成後另案處理，避免與 AS6 抵觸 |
-| **B4**（requestSync 補跑旗標）、**P2-1**（records/syncQueue 生命週期清理） | **本 feature 之後**，另案 | 不在本 plan | 皆非 US1/US9 前置，獨立低 churn |
+| **A4**（GradeRow 受控化 + debounce） | ✅ 已完成 2026-07-27（提前） | 不在本 plan | 原排「004 之後」；AS6 改寫為只保護數字驗證後無 churn 衝突，提前修 |
+| **P2-1**（records/syncQueue 生命週期清理） | ✅ 已完成 2026-07-27（提前） | 不在本 plan | 原排「004 之後」；獨立、與 004 清理無衝突，提前修 |
+| **B4**（requestSync 補跑旗標） | **本 feature 之後**，另案（未做） | 不在本 plan | 非 US1/US9 前置，獨立低 churn |
 
-**一句話**：Overlay 先於 US1/US9（Phase 1）；版本戳併入 US1（Phase 3）；臉 D 併入 US3（Phase 6）；A4/B4/P2-1 留待本 feature 之後。
+**一句話**：Overlay 先於 US1/US9（Phase 1）；版本戳併入 US1（Phase 3）；臉 D 併入 US3（Phase 6）；A4/P2-1 已提前完成（2026-07-27）；B4 仍留待本 feature 之後。
 
 ### 交錯執行的兩條鐵則
 
