@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 import { writeRecordWithHandler } from '@/lib/recordWrite';
@@ -15,6 +15,7 @@ interface RecordInput {
 /** 取得某任務的所有登記記錄（含學生資料），依座號排序。 */
 export async function GET(request: Request) {
   try {
+    const prisma = await getDb();
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get('taskId');
 
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
 /** 批次新增/更新登記記錄（含離線同步）。 */
 export async function PATCH(request: Request) {
   try {
+    const prisma = await getDb();
     const body = await request.json();
     const { records } = body as { records: RecordInput[] };
 

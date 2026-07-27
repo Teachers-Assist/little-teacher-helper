@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id } = await params;
 
     const room = await prisma.room.findUnique({
@@ -48,6 +49,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id } = await params;
     const body = await request.json();
     const { name } = body;
@@ -90,6 +92,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id } = await params;
 
     await prisma.room.delete({

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // POST /restore：還原已移除學生（isRemoved=false）。002 US2 / FR-026。
@@ -10,6 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id: roomId, studentId } = await params;
 
     const student = await prisma.student.update({

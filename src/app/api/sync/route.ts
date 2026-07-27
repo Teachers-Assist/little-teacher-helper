@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 import { writeRecordWithHandler } from '@/lib/recordWrite';
@@ -19,6 +19,7 @@ interface SyncOperation {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getDb();
     const body = await request.json();
     const { operations } = body as {
       deviceId?: string;

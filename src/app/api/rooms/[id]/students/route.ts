@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
@@ -8,6 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const includeRemoved = searchParams.get('includeRemoved') === 'true';
@@ -32,6 +33,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const { name, seatNumber } = body;

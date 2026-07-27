@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { generateRoomCode } from '@/lib/utils';
 
 export async function GET(request: Request) {
   try {
+    const prisma = await getDb();
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get('teacherId');
 
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getDb();
     const body = await request.json();
     const { name, teacherId } = body;
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 interface StudentInput {
@@ -10,6 +10,7 @@ interface StudentInput {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const prisma = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const { students } = body as { students: StudentInput[] };

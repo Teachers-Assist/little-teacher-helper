@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { TaskStatus } from '@/types';
 import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
@@ -8,6 +8,7 @@ import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const prisma = await getDb();
     const { id: roomId } = await params;
 
     const tasks = await prisma.task.findMany({
