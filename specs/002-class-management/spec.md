@@ -7,6 +7,10 @@
 
 **前置依賴**: `specs/001-little-teacher-helper/` 已實作完成。本 feature 在其上做擴充與修正，不取代原 spec。
 
+> **004 增量差異（不改本 spec 原文，僅記錄）**：本 feature 的兩處已由 `specs/004-alerts-and-feedback/` 補齊 / 重整——
+> - **AS3（班級狀況警示卡片顯示時間 / 閾值資訊）**：原文要求但 002 未實作，已由 004 **FR-085** 補齊（`ASSIGNED_SEAT_IDLE` 顯示已閒置時長、`NO_RECORDS_NEAR_DUE` 顯示截止 / 剩餘時間）。
+> - **FR-035（任務異常偵測條件）**：原兩條規則（指定座號 24h 無登記、距截止零登記）已由 004 **US6** 重整為任務層級滑動視窗（`TASK_STALLED`）＋ 截止日 08:00 絕對時鐘（`NO_RECORDS_BY_DUE`），並新增規則三（`LOW_COMPLETION`，US8）。異常規則的單一真實來源為 `specs/anomaly-rules.md`。
+
 **對應原則**（簡述，完整內容見 `specs/vision.md`）:
 - 老師做最少操作 → Excel 匯入、批次管理
 - 可逆性決定保護強度 → 所有刪除採 soft delete + 還原
