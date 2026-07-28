@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { room } from '@/db/schema';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
@@ -7,26 +9,20 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { code } = await params;
 
-    const room = await prisma.room.findUnique({
-      where: { code: code.toUpperCase() },
-      select: {
-        id: true,
-        name: true,
-        code: true,
+    const found = await db.query.room.findFirst({
+      where: eq(room.code, code.toUpperCase()),
+      columns: { id: true, name: true, code: true },
+      with: {
         students: {
-          where: { isRemoved: false },
-          select: {
-            id: true,
-            name: true,
-            seatNumber: true,
-          },
-          orderBy: [{ seatNumber: 'asc' }, { name: 'asc' }],
+          where: (s, { eq: eqOp }) => eqOp(s.isRemoved, false),
+          columns: { id: true, name: true, seatNumber: true },
+          orderBy: (s, { asc }) => [asc(s.seatNumber), asc(s.name)],
         },
         tasks: {
-          select: {
+          columns: {
             id: true,
             name: true,
             type: true,
@@ -34,27 +30,26 @@ export async function GET(
             dueDate: true,
             status: true,
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
         },
       },
     });
 
-    if (!room) {
+    if (!found) {
       return NextResponse.json({ error: ERROR_CODES.ROOM_NOT_FOUND }, { status: 404 });
     }
 
     return NextResponse.json({
       room: {
-        id: room.id,
-        name: room.name,
-        code: room.code,
+        id: found.id,
+        name: found.name,
+        code: found.code,
       },
-      students: room.students,
-      tasks: room.tasks,
+      students: found.students,
+      tasks: found.tasks,
     });
   } catch (error) {
     console.error('Failed to join room:', error);
     return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }
 }
-

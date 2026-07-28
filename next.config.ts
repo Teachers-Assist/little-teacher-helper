@@ -10,6 +10,6 @@ const nextConfig: NextConfig = {
 
 // 註：本可用 initOpenNextCloudflareForDev() 讓 next dev 透過 wrangler 取得本機 D1 綁定，
 // 但那會啟動 Cloudflare 的 workerd 執行環境；本機 Windows 上 workerd 無法啟動
-// （access violation）。因此改為：本機 dev 由 src/lib/db.ts 自動回退到原生 SQLite，
+// （access violation）。因此改為：本機 dev 由 src/lib/db.ts 以 libsql 讀本機 SQLite 檔，
 // 完全不依賴 workerd；線上（Cloudflare Workers）才走 D1。
 export default nextConfig;
