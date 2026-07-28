@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { and, asc, eq } from 'drizzle-orm';
+import { getDb, isUniqueConstraintError } from '@/lib/db';
+import { student } from '@/db/schema';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
@@ -8,17 +9,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const includeRemoved = searchParams.get('includeRemoved') === 'true';
 
-    const students = await prisma.student.findMany({
-      where: {
-        roomId: id,
-        ...(includeRemoved ? {} : { isRemoved: false }),
-      },
-      orderBy: [{ seatNumber: 'asc' }, { name: 'asc' }],
-    });
+    const students = await db
+      .select()
+      .from(student)
+      .where(and(eq(student.roomId, id), includeRemoved ? undefined : eq(student.isRemoved, false)))
+      .orderBy(asc(student.seatNumber), asc(student.name));
 
     return NextResponse.json(students);
   } catch (error) {
@@ -32,6 +32,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const { name, seatNumber } = body;
@@ -48,21 +49,17 @@ export async function POST(
       return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_REQUIRED }, { status: 400 });
     }
 
-    const student = await prisma.student.create({
-      data: {
-        name: name.trim(),
-        seatNumber,
-        roomId,
-      },
-    });
+    const [created] = await db
+      .insert(student)
+      .values({ name: name.trim(), seatNumber, roomId })
+      .returning();
 
-    return NextResponse.json(student, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (isUniqueConstraintError(error)) {
       return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_DUPLICATE }, { status: 409 });
     }
     console.error('Failed to create student:', error);
     return NextResponse.json({ error: ERROR_CODES.STUDENT_CREATE_FAILED }, { status: 500 });
   }
 }
-

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import prisma from '@/lib/db';
+import { and, eq } from 'drizzle-orm';
+import { getDb, isUniqueConstraintError } from '@/lib/db';
+import { student } from '@/db/schema';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // PATCH：編輯學生（姓名 / 座號）。002 US2。
@@ -9,6 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id: roomId, studentId } = await params;
     const body = await request.json();
     const { name, seatNumber } = body as { name?: string; seatNumber?: number };
@@ -36,21 +38,21 @@ export async function PATCH(
       return NextResponse.json({ error: ERROR_CODES.STUDENT_NAME_REQUIRED }, { status: 400 });
     }
 
-    const student = await prisma.student.update({
-      where: { id: studentId, roomId },
-      data,
-    });
+    const updated = await db
+      .update(student)
+      .set(data)
+      .where(and(eq(student.id, studentId), eq(student.roomId, roomId)))
+      .returning();
 
-    return NextResponse.json(student);
+    if (updated.length === 0) {
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 404 });
+    }
+
+    return NextResponse.json(updated[0]);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // 座號與班級內其他學生重複（含已移除學生，因 unique 約束涵蓋）
-      if (error.code === 'P2002') {
-        return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_DUPLICATE }, { status: 409 });
-      }
-      if (error.code === 'P2025') {
-        return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 404 });
-      }
+    // 座號與班級內其他學生重複（含已移除學生，因 unique 約束涵蓋）
+    if (isUniqueConstraintError(error)) {
+      return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_DUPLICATE }, { status: 409 });
     }
     console.error('Failed to update student:', error);
     return NextResponse.json({ error: ERROR_CODES.STUDENT_CREATE_FAILED }, { status: 500 });
@@ -63,18 +65,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id: roomId, studentId } = await params;
 
-    await prisma.student.update({
-      where: { id: studentId, roomId },
-      data: { isRemoved: true },
-    });
+    const updated = await db
+      .update(student)
+      .set({ isRemoved: true })
+      .where(and(eq(student.id, studentId), eq(student.roomId, roomId)))
+      .returning({ id: student.id });
+
+    if (updated.length === 0) {
+      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 404 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 404 });
-    }
     console.error('Failed to remove student:', error);
     return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }

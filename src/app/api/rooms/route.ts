@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { count, desc, eq, inArray } from 'drizzle-orm';
+import { getDb } from '@/lib/db';
+import { room, student, task } from '@/db/schema';
 import { generateRoomCode } from '@/lib/utils';
 
 export async function GET(request: Request) {
   try {
+    const db = await getDb();
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get('teacherId');
 
@@ -14,20 +17,38 @@ export async function GET(request: Request) {
       );
     }
 
-    const rooms = await prisma.room.findMany({
-      where: { teacherId },
-      include: {
-        _count: {
-          select: {
-            students: true,
-            tasks: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rooms = await db
+      .select()
+      .from(room)
+      .where(eq(room.teacherId, teacherId))
+      .orderBy(desc(room.createdAt));
 
-    return NextResponse.json(rooms);
+    const roomIds = rooms.map((r) => r.id);
+    // _count.students / _count.tasks：以 groupBy 一次算完（含全部學生，不濾 isRemoved，與原行為一致）
+    const [studentCounts, taskCounts] = roomIds.length
+      ? await Promise.all([
+          db
+            .select({ roomId: student.roomId, c: count() })
+            .from(student)
+            .where(inArray(student.roomId, roomIds))
+            .groupBy(student.roomId),
+          db
+            .select({ roomId: task.roomId, c: count() })
+            .from(task)
+            .where(inArray(task.roomId, roomIds))
+            .groupBy(task.roomId),
+        ])
+      : [[], []];
+
+    const sMap = new Map(studentCounts.map((x) => [x.roomId, x.c]));
+    const tMap = new Map(taskCounts.map((x) => [x.roomId, x.c]));
+
+    const out = rooms.map((r) => ({
+      ...r,
+      _count: { students: sMap.get(r.id) ?? 0, tasks: tMap.get(r.id) ?? 0 },
+    }));
+
+    return NextResponse.json(out);
   } catch (error) {
     console.error('Failed to fetch rooms:', error);
     return NextResponse.json(
@@ -39,6 +60,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const db = await getDb();
     const body = await request.json();
     const { name, teacherId } = body;
 
@@ -69,8 +91,8 @@ export async function POST(request: Request) {
     const maxAttempts = 10;
 
     while (attempts < maxAttempts) {
-      const existing = await prisma.room.findUnique({ where: { code } });
-      if (!existing) break;
+      const existing = await db.select({ id: room.id }).from(room).where(eq(room.code, code)).limit(1);
+      if (existing.length === 0) break;
       code = generateRoomCode();
       attempts++;
     }
@@ -82,23 +104,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const room = await prisma.room.create({
-      data: {
-        name: name.trim(),
-        code,
-        teacherId,
-      },
-      include: {
-        _count: {
-          select: {
-            students: true,
-            tasks: true,
-          },
-        },
-      },
-    });
+    const [created] = await db
+      .insert(room)
+      .values({ name: name.trim(), code, teacherId })
+      .returning();
 
-    return NextResponse.json(room, { status: 201 });
+    return NextResponse.json({ ...created, _count: { students: 0, tasks: 0 } }, { status: 201 });
   } catch (error) {
     console.error('Failed to create room:', error);
     return NextResponse.json(
@@ -107,4 +118,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

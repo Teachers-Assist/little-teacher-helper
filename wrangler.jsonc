@@ -7,5 +7,14 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "little-teacher-helper",
+      "database_id": "6797a39f-6fdf-4345-9e50-60ad7280b005",
+      // 存放 migration SQL 的資料夾（wrangler d1 migrations apply 會讀這裡）
+      "migrations_dir": "migrations"
+    }
+  ]
 }

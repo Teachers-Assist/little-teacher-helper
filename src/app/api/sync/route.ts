@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { and, eq, inArray } from 'drizzle-orm';
+import { getDb } from '@/lib/db';
+import { student, task } from '@/db/schema';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
-import { writeRecordWithHandler } from '@/lib/recordWrite';
+import { deleteRecordByTaskStudent, writeRecordWithHandler } from '@/lib/recordWrite';
 
 interface SyncOperation {
   id: string;
@@ -19,6 +21,7 @@ interface SyncOperation {
 
 export async function POST(request: Request) {
   try {
+    const db = await getDb();
     const body = await request.json();
     const { operations } = body as {
       deviceId?: string;
@@ -32,16 +35,20 @@ export async function POST(request: Request) {
 
     // 一次撈出涉及任務，供類型驗證與鎖定判斷
     const taskIds = [...new Set(operations.map((op) => op.payload?.taskId).filter(Boolean))];
-    const tasks = await prisma.task.findMany({ where: { id: { in: taskIds } } });
+    const tasks = taskIds.length
+      ? await db.select().from(task).where(inArray(task.id, taskIds))
+      : [];
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
     // 涉及班級的「在籍座號」集合，供辨識「登記者（小老師）座號已被老師移除」（AS8）。
     // 封存任務不在此擋——沿用 FR-101a：封存後離線登記照常寫入、由學生端告知「已收起」。
     const roomIds = [...new Set(tasks.map((t) => t.roomId))];
-    const activeStudents = await prisma.student.findMany({
-      where: { roomId: { in: roomIds }, isRemoved: false },
-      select: { roomId: true, seatNumber: true },
-    });
+    const activeStudents = roomIds.length
+      ? await db
+          .select({ roomId: student.roomId, seatNumber: student.seatNumber })
+          .from(student)
+          .where(and(inArray(student.roomId, roomIds), eq(student.isRemoved, false)))
+      : [];
     const activeSeatSet = new Set(activeStudents.map((s) => `${s.roomId}:${s.seatNumber}`));
 
     const syncedIds: string[] = [];
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
       try {
         if (mutation.action === 'delete') {
           // 取消勾選 / 清空成績 → 刪除記錄
-          await prisma.record.deleteMany({ where: { taskId, studentId } });
+          await deleteRecordByTaskStudent(taskId, studentId);
           syncedIds.push(operation.id);
           continue;
         }

@@ -1,39 +1,37 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { count, eq } from 'drizzle-orm';
+import { getDb } from '@/lib/db';
+import { room, student, task } from '@/db/schema';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id } = await params;
 
-    const room = await prisma.room.findUnique({
-      where: { id },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            students: true,
-            tasks: true,
-          },
-        },
+    const found = await db.query.room.findFirst({
+      where: eq(room.id, id),
+      with: {
+        teacher: { columns: { id: true, name: true } },
       },
     });
 
-    if (!room) {
+    if (!found) {
       return NextResponse.json(
         { error: '找不到該房間' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(room);
+    const [{ c: students }] = await db
+      .select({ c: count() })
+      .from(student)
+      .where(eq(student.roomId, id));
+    const [{ c: tasks }] = await db.select({ c: count() }).from(task).where(eq(task.roomId, id));
+
+    return NextResponse.json({ ...found, _count: { students, tasks } });
   } catch (error) {
     console.error('Failed to get room:', error);
     return NextResponse.json(
@@ -48,6 +46,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id } = await params;
     const body = await request.json();
     const { name } = body;
@@ -70,12 +69,9 @@ export async function PATCH(
       updateData.name = name.trim();
     }
 
-    const room = await prisma.room.update({
-      where: { id },
-      data: updateData,
-    });
+    const [updated] = await db.update(room).set(updateData).where(eq(room.id, id)).returning();
 
-    return NextResponse.json(room);
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('Failed to update room:', error);
     return NextResponse.json(
@@ -90,11 +86,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = await getDb();
     const { id } = await params;
 
-    await prisma.room.delete({
-      where: { id },
-    });
+    await db.delete(room).where(eq(room.id, id));
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -105,4 +100,3 @@ export async function DELETE(
     );
   }
 }
-

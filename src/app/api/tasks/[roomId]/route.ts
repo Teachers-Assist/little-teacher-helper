@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { getDb } from '@/lib/db';
+import { record, task } from '@/db/schema';
 import { TaskType } from '@/types';
 
 export async function GET(
@@ -7,24 +9,38 @@ export async function GET(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const db = await getDb();
     const { roomId } = await params;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // 可選：依狀態過濾
     const includeArchived = searchParams.get('includeArchived') === 'true'; // 002 US3
 
-    const tasks = await prisma.task.findMany({
-      where: {
-        roomId,
-        ...(status ? { status } : {}),
-        ...(includeArchived ? {} : { isArchived: false }),
-      },
-      include: {
-        _count: { select: { records: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const tasks = await db
+      .select()
+      .from(task)
+      .where(
+        and(
+          eq(task.roomId, roomId),
+          status ? eq(task.status, status) : undefined,
+          includeArchived ? undefined : eq(task.isArchived, false)
+        )
+      )
+      .orderBy(desc(task.createdAt));
 
-    return NextResponse.json(tasks);
+    // _count.records（全部登記，不濾學生，與原行為一致）
+    const ids = tasks.map((t) => t.id);
+    const rc = ids.length
+      ? await db
+          .select({ taskId: record.taskId, c: count() })
+          .from(record)
+          .where(inArray(record.taskId, ids))
+          .groupBy(record.taskId)
+      : [];
+    const rcMap = new Map(rc.map((x) => [x.taskId, x.c]));
+
+    const out = tasks.map((t) => ({ ...t, _count: { records: rcMap.get(t.id) ?? 0 } }));
+
+    return NextResponse.json(out);
   } catch (error) {
     console.error('Failed to fetch tasks:', error);
     return NextResponse.json({ error: '取得任務列表失敗' }, { status: 500 });
@@ -36,6 +52,7 @@ export async function POST(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const db = await getDb();
     const { roomId } = await params;
     const body = await request.json();
     const { name, type, assignedSeatNumber, dueDate } = body;
@@ -57,17 +74,18 @@ export async function POST(
     }
 
     // 依「不預建空白 Record」決策：建立任務時不為學生預先建立記錄。
-    const task = await prisma.task.create({
-      data: {
+    const [created] = await db
+      .insert(task)
+      .values({
         name: name.trim(),
         type,
         roomId,
         assignedSeatNumber: assignedSeatNumber ?? null,
         dueDate: dueDate ? new Date(dueDate) : null,
-      },
-    });
+      })
+      .returning();
 
-    return NextResponse.json(task, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error('Failed to create task:', error);
     return NextResponse.json({ error: '建立任務失敗' }, { status: 500 });

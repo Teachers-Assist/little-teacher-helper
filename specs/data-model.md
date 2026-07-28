@@ -1,6 +1,6 @@
 # Data Model: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-07-20（004 增量：新增 RecordHandler 子表；Task.dueDate 寫入慣例改 17:00）
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-07-28（ORM 改 Drizzle + Cloudflare D1，取代 Prisma／PostgreSQL；schema 真實來源移至 `src/db/schema.ts`）｜前次 2026-07-20（004 增量：新增 RecordHandler 子表；Task.dueDate 寫入慣例改 17:00）
 
 本文件定義系統的資料模型，基於 Feature Spec 中的 Key Entities。
 
@@ -217,125 +217,35 @@ enum SubmissionStatus {
 
 ---
 
-## Prisma Schema
+## Drizzle Schema
 
-```prisma
-// prisma/schema.prisma
+> **2026-07-28 起，ORM 為 Drizzle（取代 Prisma）。** Schema 的**單一真實來源是
+> `src/db/schema.ts`**；本節僅說明對映與相容性重點。線上資料庫為 **Cloudflare D1**
+> （SQLite 相容），本機開發用 **libsql** 讀本機 SQLite 檔（`prisma/dev.db`，資料夾名沿用）。
+> 生產環境不再是 PostgreSQL。
 
-generator client {
-  provider = "prisma-client-js"
-}
+上表 6 個實體與 3 個 enum（TaskType / TaskStatus / SubmissionStatus）皆維持不變，只是改由
+`drizzle-orm/sqlite-core` 定義（`sqliteTable`）。表名維持 PascalCase、欄名維持 camelCase，
+與既有資料庫完全一致。enum 於 SQLite 以 `text` 欄位儲存、TS 層以 `src/types` 的 enum 約束。
 
-datasource db {
-  provider = "sqlite"  // MVP: sqlite, Production: postgresql
-  url      = env("DATABASE_URL")
-}
+**儲存相容性（關鍵，勿更動——由實際 `dev.db` 驗證）**：舊資料由 Prisma 寫入，Drizzle 必須沿用
+相同的物理儲存慣例才能正確讀回：
 
-model Teacher {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?  @unique
-  rooms     Room[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+| 概念型別 | SQLite 實際儲存 | Drizzle 定義 |
+|---|---|---|
+| DateTime（createdAt / updatedAt / dueDate / archivedAt / syncedAt / handledAt） | **INTEGER 毫秒**（Unix ms） | `integer(col, { mode: 'timestamp_ms' })` |
+| Boolean（isRemoved / isArchived / isAssignedRecorder） | **INTEGER 0 / 1** | `integer(col, { mode: 'boolean' })` |
+| id（PK） | TEXT UUID | `text(col).primaryKey().$defaultFn(() => crypto.randomUUID())` |
 
-model Room {
-  id        String    @id @default(uuid())
-  code      String    @unique
-  name      String
-  teacher   Teacher   @relation(fields: [teacherId], references: [id])
-  teacherId String
-  students  Student[]
-  tasks     Task[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+- 時間戳**不依賴** SQL 的 `DEFAULT CURRENT_TIMESTAMP`（那會寫入 TEXT）；一律由
+  `$defaultFn` / `$onUpdateFn` 在應用層寫入 `Date`，維持毫秒整數形式。
+- 唯一約束（`Record` 的 `(taskId, studentId)`、`Student` 的 `(roomId, seatNumber)`）以
+  `uniqueIndex` 定義，供 `onConflictDoUpdate` upsert 使用。
+- 關聯（`relations()`）供 `db.query.X.findFirst/findMany({ with })` 使用，取代 Prisma 的
+  `include`；關聯欄位排序 relational API 不支援，需於記憶體排序。
 
-  @@index([teacherId])
-  @@index([code])
-}
-
-model Student {
-  id          String   @id @default(uuid())
-  name        String
-  seatNumber  Int
-  room        Room     @relation(fields: [roomId], references: [id])
-  roomId      String
-  records     Record[]
-  isRemoved   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([roomId, seatNumber])
-  @@index([roomId])
-}
-
-model Task {
-  id                  String     @id @default(uuid())
-  name                String
-  type                TaskType
-  room                Room       @relation(fields: [roomId], references: [id])
-  roomId              String
-  assignedSeatNumber  Int?
-  dueDate             DateTime?
-  status              TaskStatus @default(ACTIVE)
-  isArchived          Boolean    @default(false)
-  archivedAt          DateTime?  // 004 FR-097a：最近一次封存時間
-  records             Record[]
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
-
-  @@index([roomId])
-  @@index([isArchived])
-}
-
-model Record {
-  id                   String            @id @default(uuid())
-  task                 Task              @relation(fields: [taskId], references: [id])
-  taskId               String
-  student              Student           @relation(fields: [studentId], references: [id])
-  studentId            String
-  submissionStatus     SubmissionStatus?
-  gradeValue           Int?
-  recorderSeatNumber   Int
-  isAssignedRecorder   Boolean
-  handlers             RecordHandler[]   // 004：順序處理者名單
-  syncedAt             DateTime?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-
-  @@unique([taskId, studentId])
-  @@index([taskId])
-  @@index([studentId])
-}
-
-// 004：一筆 Record 的順序處理者名單（每次處理追加一筆，依 handledAt 排序）
-model RecordHandler {
-  id         String   @id @default(uuid())
-  record     Record   @relation(fields: [recordId], references: [id])
-  recordId   String
-  seatNumber Int
-  handledAt  DateTime @default(now())
-
-  @@index([recordId])
-}
-
-enum TaskType {
-  SUBMISSION  // 繳交與否
-  GRADE       // 成績數值
-}
-
-enum TaskStatus {
-  ACTIVE
-  HELPER_COMPLETED
-  CLOSED
-}
-
-enum SubmissionStatus {
-  SUBMITTED
-  NOT_SUBMITTED
-}
-```
+**遷移 / 建表**：初始建表 SQL 為 `migrations/0001_init.sql`（D1 與 SQLite 相容，schema 未變）。
+本機用 `pnpm db:push` 依 schema 同步，線上用 `pnpm db:migrate:remote`（wrangler）套用 migrations。
 
 ---
 

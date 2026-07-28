@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { getDb } from '@/lib/db';
+import { teacher } from '@/db/schema';
 
 export async function POST(request: Request) {
   try {
+    const db = await getDb();
     const body = await request.json();
     const { name, email } = body;
 
@@ -20,14 +22,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const teacher = await prisma.teacher.create({
-      data: {
-        name: name.trim(),
-        email: email?.trim() || null,
-      },
-    });
+    const [created] = await db
+      .insert(teacher)
+      .values({ name: name.trim(), email: email?.trim() || null })
+      .returning();
 
-    return NextResponse.json(teacher, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error('Failed to create teacher:', error);
     return NextResponse.json(
@@ -36,4 +36,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

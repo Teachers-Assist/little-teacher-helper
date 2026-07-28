@@ -4,7 +4,6 @@
   "description": "讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式",
   "private": true,
   "scripts": {
-    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -14,11 +13,11 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate:local": "wrangler d1 migrations apply little-teacher-helper --local",
+    "db:migrate:remote": "wrangler d1 migrations apply little-teacher-helper --remote",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
@@ -35,9 +34,10 @@
   "dependencies": {
     "@iconify-json/lucide": "^1.2.109",
     "@iconify/react": "^6.0.2",
+    "@libsql/client": "^0.17.4",
     "@opennextjs/cloudflare": "1.14.1",
-    "@prisma/client": "5",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "html5-qrcode": "^2.3.8",
     "next": "^16.0.6",
     "qrcode": "^1.5.4",
@@ -47,6 +47,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260727.1",
     "@eslint/eslintrc": "^3.3.3",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^24.10.1",
@@ -54,15 +55,15 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.22",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.6",
     "next-pwa": "^5.6.0",
     "postcss": "^8.5.6",
     "prettier": "^3.7.3",
-    "prisma": "5",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
-    "wrangler": "^4.51.0"
+    "wrangler": "^4.114.0"
   }
 }
