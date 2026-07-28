@@ -1,8 +1,10 @@
 # Quickstart Guide: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-07-28（資料層改 Drizzle ORM + Cloudflare D1，取代 Prisma；部署改 Cloudflare Workers）
 
 本指南說明如何快速設置開發環境並開始開發。
+
+> **資料層現況（2026-07）**：ORM 為 **Drizzle**（非 Prisma）。線上資料庫為 **Cloudflare D1**，本機開發用 **libsql** 讀本機 SQLite 檔（`prisma/dev.db`，資料夾名沿用）。部署走 **OpenNext + Cloudflare Workers**（非 Vercel）。schema 單一真實來源為 `src/db/schema.ts`。
 
 ---
 
@@ -10,8 +12,8 @@
 
 | 工具 | 版本 | 安裝指令 |
 |------|------|---------|
-| Node.js | 20.x LTS | [nodejs.org](https://nodejs.org/) |
-| pnpm | 8.x+ | `npm install -g pnpm` |
+| Node.js | 22.x LTS | [nodejs.org](https://nodejs.org/) |
+| pnpm | 9.x+ | `npm install -g pnpm` |
 | Git | 2.x+ | 系統內建或 [git-scm.com](https://git-scm.com/) |
 
 ---
@@ -43,8 +45,8 @@ cp .env.example .env.local
 編輯 `.env.local`：
 
 ```env
-# 資料庫 (MVP 使用 SQLite)
-DATABASE_URL="file:./dev.db"
+# 本機開發資料庫（libsql 讀本機 SQLite 檔，相對於專案根目錄）
+DATABASE_URL="file:./prisma/dev.db"
 
 # 應用程式 URL (用於 QRCode 產生)
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -55,16 +57,21 @@ NODE_ENV="development"
 
 ### 4. 初始化資料庫
 
+本機開發直接用 Drizzle 把 schema 同步到本機 SQLite 檔（`prisma/dev.db`）：
+
 ```bash
-# 產生 Prisma Client
-pnpm prisma generate
+# 依 src/db/schema.ts 建立 / 更新本機資料表
+pnpm db:push
 
-# 執行資料庫遷移
-pnpm prisma migrate dev --name init
-
-# (選用) 開啟 Prisma Studio 查看資料
-pnpm prisma studio
+# (選用) 開啟 Drizzle Studio 查看資料
+pnpm db:studio
 ```
+
+> **線上 D1** 不走 `db:push`，改用 wrangler 套用 `migrations/` 內的 SQL：
+> ```bash
+> pnpm db:migrate:remote   # wrangler d1 migrations apply --remote
+> ```
+> 改動 schema 後用 `pnpm db:generate` 產生新的 migration SQL 到 `migrations/`，再 apply。
 
 ### 5. 啟動開發伺服器
 
@@ -81,13 +88,19 @@ pnpm dev
 ```
 .
 ├── src/
-│   ├── app/           # Next.js App Router 頁面
+│   ├── app/           # Next.js App Router 頁面 + API routes
 │   ├── components/    # React 元件
-│   ├── lib/           # 共用函式庫
+│   ├── db/
+│   │   └── schema.ts  # Drizzle schema（資料模型單一真實來源）
+│   ├── lib/
+│   │   └── db.ts      # getDb()：線上 D1 / 本機 libsql 雙 driver
 │   ├── hooks/         # React Hooks
 │   └── types/         # TypeScript 型別
+├── migrations/        # D1 遷移 SQL（wrangler d1 migrations apply 讀這裡）
 ├── prisma/
-│   └── schema.prisma  # 資料庫 Schema
+│   └── dev.db         # 本機開發用 SQLite 資料檔（資料夾名沿用；Prisma 已移除）
+├── drizzle.config.ts  # drizzle-kit 設定（push / studio / generate）
+├── wrangler.jsonc     # Cloudflare Workers + D1 綁定設定
 ├── public/            # 靜態資源
 ├── specs/             # 功能規格文件
 └── tests/             # 測試檔案
@@ -100,12 +113,15 @@ pnpm dev
 | 指令 | 說明 |
 |------|------|
 | `pnpm dev` | 啟動開發伺服器 |
-| `pnpm build` | 建置生產版本 |
+| `pnpm build` | 建置生產版本（`next build`） |
 | `pnpm start` | 啟動生產伺服器 |
 | `pnpm lint` | 執行 ESLint 檢查 |
-| `pnpm test` | 執行測試 |
-| `pnpm prisma studio` | 開啟資料庫管理介面 |
-| `pnpm prisma migrate dev` | 執行資料庫遷移 |
+| `pnpm test` | 執行測試（vitest） |
+| `pnpm db:push` | 依 schema 更新本機 SQLite 資料表 |
+| `pnpm db:studio` | 開啟 Drizzle Studio 資料庫管理介面 |
+| `pnpm db:generate` | 依 schema 產生 migration SQL 到 `migrations/` |
+| `pnpm db:migrate:remote` | 套用 migrations 到線上 D1（wrangler） |
+| `pnpm deploy` | 建置並部署到 Cloudflare Workers（OpenNext） |
 
 ---
 
@@ -206,50 +222,60 @@ touch src/app/api/rooms/route.ts
 ```typescript
 // src/app/api/rooms/route.ts
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+import { getDb } from '@/lib/db';
+import { room } from '@/db/schema';
 
 export async function GET(request: Request) {
+  const db = await getDb();
   const { searchParams } = new URL(request.url);
   const teacherId = searchParams.get('teacherId');
 
-  const rooms = await prisma.room.findMany({
-    where: { teacherId: teacherId || undefined },
-  });
+  const rooms = teacherId
+    ? await db.select().from(room).where(eq(room.teacherId, teacherId))
+    : await db.select().from(room);
 
   return NextResponse.json(rooms);
 }
 
 export async function POST(request: Request) {
+  const db = await getDb();
   const body = await request.json();
-  
-  const room = await prisma.room.create({
-    data: {
+
+  const [created] = await db
+    .insert(room)
+    .values({
       name: body.name,
       code: generateRoomCode(), // 產生 6 位代碼
       teacherId: body.teacherId,
-    },
-  });
+    })
+    .returning();
 
-  return NextResponse.json(room, { status: 201 });
+  return NextResponse.json(created, { status: 201 });
 }
 ```
 
-### 使用 Prisma 查詢資料
+> 注意：`getDb()` 是 **async**，每個 handler 開頭 `const db = await getDb();`。查詢用 Drizzle
+> query builder（`db.select()...`）或關聯查詢（`db.query.room.findFirst({ with: {...} })`
+> 取代 Prisma 的 `include`）。
+
+### getDb() 如何取得連線（線上 D1 / 本機 libsql）
 
 ```typescript
-// src/lib/db.ts
-import { PrismaClient } from '@prisma/client';
+// src/lib/db.ts（摘要）
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle as drizzleD1, type DrizzleD1Database } from 'drizzle-orm/d1';
+import { schema } from '@/db/schema';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+export type DB = DrizzleD1Database<typeof schema>;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+// 以 WebSocketPair（Workers 專屬全域）判斷環境：
+//  - 線上 Workers → drizzle-orm/d1 綁 env.DB
+//  - 本機 next dev → 動態載入 drizzle-orm/libsql 讀 file:./prisma/dev.db
+export async function getDb(): Promise<DB> { /* ... */ }
 ```
+
+> 完整實作見 `src/lib/db.ts`。schema 定義在 `src/db/schema.ts`。
 
 ### 實作離線儲存
 
@@ -329,38 +355,47 @@ mkcert localhost
 
 ## 部署
 
-### Vercel 部署 (推薦)
+### Cloudflare Workers 部署（OpenNext）
+
+線上以 **OpenNext 打包成 Cloudflare Worker**、資料庫用 **D1**。日常部署由 Cloudflare 原生
+Git 整合（Workers Builds）在 push 後自動於 Linux builder 執行；也可本機手動：
 
 ```bash
-# 安裝 Vercel CLI
-npm i -g vercel
-
-# 部署
-vercel
+# 建置並部署（= opennextjs-cloudflare build && deploy）
+pnpm deploy
 ```
 
-### 環境變數設定
+> ⚠️ **Windows 注意**：`opennextjs-cloudflare build` 在 Windows 會 segfault，本機無法產出
+> Worker bundle。請靠 Cloudflare 的 Linux CI 部署驗證（含 worker gzip size 是否在免費方案
+> 3 MiB 上限內）。本機開發（`pnpm dev`）不受影響，走 libsql。
 
-在 Vercel Dashboard 設定：
+### 綁定與環境變數
 
-| 變數名稱 | 說明 |
-|----------|------|
-| `DATABASE_URL` | PostgreSQL 連接字串 |
-| `NEXT_PUBLIC_APP_URL` | 生產環境網址 |
+D1 綁定寫在 `wrangler.jsonc`（`d1_databases` 的 `binding: "DB"`），程式端以
+`getCloudflareContext().env.DB` 取得，**不經 `DATABASE_URL`**。`DATABASE_URL` 只在本機開發用。
+
+| 設定 | 位置 | 說明 |
+|----------|------|------|
+| `DB`（D1 binding） | `wrangler.jsonc` | 線上資料庫，`database_id` 指向 Cloudflare D1 |
+| `DATABASE_URL` | 本機 `.env.local` | 僅本機 libsql 用（`file:./prisma/dev.db`） |
+| `NEXT_PUBLIC_APP_URL` | Cloudflare 專案環境變數 | 生產環境網址（QRCode 用） |
 
 ---
 
 ## 常見問題
 
-### Q: Prisma 無法連接資料庫
+### Q: 本機資料庫沒有資料表 / schema 對不上
 
 ```bash
-# 重新產生 Prisma Client
-pnpm prisma generate
-
-# 重置資料庫
-pnpm prisma migrate reset
+# 依 src/db/schema.ts 重新同步本機 SQLite 資料表
+pnpm db:push
 ```
+
+### Q: 本機日期 / 布林值讀出來怪怪的
+
+Drizzle schema 已對映既有資料的儲存慣例：**時間欄位為 INTEGER 毫秒**
+（`mode: 'timestamp_ms'`）、**布林為 0/1**（`mode: 'boolean'`）。若新增欄位，時間 / 布林務必
+沿用同樣 mode，否則會與既有資料不相容。詳見 `src/db/schema.ts` 開頭註解。
 
 ### Q: 熱重載不工作
 
@@ -373,9 +408,7 @@ pnpm dev
 ### Q: TypeScript 型別錯誤
 
 ```bash
-# 重新產生 Prisma 型別
-pnpm prisma generate
-
+# schema 型別由 src/db/schema.ts 直接推導，改完重啟 TS 服務即可
 # 重啟 TypeScript 服務 (VS Code)
 Cmd+Shift+P -> TypeScript: Restart TS Server
 ```
@@ -394,7 +427,9 @@ Cmd+Shift+P -> TypeScript: Restart TS Server
 ## 相關資源
 
 - [Next.js 文件](https://nextjs.org/docs)
-- [Prisma 文件](https://www.prisma.io/docs)
+- [Drizzle ORM 文件](https://orm.drizzle.team/docs/overview)
+- [Cloudflare D1 文件](https://developers.cloudflare.com/d1/)
+- [OpenNext for Cloudflare](https://opennext.js.org/cloudflare)
 - [Tailwind CSS 文件](https://tailwindcss.com/docs)
 - [PWA with Next.js](https://github.com/shadowwalker/next-pwa)
 

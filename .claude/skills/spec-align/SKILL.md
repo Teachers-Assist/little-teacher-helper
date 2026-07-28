@@ -127,7 +127,7 @@ i18n 文案集中在 `src/messages/zh-TW.ts` 與 `src/messages/en.ts`，由 `src
    - 不存在 → 標記為「新 entity 待新增」（Step 4.2 處理）
    - 存在 → 繼續檢查欄位
 2. **新 feature 提到的每個 entity 欄位**：
-   - 該欄位在 `data-model.md` 的 entity 表格與 Prisma schema 都存在嗎？
+   - 該欄位在 `data-model.md` 的 entity 表格與 Drizzle schema（`src/db/schema.ts`）都存在嗎？
    - 不存在 → 標記為「新欄位待新增」
    - 存在但型別/語意不一致 → **衝突警告**，列出兩邊定義，請使用者裁決
 3. **新 feature 提到的關聯（relation）**：
@@ -197,7 +197,7 @@ i18n 文案集中在 `src/messages/zh-TW.ts` 與 `src/messages/en.ts`，由 `src
 **新增 entity**：
 - 在 ERD 圖適當位置加入新方塊與關聯線
 - 依現有 entity 的格式新增一節（章節標題、表格、關聯說明）
-- 補 Prisma schema model
+- 在 `src/db/schema.ts` 補對應的 Drizzle table（`sqliteTable` + `relations()`）；時間 / 布林欄位沿用 `timestamp_ms` / `boolean` mode
 - 若離線需快取，加入 Offline Data Structure
 - 若有有意義的狀態轉移，補 Data Lifecycle 區塊
 
@@ -205,19 +205,19 @@ i18n 文案集中在 `src/messages/zh-TW.ts` 與 `src/messages/en.ts`，由 `src
 - ERD 圖：方塊與所有箭頭標籤一起改
 - Entity section 標題與表格
 - 所有「關聯」段落中提到舊名的地方
-- Prisma schema：`model` 名稱、relation field、`@relation` 參照
+- `src/db/schema.ts`：`sqliteTable` 名稱、`relations()` 定義、`references()` 參照
 - Offline Data Structure：TypeScript interface 的 key
 - Data Lifecycle：所有狀態標籤中引用舊名的地方
 
 **欄位新增/變動**：
 - entity 表格加入欄位（含型別、constraint、描述）
-- Prisma schema 對應 model 加欄位
+- `src/db/schema.ts` 對應 table 加欄位（時間 / 布林沿用 `timestamp_ms` / `boolean` mode）
 - 若是離線需要的欄位，同步 Offline Data Structure interface
 - 若有 constraint，更新 validation 規則段落
 
 **改完之後做內部一致性檢查**：
 - ERD 每個 entity 都有對應 entity section
-- entity 表格的每個欄位都在 Prisma schema 出現
+- entity 表格的每個欄位都在 `src/db/schema.ts` 的 Drizzle table 出現
 - Offline Data Structure 的 key 用的是目前的 entity 名
 
 **重要**：因為 data-model.md 是全專案共用，更新時要注意舊 feature 已實作的 entity 不要被破壞。任何 breaking change（重新命名、刪除欄位、改變關聯）都要在報告中**明確標示為 breaking**，並提醒使用者該 entity 對應的舊 feature 程式碼也需要同步調整。
@@ -229,7 +229,7 @@ i18n 文案集中在 `src/messages/zh-TW.ts` 與 `src/messages/en.ts`，由 `src
 最後快速 cross-check：
 
 - `specs/data-model.md` 中的 entity 名稱與 `specs/<NEW>/plan.md` 的路由路徑、component 命名一致
-- Prisma model 名稱與其上方 entity 表格名稱一致
+- `src/db/schema.ts` 的 table 名稱與 data-model.md entity 表格名稱一致
 - Offline Data Structure interface 的 key 是現行 entity 名
 - spec 中新增的 user story 在 `plan.md` 有對應的路由 / component 條目
 - spec 中強制慣例的 NFR 在 `plan.md` Constraints 有對應條目
