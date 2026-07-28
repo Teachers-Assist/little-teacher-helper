@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { ClassesView } from '@/components/dashboard/ClassesView';
 import { TasksView } from '@/components/dashboard/TasksView';
@@ -26,8 +27,69 @@ export default function TeacherDashboard() {
   const [newTeacherName, setNewTeacherName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [view, setView] = useState<View | null>(null);
+  // 換裝置還原連結（?tid=）帶進來的連結若無效、且本機「沒有」既有 session 時，
+  // 於建立帳號畫面上方提示。
+  const [restoreFailed, setRestoreFailed] = useState(false);
+  // 還原連結無效、但本機「已有」老師 session：顯示阻斷式提示，覆蓋側欄（不洩漏原身份），
+  // 且不清除 localStorage。老師確認後才回到自己的儀表板。
+  const [invalidWithSession, setInvalidWithSession] = useState(false);
+  // 還原連結指向「另一位」老師（與本機既有 teacherId 不同）時，覆蓋前要老師確認。
+  const [pendingSwitch, setPendingSwitch] = useState<{
+    fromName: string;
+    toId: string;
+    toName: string;
+  } | null>(null);
 
   useEffect(() => {
+    // 還原連結入口：/teacher?tid=<teacherId>（設定選單「複製我的還原連結」產生）。
+    const tid = new URLSearchParams(window.location.search).get('tid');
+    if (tid) {
+      (async () => {
+        try {
+          const res = await fetch(`/api/teachers/${encodeURIComponent(tid)}`);
+          if (res.ok) {
+            const teacher = (await res.json()) as { id: string; name: string };
+            const existingId = localStorage.getItem('teacherId');
+            const existingName = localStorage.getItem('teacherName') || '';
+
+            // 這個瀏覽器已是「另一位」老師：覆蓋前先問，避免誤把 A 擠掉（切回去需要 A 的連結）。
+            // 先把 ?tid= 從網址清掉再顯示對話框；老師身份此刻尚未變動。
+            if (existingId && existingId !== teacher.id) {
+              window.history.replaceState(null, '', '/teacher');
+              setPendingSwitch({ fromName: existingName, toId: teacher.id, toName: teacher.name });
+              setIsLoading(false);
+              return;
+            }
+
+            // 沒有既有身份、或就是同一位老師（等同 no-op）：直接寫回並整頁 replace。
+            // 這一步同時清掉 ?tid= 又讓側欄等以 localStorage 為源的元件讀到身份，不需再清一次。
+            localStorage.setItem('teacherId', teacher.id);
+            localStorage.setItem('teacherName', teacher.name);
+            window.location.replace('/teacher');
+            return;
+          }
+        } catch {
+          // 落到下方無效處理
+        }
+        // 連結無效／失效：先清掉網址上的 ?tid=（但 MUST NOT 動 localStorage）。
+        window.history.replaceState(null, '', '/teacher');
+        const keepId = localStorage.getItem('teacherId');
+        const keepName = localStorage.getItem('teacherName');
+        if (keepId && keepName) {
+          // 本機已有老師 session：顯示阻斷式「連結無效」提示，覆蓋側欄不洩漏原身份，
+          // 也不清除原資料；老師確認後才回自己的儀表板。
+          setInvalidWithSession(true);
+          setIsLoading(false);
+        } else {
+          // 本機沒有既有 session：回建立帳號畫面並提示（沒有原資料可隱藏）。
+          setRestoreFailed(true);
+          setShowCreateTeacher(true);
+          setIsLoading(false);
+        }
+      })();
+      return;
+    }
+
     const storedTeacherId = localStorage.getItem('teacherId');
     const storedTeacherName = localStorage.getItem('teacherName');
     if (storedTeacherId && storedTeacherName) {
@@ -39,6 +101,44 @@ export default function TeacherDashboard() {
       setIsLoading(false);
     }
   }, []);
+
+  // 確認切換：寫回新身份並整頁 replace（重載讓側欄等讀到新身份）。
+  const confirmSwitch = () => {
+    if (!pendingSwitch) return;
+    localStorage.setItem('teacherId', pendingSwitch.toId);
+    localStorage.setItem('teacherName', pendingSwitch.toName);
+    window.location.replace('/teacher');
+  };
+
+  // 取消切換：維持原本的老師，載入其 dashboard（?tid= 先前已清掉）。
+  const cancelSwitch = () => {
+    setPendingSwitch(null);
+    const id = localStorage.getItem('teacherId');
+    const name = localStorage.getItem('teacherName');
+    if (id && name) {
+      setTeacherId(id);
+      setTeacherName(name);
+      fetchDashboard(id);
+    } else {
+      setShowCreateTeacher(true);
+      setIsLoading(false);
+    }
+  };
+
+  // 無效連結（但本機有 session）：關掉提示，回到原本老師的 dashboard（localStorage 未動）。
+  const dismissInvalidLink = () => {
+    setInvalidWithSession(false);
+    const id = localStorage.getItem('teacherId');
+    const name = localStorage.getItem('teacherName');
+    if (id && name) {
+      setTeacherId(id);
+      setTeacherName(name);
+      fetchDashboard(id);
+    } else {
+      setShowCreateTeacher(true);
+      setIsLoading(false);
+    }
+  };
 
   const fetchDashboard = async (id: string) => {
     setIsLoading(true);
@@ -114,6 +214,46 @@ export default function TeacherDashboard() {
     );
   }
 
+  // 還原連結指向另一位老師：覆蓋前先確認（?tid= 已在 effect 內清掉）。
+  if (pendingSwitch) {
+    return (
+      <div className="h-full min-h-[80vh]">
+        <ConfirmDialog
+          open
+          title={messages.teacher.restore.switchTitle}
+          message={messages.teacher.restore.switchBody(pendingSwitch.fromName, pendingSwitch.toName)}
+          confirmLabel={messages.teacher.restore.switchConfirm(pendingSwitch.toName)}
+          cancelLabel={messages.teacher.restore.switchCancel(pendingSwitch.fromName)}
+          onConfirm={confirmSwitch}
+          onCancel={cancelSwitch}
+        />
+      </div>
+    );
+  }
+
+  // 還原連結無效、但本機已有 session：整片不透明覆蓋（含側欄，z-50 > 側欄 z-20），
+  // 不顯示任何原 localStorage 身份/班級，也不清除資料；老師確認後才回自己的儀表板。
+  if (invalidWithSession) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#fffbeb] px-4">
+        <div className="w-full max-w-sm rounded-xl border-2 border-black bg-white p-8 text-center">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50">
+            <Icon name="lucide:link-2-off" size={24} className="text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">
+            {messages.teacher.restore.invalidTitle}
+          </h2>
+          <p className="mt-1 mb-6 text-sm text-slate-500">
+            {messages.teacher.restore.invalidKeepBody}
+          </p>
+          <Button variant="primary" className="w-full" onClick={dismissInvalidLink}>
+            {messages.teacher.restore.invalidContinue}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (showCreateTeacher) {
     return (
       <div className="flex h-full min-h-[80vh] items-center justify-center px-4">
@@ -127,6 +267,12 @@ export default function TeacherDashboard() {
             </h2>
             <p className="mt-1 text-sm text-slate-500">{messages.teacher.createTeacherHint}</p>
           </div>
+          {restoreFailed && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-xs text-amber-700">
+              <Icon name="lucide:link-2-off" size={15} className="mt-px shrink-0" />
+              <span>{messages.teacher.restore.linkInvalid}</span>
+            </div>
+          )}
           <form onSubmit={handleCreateTeacher} className="space-y-4">
             <input
               type="text"

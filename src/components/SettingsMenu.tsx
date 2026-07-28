@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
+
+// 以外部 store 讀 localStorage 的 teacherId（SSR-safe），沿用 TeacherSidebar 讀 teacherName 的慣例。
+const emptySubscribe = (): (() => void) => () => {};
+const getStoredTeacherId = (): string | null => localStorage.getItem('teacherId');
+const getServerTeacherId = (): string | null => null;
 
 interface SettingsMenuProps {
   /**
@@ -22,8 +29,25 @@ interface SettingsMenuProps {
  */
 export function SettingsMenu({ variant = 'floating' }: SettingsMenuProps) {
   const messages = useMessages();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // 還原連結只在老師端（sidebar）出現，helper 端沒有 teacherId 也不該有此入口。
+  const teacherId = useSyncExternalStore(emptySubscribe, getStoredTeacherId, getServerTeacherId);
+  const [showRestoreWarn, setShowRestoreWarn] = useState(false);
+
+  const copyRestoreLink = async () => {
+    setShowRestoreWarn(false);
+    if (!teacherId) return;
+    const url = `${window.location.origin}/teacher?tid=${encodeURIComponent(teacherId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(messages.teacher.restore.linkCopied);
+    } catch {
+      toast.error(messages.teacher.restore.copyFailed);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +79,36 @@ export function SettingsMenu({ variant = 'floating' }: SettingsMenuProps) {
         {messages.nav.language}
       </p>
       <LanguageSwitcher />
+
+      {variant === 'sidebar' && teacherId && (
+        <div className="mt-3 border-t border-slate-200 pt-3">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              setShowRestoreWarn(true);
+            }}
+            className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+          >
+            <Icon name="lucide:link" size={14} className="shrink-0 text-slate-400" />
+            {messages.teacher.restore.copyLink}
+          </button>
+        </div>
+      )}
     </div>
+  );
+
+  // 複製前的警告彈窗（沿用專案的 ConfirmDialog；用 modal 不用 toast，確保老師「讀完」才複製）。
+  const restoreDialog = (
+    <ConfirmDialog
+      open={showRestoreWarn}
+      title={messages.teacher.restore.warnTitle}
+      message={messages.teacher.restore.warnBody}
+      confirmLabel={messages.teacher.restore.warnConfirm}
+      onConfirm={copyRestoreLink}
+      onCancel={() => setShowRestoreWarn(false)}
+    />
   );
 
   if (variant === 'sidebar') {
@@ -76,6 +129,7 @@ export function SettingsMenu({ variant = 'floating' }: SettingsMenuProps) {
           {messages.nav.settings}
         </button>
         {panel}
+        {restoreDialog}
       </div>
     );
   }

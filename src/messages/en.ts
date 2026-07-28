@@ -469,6 +469,30 @@ export const messages = {
       copyFailed: 'Copy failed. Please select manually.',
     },
 
+    // Restore on a new device/browser: teacherId is the account key; a link avoids typing the UUID.
+    // Deliberately distinct from the student class QR (different copy, color, and a warning dialog),
+    // so a teacher does not hand their account link to students.
+    restore: {
+      copyLink: 'Copy My Restore Link',
+      warnTitle: 'This is your personal restore link',
+      warnBody:
+        'This link is the key to your account — paste it in another browser or device to recover all your class data. Keep it like a password and never give it to students (for students to join a class, use the class code from "Show QR Code" instead).',
+      warnConfirm: 'Got it, copy the link',
+      linkCopied: 'Restore link copied. Keep it safe.',
+      copyFailed: 'Copy failed. Please copy manually.',
+      linkInvalid: 'This restore link is invalid or expired — check that you copied the full link, or just create an account below.',
+      // Invalid link but a session already exists on this device: blocking notice (original data neither shown nor cleared).
+      invalidTitle: 'Restore link invalid',
+      invalidKeepBody: 'This restore link is invalid or expired. Your data is still safely stored. Go back to the dashboard to keep using this device’s existing data.',
+      invalidContinue: 'Back to my dashboard',
+      // Confirmation before overwriting when the restore link points to a different teacher.
+      switchTitle: 'Switch to a different teacher?',
+      switchBody: (from: string, to: string) =>
+        `This browser is currently "${from}". This restore link belongs to "${to}", and continuing will switch to "${to}"'s data. "${from}"'s data is not lost — you can switch back anytime with "${from}"'s restore link.`,
+      switchConfirm: (to: string) => `Switch to "${to}"`,
+      switchCancel: (from: string) => `Stay as "${from}"`,
+    },
+
     // ─── 002 new: dashboard dual-view ──────────────────────────
     dashboard: {
       byClass: 'By Class',

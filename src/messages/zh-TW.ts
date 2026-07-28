@@ -443,6 +443,29 @@ export const messages = {
       copyFailed: '複製失敗，請手動選取',
     },
 
+    // 換裝置 / 換瀏覽器還原：teacherId 是帳號鑰匙，用連結傳遞省去手打 UUID。
+    // 與學生的「班級 QRCode」刻意區隔（不同文案、不同顏色、附警告彈窗），避免老師誤把帳號連結給學生。
+    restore: {
+      copyLink: '複製我的還原連結',
+      warnTitle: '這是你的專屬還原連結',
+      warnBody:
+        '這條連結等於你帳號的鑰匙——在別的瀏覽器或裝置貼上，就能取回你所有班級的資料。請像密碼一樣保管，千萬不要傳給學生（學生要加入班級，請改用「顯示 QRCode」的班級代碼）。',
+      warnConfirm: '我知道了，複製連結',
+      linkCopied: '還原連結已複製，請妥善保管',
+      copyFailed: '複製失敗，請手動複製',
+      linkInvalid: '這條還原連結無效或已失效——請確認你複製了完整的連結，或直接在下方建立帳號。',
+      // 連結無效、但本機已有老師 session：阻斷式提示（不顯示也不清除原資料）。
+      invalidTitle: '還原連結無效',
+      invalidKeepBody: '這條還原連結無效或已失效，資料仍安全保存。回到儀表板續用本裝置既有資料。',
+      invalidContinue: '回到我的儀表板',
+      // 還原連結指向另一位老師時，覆蓋前的確認。
+      switchTitle: '要換成另一位老師嗎？',
+      switchBody: (from: string, to: string) =>
+        `這個瀏覽器目前是「${from}」。這條還原連結屬於「${to}」，繼續就會改用「${to}」的資料。「${from}」的資料不會消失，之後用「${from}」的還原連結就能切回來。`,
+      switchConfirm: (to: string) => `改用「${to}」`,
+      switchCancel: (from: string) => `維持「${from}」`,
+    },
+
     // ─── 002 新增：Dashboard 雙視角 ───────────────────────────
     dashboard: {
       byClass: '按班級檢視',
