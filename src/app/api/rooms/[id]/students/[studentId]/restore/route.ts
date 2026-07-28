@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { and, eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { student } from '@/db/schema';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // POST /restore：還原已移除學生（isRemoved=false）。002 US2 / FR-026。
@@ -10,19 +11,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string; studentId: string }> }
 ) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { id: roomId, studentId } = await params;
 
-    const student = await prisma.student.update({
-      where: { id: studentId, roomId },
-      data: { isRemoved: false },
-    });
+    const updated = await db
+      .update(student)
+      .set({ isRemoved: false })
+      .where(and(eq(student.id, studentId), eq(student.roomId, roomId)))
+      .returning();
 
-    return NextResponse.json(student);
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    if (updated.length === 0) {
       return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 404 });
     }
+
+    return NextResponse.json(updated[0]);
+  } catch (error) {
     console.error('Failed to restore student:', error);
     return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
   }

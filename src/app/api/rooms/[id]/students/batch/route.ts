@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { getDb } from '@/lib/db';
+import { getDb, isUniqueConstraintError } from '@/lib/db';
+import { student } from '@/db/schema';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 interface StudentInput {
@@ -10,7 +10,7 @@ interface StudentInput {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const { students } = body as { students: StudentInput[] };
@@ -49,18 +49,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    // Create all students
-    const createdStudents = await prisma.$transaction(
-      students.map((student) =>
-        prisma.student.create({
-          data: {
-            name: student.name.trim(),
-            seatNumber: student.seatNumber,
-            roomId,
-          },
-        })
-      )
-    );
+    // 單一多列 INSERT ＝ 全或無（任一座號與現有衝突則整批失敗，不會部分寫入）
+    const createdStudents = await db
+      .insert(student)
+      .values(students.map((s) => ({ name: s.name.trim(), seatNumber: s.seatNumber, roomId })))
+      .returning();
 
     return NextResponse.json(
       {
@@ -70,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (isUniqueConstraintError(error)) {
       return NextResponse.json(
         { error: ERROR_CODES.STUDENT_SEAT_DUPLICATE_EXISTING },
         { status: 409 }

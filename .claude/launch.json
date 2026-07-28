@@ -9,10 +9,10 @@
       "autoPort": true
     },
     {
-      "name": "prisma-studio",
+      "name": "drizzle-studio",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["db:studio"],
-      "port": 5555
+      "port": 4983
     }
   ]
 }

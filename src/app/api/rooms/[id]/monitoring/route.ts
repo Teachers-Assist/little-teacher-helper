@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { and, count, desc, eq, inArray, max } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { record, student, task } from '@/db/schema';
 import { TaskStatus } from '@/types';
 import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
@@ -8,31 +10,36 @@ import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { id: roomId } = await params;
 
-    const tasks = await prisma.task.findMany({
-      where: { roomId },
-      // 分子排除已移除學生的紀錄（FR-104）
-      include: { _count: { select: { records: { where: { student: { isRemoved: false } } } } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const tasks = await db
+      .select()
+      .from(task)
+      .where(eq(task.roomId, roomId))
+      .orderBy(desc(task.createdAt));
 
     // 分母：班級在籍學生數（只計 isRemoved=false，FR-104）
-    const classStudentCount = await prisma.student.count({
-      where: { roomId, isRemoved: false },
-    });
+    const [{ c: classStudentCount }] = await db
+      .select({ c: count() })
+      .from(student)
+      .where(and(eq(student.roomId, roomId), eq(student.isRemoved, false)));
 
-    // 每個任務的最後一次登記活動時間（滑動視窗起算點，US6 規則一）
-    const lastByTask = new Map<string, Date>();
     const taskIds = tasks.map((t) => t.id);
+    // 每個任務的登記筆數（分子，排除已移除學生，FR-104）與最後一次登記活動時間（滑動視窗起算點）
+    const recMap = new Map<string, number>();
+    const lastByTask = new Map<string, Date>();
     if (taskIds.length > 0) {
-      const grouped = await prisma.record.groupBy({
-        by: ['taskId'],
-        where: { taskId: { in: taskIds }, student: { isRemoved: false } },
-        _max: { updatedAt: true },
-      });
-      for (const g of grouped) if (g._max.updatedAt) lastByTask.set(g.taskId, g._max.updatedAt);
+      const grouped = await db
+        .select({ taskId: record.taskId, c: count(), m: max(record.updatedAt) })
+        .from(record)
+        .innerJoin(student, eq(record.studentId, student.id))
+        .where(and(inArray(record.taskId, taskIds), eq(student.isRemoved, false)))
+        .groupBy(record.taskId);
+      for (const g of grouped) {
+        recMap.set(g.taskId, g.c);
+        if (g.m != null) lastByTask.set(g.taskId, new Date(Number(g.m)));
+      }
     }
 
     const now = Date.now();
@@ -61,7 +68,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           isArchived: task.isArchived,
           dueDate: task.dueDate,
           createdAt: task.createdAt,
-          recordedCount: task._count.records,
+          recordedCount: recMap.get(task.id) ?? 0,
           classStudentCount,
           lastRecordActivityAt: lastByTask.get(task.id) ?? null,
         },

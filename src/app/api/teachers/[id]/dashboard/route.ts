@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { and, count, desc, eq, inArray, max } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { record, room, student, task } from '@/db/schema';
 import { TaskStatus } from '@/types';
 import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
@@ -9,34 +11,62 @@ import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { id: teacherId } = await params;
 
-    const rooms = await prisma.room.findMany({
-      where: { teacherId },
-      include: {
-        // 分母只計在籍學生（FR-104）
-        _count: { select: { students: { where: { isRemoved: false } } } },
-        tasks: {
-          where: { isArchived: false },
-          // 分子排除已移除學生的紀錄（FR-104）
-          include: { _count: { select: { records: { where: { student: { isRemoved: false } } } } } },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rooms = await db
+      .select()
+      .from(room)
+      .where(eq(room.teacherId, teacherId))
+      .orderBy(desc(room.createdAt));
 
-    const taskIds = rooms.flatMap((r) => r.tasks.map((t) => t.id));
+    const roomIds = rooms.map((r) => r.id);
 
-    // 每個任務的最後一次登記活動時間（滑動視窗起算點，US6 規則一）
+    // 每班在籍學生數（分母只計 isRemoved=false，FR-104）
+    const studentCountMap = new Map<string, number>();
+    // 各班進行中/封存無關的任務（isArchived=false）
+    let tasks: (typeof task.$inferSelect)[] = [];
+    if (roomIds.length > 0) {
+      const [studentCounts, taskRows] = await Promise.all([
+        db
+          .select({ roomId: student.roomId, c: count() })
+          .from(student)
+          .where(and(inArray(student.roomId, roomIds), eq(student.isRemoved, false)))
+          .groupBy(student.roomId),
+        db
+          .select()
+          .from(task)
+          .where(and(inArray(task.roomId, roomIds), eq(task.isArchived, false)))
+          .orderBy(desc(task.createdAt)),
+      ]);
+      for (const s of studentCounts) studentCountMap.set(s.roomId, s.c);
+      tasks = taskRows;
+    }
+
+    const taskIds = tasks.map((t) => t.id);
+
+    // 每個任務的登記筆數（分子排除已移除學生，FR-104）與最後一次登記活動時間（US6 規則一）
+    const recordedCountMap = new Map<string, number>();
     const lastByTask = new Map<string, Date>();
     if (taskIds.length > 0) {
-      const grouped = await prisma.record.groupBy({
-        by: ['taskId'],
-        where: { taskId: { in: taskIds }, student: { isRemoved: false } },
-        _max: { updatedAt: true },
-      });
-      for (const g of grouped) if (g._max.updatedAt) lastByTask.set(g.taskId, g._max.updatedAt);
+      const grouped = await db
+        .select({ taskId: record.taskId, c: count(), m: max(record.updatedAt) })
+        .from(record)
+        .innerJoin(student, eq(record.studentId, student.id))
+        .where(and(inArray(record.taskId, taskIds), eq(student.isRemoved, false)))
+        .groupBy(record.taskId);
+      for (const g of grouped) {
+        recordedCountMap.set(g.taskId, g.c);
+        if (g.m != null) lastByTask.set(g.taskId, new Date(Number(g.m)));
+      }
+    }
+
+    // 任務依班級分組（取代 Prisma 的 room.tasks include）
+    const tasksByRoom = new Map<string, (typeof task.$inferSelect)[]>();
+    for (const t of tasks) {
+      const list = tasksByRoom.get(t.roomId);
+      if (list) list.push(t);
+      else tasksByRoom.set(t.roomId, [t]);
     }
 
     const now = Date.now();
@@ -71,8 +101,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       let roomInProgress = 0;
       let roomAnomalies = 0;
       let roomLastActivity = room.createdAt.getTime();
+      const roomStudentCount = studentCountMap.get(room.id) ?? 0;
 
-      for (const task of room.tasks) {
+      for (const task of tasksByRoom.get(room.id) ?? []) {
+        const recordedCount = recordedCountMap.get(task.id) ?? 0;
         const lastAt = lastByTask.get(task.id) ?? task.createdAt;
         roomLastActivity = Math.max(roomLastActivity, new Date(lastAt).getTime());
 
@@ -84,8 +116,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             isArchived: task.isArchived,
             dueDate: task.dueDate,
             createdAt: task.createdAt,
-            recordedCount: task._count.records,
-            classStudentCount: room._count.students,
+            recordedCount,
+            classStudentCount: roomStudentCount,
             lastRecordActivityAt: lastByTask.get(task.id) ?? null,
           },
           now
@@ -103,8 +135,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           type: task.type,
           status: task.status,
           dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-          recordedCount: task._count.records,
-          studentCount: room._count.students,
+          recordedCount,
+          studentCount: roomStudentCount,
           isAnomaly: anomalies.length > 0,
           anomalies,
           lastActivityAt: new Date(lastAt).toISOString(),

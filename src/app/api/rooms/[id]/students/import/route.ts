@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { student } from '@/db/schema';
 
 // 學生 Excel 批次匯入的「後端」endpoint（002 US1）。
 // 前端已完成格式驗證與檔案內衝突偵測，此處只收乾淨 JSON，負責：
@@ -29,7 +31,7 @@ interface Conflict {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { id: roomId } = await params;
     const body = await request.json();
     const incoming = (body?.students ?? []) as ImportRow[];
@@ -80,10 +82,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // 3. 與既有資料衝突。座號 unique 約束涵蓋已移除學生，故座號比對全體；
     //    姓名僅與「現有（未移除）」學生比對。
-    const existing = await prisma.student.findMany({
-      where: { roomId },
-      select: { seatNumber: true, name: true, isRemoved: true },
-    });
+    const existing = await db
+      .select({ seatNumber: student.seatNumber, name: student.name, isRemoved: student.isRemoved })
+      .from(student)
+      .where(eq(student.roomId, roomId));
     const existingSeats = new Set(existing.map((s) => s.seatNumber));
     const existingActiveNames = new Set(
       existing.filter((s) => !s.isRemoved).map((s) => s.name)
@@ -104,14 +106,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ conflicts }, { status: 409 });
     }
 
-    // 4. 全或無原子寫入
-    const created = await prisma.$transaction(
-      incoming.map((row) =>
-        prisma.student.create({
-          data: { name: row.name.trim(), seatNumber: row.seatNumber, roomId },
-        })
-      )
-    );
+    // 4. 全或無原子寫入（單一多列 INSERT）
+    const created = await db
+      .insert(student)
+      .values(incoming.map((row) => ({ name: row.name.trim(), seatNumber: row.seatNumber, roomId })))
+      .returning();
 
     return NextResponse.json({ created: created.length, students: created }, { status: 201 });
   } catch (error) {

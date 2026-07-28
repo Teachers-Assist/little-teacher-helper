@@ -27,8 +27,11 @@ export async function GET() {
   // 3) 實際跑一個查詢，抓真正的錯誤與 stack
   try {
     const { getDb } = await import('@/lib/db');
-    const prisma = await getDb();
-    info.teacherCount = await prisma.teacher.count();
+    const { teacher } = await import('@/db/schema');
+    const { count } = await import('drizzle-orm');
+    const db = await getDb();
+    const [{ c }] = await db.select({ c: count() }).from(teacher);
+    info.teacherCount = c;
     info.dbQueryOk = true;
   } catch (e) {
     info.dbQueryErr = e instanceof Error ? e.message : String(e);

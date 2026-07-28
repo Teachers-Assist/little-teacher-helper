@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
+import { record, recordHandler, student, task } from '@/db/schema';
 import { TaskStatus, SubmissionStatus } from '@/types';
 
 export async function GET(
@@ -7,32 +9,36 @@ export async function GET(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { taskId } = await params;
 
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: { _count: { select: { records: true } } },
-    });
+    const [found] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
 
-    if (!task) {
+    if (!found) {
       return NextResponse.json({ error: '找不到該任務' }, { status: 404 });
     }
 
+    const [{ c: recordedCount }] = await db
+      .select({ c: count() })
+      .from(record)
+      .where(eq(record.taskId, taskId));
+
     // 班級在籍學生總數（未登記者 = 查無 Record）
-    const totalCount = await prisma.student.count({
-      where: { roomId: task.roomId, isRemoved: false },
-    });
+    const [{ c: totalCount }] = await db
+      .select({ c: count() })
+      .from(student)
+      .where(and(eq(student.roomId, found.roomId), eq(student.isRemoved, false)));
 
     // 繳交類型統計：已繳 = 已登記的記錄數；未繳 = 總人數 − 已繳（未繳不存記錄）
-    const submittedCount = await prisma.record.count({
-      where: { taskId, submissionStatus: SubmissionStatus.SUBMITTED },
-    });
+    const [{ c: submittedCount }] = await db
+      .select({ c: count() })
+      .from(record)
+      .where(and(eq(record.taskId, taskId), eq(record.submissionStatus, SubmissionStatus.SUBMITTED)));
     const notSubmittedCount = Math.max(totalCount - submittedCount, 0);
 
     return NextResponse.json({
-      ...task,
-      recordedCount: task._count.records,
+      ...found,
+      recordedCount,
       totalCount,
       submittedCount,
       notSubmittedCount,
@@ -48,7 +54,7 @@ export async function PATCH(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { taskId } = await params;
     const body = await request.json();
     const { name, assignedSeatNumber, dueDate, status, isArchived } = body;
@@ -107,12 +113,9 @@ export async function PATCH(
       updateData.archivedAt = isArchived ? new Date() : null;
     }
 
-    const task = await prisma.task.update({
-      where: { id: taskId },
-      data: updateData,
-    });
+    const [updated] = await db.update(task).set(updateData).where(eq(task.id, taskId)).returning();
 
-    return NextResponse.json(task);
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('Failed to update task:', error);
     return NextResponse.json({ error: '更新任務失敗' }, { status: 500 });
@@ -124,14 +127,19 @@ export async function DELETE(
   { params }: { params: Promise<{ roomId: string; taskId: string }> }
 ) {
   try {
-    const prisma = await getDb();
+    const db = await getDb();
     const { taskId } = await params;
 
-    // 刪除任務前先清掉其登記記錄（無 soft delete，直接移除）
-    await prisma.$transaction([
-      prisma.record.deleteMany({ where: { taskId } }),
-      prisma.task.delete({ where: { id: taskId } }),
-    ]);
+    // 刪除任務前先清掉其登記記錄與名單（無 soft delete，直接移除）。
+    // D1 無互動式 transaction，循序刪除：handlers → records → task。
+    const recIds = (
+      await db.select({ id: record.id }).from(record).where(eq(record.taskId, taskId))
+    ).map((r) => r.id);
+    if (recIds.length > 0) {
+      await db.delete(recordHandler).where(inArray(recordHandler.recordId, recIds));
+    }
+    await db.delete(record).where(eq(record.taskId, taskId));
+    await db.delete(task).where(eq(task.id, taskId));
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
