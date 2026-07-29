@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui';
 import { getLocale } from '@/i18n/locale';
 import { getMessages } from '@/messages';
 import { MessagesProvider } from '@/i18n/MessagesProvider';
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 
 // Self-hosted via next/font (no runtime Google Fonts request). Exposes the
 // `--font-noto-sans` CSS variable consumed by the Tailwind `--font-sans` token.
@@ -54,6 +55,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} className={notoSansTC.variable}>
       <body className="min-h-screen bg-amber-50 text-slate-900">
+        <ServiceWorkerRegistration />
         <MessagesProvider locale={locale}>
           <ToastProvider>
             <main className="flex min-h-screen flex-col">{children}</main>
