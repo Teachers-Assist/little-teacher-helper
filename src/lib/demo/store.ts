@@ -11,7 +11,8 @@
 //   - 「同步」只走注入的 broadcaster（頁面接 channel.ts），MUST NOT 呼叫任何 /api/*
 
 import { useMemo, useSyncExternalStore } from 'react';
-import type { OfflineRecordEntry } from '@/types';
+import type { OfflineRecordEntry, Task } from '@/types';
+import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { createDemoSeed, DEMO_ROOM, type DemoSeed } from './seed';
 
@@ -29,8 +30,13 @@ interface DemoData {
   pending: DemoPendingOp[]; // 待同步（離線登記累積；線上時為空）
 }
 
+// 本 session 固定基準時間（模組載入時算一次，非 render 期間）——種子時間戳與異常判定共用同一
+// 基準，確保任務 C 的「idle ≈ 25h」穩定觸發規則一，且不在 render 內呼叫 Date.now()
+// （react-hooks/purity）。
+const SEED_NOW = Date.now();
+
 // 本 session 固定種子：提供 students / tasks（不變）與初始 records。
-const seed: DemoSeed = createDemoSeed();
+const seed: DemoSeed = createDemoSeed(SEED_NOW);
 
 function clone<T>(d: T): T {
   return JSON.parse(JSON.stringify(d)) as T;
@@ -218,18 +224,77 @@ export function useDemoSeat(): number {
   return useDemoData().seatNumber;
 }
 
-/** 某任務的登記記錄：records（base）⊕ pending（overlay，未同步變更蓋過 base）。 */
+/** records（base）⊕ pending（overlay，未同步變更蓋過 base）——純函式，供 hooks 共用。 */
+function mergeTaskRecords(
+  data: DemoData,
+  taskId: string
+): { [studentId: string]: OfflineRecordEntry } {
+  const result: { [studentId: string]: OfflineRecordEntry } = { ...(data.records[taskId] ?? {}) };
+  for (const op of data.pending) {
+    if (op.taskId !== taskId) continue;
+    if (op.entry === null) delete result[op.studentId];
+    else result[op.studentId] = op.entry;
+  }
+  return result;
+}
+
+/** 某任務的登記記錄（overlay 派生）。 */
 export function useDemoRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
   const data = useDemoData();
+  return useMemo(() => mergeTaskRecords(data, taskId), [data, taskId]);
+}
+
+export interface DemoTaskStat {
+  task: Task;
+  recordedCount: number;
+  studentCount: number;
+  anomalies: Anomaly[];
+}
+
+export interface DemoTeacherView {
+  stats: { total: number; inProgress: number; anomalies: number; archived: number };
+  taskStats: DemoTaskStat[];
+}
+
+/**
+ * 老師端彙整：各任務登記進度 + 由**真實 `detectAnomalies`** 算出的異常（FR-145）。
+ * 任務 C 零登記且 createdAt 逾 24h → 觸發規則一 TASK_STALLED。
+ */
+export function useDemoTeacherView(): DemoTeacherView {
+  const data = useDemoData();
   return useMemo(() => {
-    const result: { [studentId: string]: OfflineRecordEntry } = { ...(data.records[taskId] ?? {}) };
-    for (const op of data.pending) {
-      if (op.taskId !== taskId) continue;
-      if (op.entry === null) delete result[op.studentId];
-      else result[op.studentId] = op.entry;
-    }
-    return result;
-  }, [data, taskId]);
+    const studentCount = seed.students.filter((s) => !s.isRemoved).length;
+    const taskStats: DemoTaskStat[] = seed.tasks.map((task) => {
+      const merged = mergeTaskRecords(data, task.id);
+      const entries = Object.values(merged);
+      const lastRecordActivityAt = entries.reduce<string | null>(
+        (max, e) => (!max || e.updatedAt > max ? e.updatedAt : max),
+        null
+      );
+      const anomalies = detectAnomalies(
+        {
+          status: task.status,
+          isArchived: task.isArchived,
+          dueDate: task.dueDate ?? null,
+          createdAt: task.createdAt,
+          recordedCount: entries.length,
+          classStudentCount: studentCount,
+          lastRecordActivityAt,
+        },
+        SEED_NOW
+      );
+      return { task, recordedCount: entries.length, studentCount, anomalies };
+    });
+    return {
+      stats: {
+        total: taskStats.length,
+        inProgress: taskStats.filter((t) => t.task.status === 'ACTIVE').length,
+        anomalies: taskStats.filter((t) => t.anomalies.length > 0).length,
+        archived: 0,
+      },
+      taskStats,
+    };
+  }, [data]);
 }
 
 /** 同步狀態：待同步筆數 + 連線狀態（供 SyncIndicator 呈現）。 */

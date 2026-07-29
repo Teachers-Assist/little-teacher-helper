@@ -51,9 +51,10 @@
 
 **Goal**: 老師端呈現種子班級狀況與三任務，異常由真函式算出。
 
-- [ ] T609 [US2] `/demo` 老師端呈現種子班級狀況 + 三任務清單（重用 `DashboardStats` / `MonitoringStats` 或精簡版；資料源 = demo store）
-- [ ] T610 [US2] 異常：對種子跑真實 `src/lib/anomalyDetection.ts` 的 `detectAnomalies`，任務 C 產生 `TASK_STALLED`，以 `MonitoringAlerts` 呈現（FR-145 / SC-042）
-- [ ] T611 [US2] [P] 任務 A 呈現全班繳交狀況（已交 N / 未交 M＝社會壓力數字）、任務 B 呈現成績概況（數字型別特色）
+- [x] T609 [US2] `/demo` 老師端呈現種子班級狀況（**重用 `MonitoringStats`**）+ 三任務清單（各任務進度 N/6，badge 區分繳交/成績型）；資料源 = demo store `useDemoTeacherView` <!-- 2026-07-29 完成，dev 實測 -->
+
+- [x] T610 [US2] 異常：`useDemoTeacherView` 對種子跑真實 `detectAnomalies`（基準 `SEED_NOW`），任務 C 產生 `TASK_STALLED`；以**自寫紅色異常卡片**呈現（不重用 `MonitoringAlerts`——它有 `router.push('/teacher/...')` 副作用不適用 demo），文案沿用 `classStatus.anomalyIdle`（FR-145 / SC-042）。dev 實測顯示「已經 25 小時沒有新的登記了」 <!-- 2026-07-29 完成 -->
+- [x] T611 [US2] [P] 任務 A 全班繳交狀況 4/6（社會壓力數字）✓、任務 B 以「成績」badge + 登記進度區分型別 ✓。**成績「只能填數字」的資料型別特色，改於小老師端登記畫面（`RecordForm`，US3/US4）體現**——老師端舞台維持精簡進度呈現 <!-- 2026-07-29 完成（範圍：老師端進度+型別區分；成績數值輸入體驗留小老師端） -->
 
 **Checkpoint**: 三任務各體現一特色，停擺警示由 `detectAnomalies` 真算
 
