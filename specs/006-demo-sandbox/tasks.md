@@ -25,9 +25,9 @@
 **Goal**: 定案資料層抽換方案，備好種子、demo store、跨視窗頻道、i18n。
 
 - [x] T601 [FND] **前置盤點（plan §1.2 的 T0）**：讀 `src/lib/offline/storage.ts`、`syncController.ts`，判斷能否乾淨參數化「storage 載體」與「上傳目標」→ 定案方案。**結論：定案方案 B（B2 平行 demo store）**；否決 A（storage.ts 模組單例 + key 寫死 + 正式路徑重度依賴，參數化回歸風險高）。佐證：`RecordForm` 等子元件 props-driven、資料 hooks 集中 page 層，重用度高。詳見 `plan.md` §1.2 <!-- 2026-07-29 盤點完成 -->
-- [ ] T602 [FND] [P] 新增 `src/lib/demo/seed.ts`：五年二班 6 位學生（座號 1–6，化名）+ 三任務——A 校外教學同意書（SUBMISSION，4/6 已交）、B 數學小考（GRADE，數位有成績）、C 午餐費（SUBMISSION，零登記，`createdAt = now − 25h` 觸發停擺）；時間戳一律相對 `now` 計算
-- [ ] T603 [FND] demo store（依 T601 定案）：以 sessionStorage `little-helper-demo` 為載體，提供與 `useOffline*` 同介面的資料存取（方案 A＝參數化既有 `storage.ts`；方案 B＝新 `src/lib/demo/store.ts`）。**ISO-1/ISO-3**
-- [ ] T604 [FND] [P] 新增 `src/lib/demo/channel.ts`：`BroadcastChannel` 封裝——頻道名帶 demo session id（隔離多分頁）、feature-detect、卸載時 `close()`。**ISO-4**
+- [x] T602 [FND] [P] 新增 `src/lib/demo/seed.ts`：五年二班 6 位學生（座號 1–6，化名）+ 三任務——A 校外教學同意書（SUBMISSION，4/6 已交）、B 數學小考（GRADE，數位有成績）、C 午餐費（SUBMISSION，零登記，`createdAt = now − 25h` 觸發停擺）；時間戳一律相對 `now` 計算。**固定字串 id 供跨視窗對齊** <!-- 2026-07-29 完成，tsc/eslint 通過 -->
+- [x] T603 [FND] demo store（方案 B2）：新增 `src/lib/demo/store.ts`——sessionStorage `little-helper-demo` 反應式 store，hooks 鏡像 `useOffline*`（`useDemoRoom/Students/Tasks/Task/Records/Seat/SyncStatus`），overlay（records ⊕ pending）、online gate、broadcaster 注入、`resetDemo`。**ISO-1/ISO-3** <!-- 2026-07-29 完成，tsc/eslint 通過 -->
+- [x] T604 [FND] [P] 新增 `src/lib/demo/channel.ts`：`BroadcastChannel` 封裝——頻道名帶 demo session id（隔離多分頁）、feature-detect（不支援回無操作殼）、`close()`。**ISO-4** <!-- 2026-07-29 完成，tsc/eslint 通過 -->
 - [x] T605 [FND] [P] i18n：`demo.*` + `landing.tryDemo*` 於 `src/messages/zh-TW.ts` / `en.ts`（已落地、tsc 通過）
 
 **Checkpoint**: 方案定案、種子可載、demo store 讀寫走 sessionStorage、頻道可收發 → 可進 User Story
@@ -38,8 +38,9 @@
 
 **Goal**: `/demo` 骨架 + 常駐標示帶 + 首頁次要入口，且全程不碰正式身份。
 
-- [ ] T606 [US1] 新增 `src/app/demo/page.tsx` 骨架 + 常駐**示範模式標示帶**（`demo.banner.title/desc`）+「建立我自己的班級」（`teacher.createRoom`→`/teacher`）+「還原狀態」（`demo.banner.restart`，清回種子＝FR-151）。版面用 `.lp-*`（非 `.page-*`）
-- [ ] T607 [US1] [P] 修改 `src/app/page.tsx`：新增「試用看看」**次要**入口（`landing.tryDemoTitle/Desc`→`/demo`），視覺層級低於「我是老師 / 我是小老師」（FR-141）
+- [x] T606 [US1] 新增 `src/app/demo/page.tsx` 骨架 + 常駐**示範模式標示帶**（`demo.banner.title/desc`）+「建立我自己的班級」（`teacher.createRoom`→`/teacher`）+「還原狀態」（`demo.banner.restart`，`resetDemo` 清回種子＝FR-151）。版面用**首頁式自訂容器**（全寬老師端舞台，非窄版 `.lp-body-narrow`；未用 `.page-*`，不違反 ui-spec） <!-- 2026-07-29 完成，dev 實測：標示帶渲染、還原狀態寫 sessionStorage 種子、不碰正式 key -->
+  - 內容區（班級狀況/三任務/顯示 QRCode）為佔位 `.empty-state`，待 US2/US3 接入
+- [x] T607 [US1] [P] 修改 `src/app/HomePage.tsx`：新增「試用看看」**次要**入口（`landing.tryDemoTitle/Desc`→`/demo`，`play-circle` 圖示），弱連結層級低於兩張角色卡按鈕（FR-141） <!-- 2026-07-29 完成，dev 實測入口出現於角色卡下方 -->
 - [ ] T608 [US1] 全程隔離自檢（ISO-1）：`/demo` 任何操作不建立/變動 `teacherId`/`teacherName`/`little-helper-offline-data`（驗證掛 T621）
 
 **Checkpoint**: 首頁可進 `/demo`、標示帶常駐、localStorage 三 key 未動

@@ -59,6 +59,18 @@ export default function HomePage() {
               cta={landing.helperCta}
               variant="secondary"
             />
+
+            {/* 次要入口：試用示範沙盒（層級刻意低於兩張角色卡，FR-141） */}
+            <Link
+              href="/demo"
+              className="group flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-primary-600"
+            >
+              <Icon name="lucide:play-circle" size={15} />
+              <span>{landing.tryDemoTitle}</span>
+              <span className="font-normal text-slate-500 group-hover:text-primary-500">
+                · {landing.tryDemoDesc}
+              </span>
+            </Link>
           </div>
         </div>
       </section>

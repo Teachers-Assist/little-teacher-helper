@@ -56,6 +56,7 @@ const USED_ICONS = [
   'star',
   'copy',
   'table',
+  'play-circle',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;
