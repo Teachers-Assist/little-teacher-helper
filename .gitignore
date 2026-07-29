@@ -45,11 +45,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# PWA generated files
-public/sw.js
-public/sw.js.map
-public/workbox-*.js
-public/workbox-*.js.map
+# PWA
+# 註：public/sw.js 為手寫原始碼（非 next-pwa 產生），必須被追蹤，故不忽略。
 
 # TypeScript
 *.tsbuildinfo

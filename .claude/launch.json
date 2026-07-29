@@ -9,6 +9,12 @@
       "autoPort": true
     },
     {
+      "name": "next-start",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["start", "-p", "3100"],
+      "port": 3100
+    },
+    {
       "name": "drizzle-studio",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["db:studio"],
