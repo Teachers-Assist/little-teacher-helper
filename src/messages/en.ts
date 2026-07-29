@@ -82,6 +82,10 @@ export const messages = {
       "Scan your teacher's QR code to join your class and help record who's turned in their work",
     helperCta: 'Scan QR Code to Join',
 
+    // Homepage secondary "try the demo" entry (006 demo sandbox)
+    tryDemoTitle: 'Try the demo',
+    tryDemoDesc: 'Play with sample data — nothing is saved',
+
     // Feature row (2a: new copy / icons)
     featureFastTitle: 'No Account Needed',
     featureFastDesc: 'Scan to join a class — no sign-up or password',
@@ -106,6 +110,33 @@ export const messages = {
         rest: ' (it shows “Synced”) before handing it back.',
       },
     ],
+  },
+
+  // Promo demo sandbox (006): only demo-specific new copy; shared text reuses existing keys
+  // (Show QR code → teacher.showQrcode; create class → teacher.createRoom;
+  //  sync status → sync.*; helper UI → qr / join / helper.*).
+  demo: {
+    banner: {
+      title: 'Demo mode',
+      desc: 'This is a sample class — nothing you do is saved or affects real classes',
+      restart: 'Restart demo',
+    },
+    qr: {
+      fakeHint: 'Normally helpers scan this QR code to join; in the demo, use the button below instead',
+      openHelperBtn: 'Open helper view in a new window',
+      popupBlocked: 'Your browser blocked the new window. Please allow pop-ups and try again.',
+    },
+    helper: {
+      simNotice: "Simulation: helpers normally scan the teacher's QR code; this window stands for one student tablet",
+    },
+    hint: {
+      anomaly: 'Shows when a task looks off (stalled or low completion) — no need to keep watching your helpers',
+      offline: 'Try going offline, register, then refresh — your data stays',
+      reconnect: 'Reconnect and watch it sync to the teacher view',
+    },
+    invite: {
+      text: 'Like it? Creating your own class just takes a name',
+    },
   },
 
   // QR code scanning and display

@@ -77,6 +77,10 @@ export const messages = {
     helperDesc: '用相機掃描 QRCode，進入班級幫忙記錄誰有繳交',
     helperCta: '掃描 QRCode 加入班級',
 
+    // 首頁「試用看看」次要入口（006 demo 沙盒）
+    tryDemoTitle: '試用看看',
+    tryDemoDesc: '用假資料先玩一遍，不會存檔',
+
     // 特色三欄（2a 換新文案／icon）
     featureFastTitle: '免帳號即用',
     featureFastDesc: '掃碼進入班級，無需註冊或密碼',
@@ -101,6 +105,33 @@ export const messages = {
         rest: '（顯示「已同步」）再交還。',
       },
     ],
+  },
+
+  // 推廣示範沙盒（006）：僅列 demo 專屬新文案；共用文字沿用既有 key
+  // （顯示 QRCode → teacher.showQrcode；建立班級 → teacher.createRoom；
+  //  同步狀態 → sync.*；小老師端 UI → qr / join / helper.*）。
+  demo: {
+    banner: {
+      title: '示範模式',
+      desc: '這是示範班級，你的操作不會被儲存，也不會影響真實班級',
+      restart: '還原狀態',
+    },
+    qr: {
+      fakeHint: '實際上小老師是掃這個 QRCode 進入，示範用下面的按鈕代替掃描',
+      openHelperBtn: '用新視窗模擬小老師端',
+      popupBlocked: '瀏覽器擋住了新視窗，請允許彈出視窗後再試一次',
+    },
+    helper: {
+      simNotice: '這是模擬：實際上小老師是掃老師的 QRCode 進入，此視窗代表一台學生的平板',
+    },
+    hint: {
+      anomaly: '當任務發生異常（停擺、登記率過低）會顯示，老師不用一直監督小老師',
+      offline: '試試關掉網路再登記，重整看看資料還在不在',
+      reconnect: '重新連上網路，看登記自動同步到老師端',
+    },
+    invite: {
+      text: '喜歡嗎？建立你自己的班級只要填個名字',
+    },
   },
 
   // QRCode 掃描與顯示
