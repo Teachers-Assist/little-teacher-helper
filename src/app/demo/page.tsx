@@ -4,17 +4,23 @@
 // 顯示 QRCode（US3）、特色 hint（US6）、建班邀請（US5）於後續 task 接入。
 // 獨立入口，MUST NOT 寫 teacherId（FR-142）；資料源為 demo store（sessionStorage）。
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { MonitoringStats } from '@/components/MonitoringStats';
 import { DemoQrModal } from '@/components/demo/DemoQrModal';
+import { createDemoChannel, type DemoChannel } from '@/lib/demo/channel';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { TaskType } from '@/types';
 import type { Anomaly } from '@/lib/anomalyDetection';
-import { resetDemo, useDemoRoom, useDemoTeacherView } from '@/lib/demo/store';
+import {
+  applyDemoIncoming,
+  resetDemo,
+  useDemoRoom,
+  useDemoTeacherView,
+} from '@/lib/demo/store';
 
 export default function DemoPage() {
   const { demo, teacher } = useMessages();
@@ -76,10 +82,20 @@ function DemoTeacherStage() {
   const warnings = taskStats.filter((t) => t.anomalies.length > 0);
   const [qrOpen, setQrOpen] = useState(false);
   const sidRef = useRef<string | null>(null);
+  const channelRef = useRef<DemoChannel | null>(null);
 
-  // 開新視窗模擬小老師端；sid 在事件內產生（非 render），並經 URL 傳給 helper 視窗以共用頻道。
+  // 老師端視窗關閉時關閉頻道。
+  useEffect(() => () => channelRef.current?.close(), []);
+
+  // 開新視窗模擬小老師端；sid 在事件內產生（非 render），經 URL 傳給 helper 視窗共用頻道。
+  // 同時建立老師端接收頻道：收到小老師端 broadcast 即套入本視窗 records（US4）。
   const handleOpenHelper = () => {
     if (!sidRef.current) sidRef.current = crypto.randomUUID();
+    if (!channelRef.current) {
+      channelRef.current = createDemoChannel(sidRef.current, (msg) => {
+        if (msg.type === 'RECORDS_SYNCED') applyDemoIncoming(msg.taskId, msg.records);
+      });
+    }
     const win = window.open(
       `/demo/helper?sid=${sidRef.current}`,
       'demo-helper',

@@ -76,9 +76,9 @@
 
 **Goal**: 真實網路狀態驅動同步時機；斷網重整靠現有 SW；跨視窗 broadcast。
 
-- [ ] T615 [US4] 跨視窗同步：小老師端登記 → 經 `channel.ts` broadcast → 老師端視窗更新對應任務班級狀況（FR-149）。**ISO-4**
-- [ ] T616 [US4] `navigator.onLine` gate（重用 `useNetworkStatus`）：離線登記標「待同步」（重用 `SyncIndicator` 三態）且 **hold 不 broadcast**；`online` 事件才依序 flush；在線登記近即時反映（FR-148）
-- [ ] T617 [US4] [P] 小老師端文字提示引導「關網→登記→重整看資料還在→重連看同步」（`demo.hint.offline` / `demo.hint.reconnect`）；MUST NOT 提供假斷線/重連按鈕
+- [x] T615 [US4] 跨視窗同步接線：helper `setDemoBroadcaster`→`channel.post`；老師端 `handleOpenHelper` 建 `createDemoChannel(sid, applyDemoIncoming)`（FR-149）。**ISO-4**。⚠️ 端到端跨視窗需**真機兩視窗**驗（自動化 `window.open` 同 tab、無法並存兩 context） <!-- 2026-07-29 接線完成、tsc/eslint 過 -->
+- [x] T616 [US4] `navigator.onLine` gate（`upsertDemoRecord` 內）：離線登記進 pending 標「待同步」（自寫 `DemoSyncIndicator`，`SyncIndicator` 綁正式 store 不可重用）且 **hold 不 broadcast**；`online` flush；在線直接進 records（FR-148） <!-- 2026-07-29 完成，dev 端到端實測：離線→pending、重連→flush 進 records、pending 清空 -->
+- [x] T617 [US4] [P] 小老師端文字提示「試試關掉網路再登記，重整看看資料還在不在」（`demo.hint.offline`，helper 頂部常駐 accent hint）；MUST NOT 提供假斷線/重連按鈕 <!-- 2026-07-29 完成，dev 實測 hint 顯示 -->
 - [ ] T618 [US4] **手動驗證（SC-041，MUST 於 production build + 先在線載過 `/demo/helper`）**：關網登記→老師端不更新→斷網重整頁面仍載回且登記仍在→重連數秒內顯示「已同步」。未過不得視為完成
 
 **Checkpoint**: 斷網重整不白頁、資料不消失、重連自動同步到老師端

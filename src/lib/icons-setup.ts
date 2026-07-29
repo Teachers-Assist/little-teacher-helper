@@ -61,6 +61,7 @@ const USED_ICONS = [
   'alert-triangle',
   'external-link',
   'chevron-right',
+  'lightbulb',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;
