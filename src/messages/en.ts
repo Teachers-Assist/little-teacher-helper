@@ -33,6 +33,19 @@ export const messages = {
       'A PWA app that lets student helpers collect forms and record assignment submissions',
   },
 
+  // SEO / social sharing (referenced by layout and home metadata; share image is public/icons/ig_1080.png)
+  seo: {
+    // Home <title> and og:title: brand + core value prop (keyword-rich)
+    title: 'Little Teacher Helper — Leave submission tracking to your helpers',
+    // meta description / og:description: value prop + how it works + differentiators
+    description:
+      'Leave submission tracking to your student helpers. No account, no install: show a QR code, helpers scan in and record who turned in homework or forms. Works offline and auto-syncs — you set the rules, helpers carry them out.',
+    keywords:
+      'student helper,submission tracking,classroom management,QR code check-in,offline attendance,no account,teacher tools,homework tracking,education app',
+    ogImageAlt:
+      'Little Teacher Helper: leave submission tracking to your student helpers — free, no account, works offline',
+  },
+
   // Sidebar navigation
   nav: {
     appName: 'Little Teacher Helper',
@@ -48,9 +61,19 @@ export const messages = {
     tasks: 'Tasks',
   },
 
-  // Home page
+  // Home page (landing 2a: headline split layout)
   landing: {
-    tagline: 'Making form collection and assignment tracking simple',
+    tagline: 'Making form collection and assignment tracking simple', // kept for PWA/meta; no longer shown in Hero
+
+    // Hero headline
+    heroBadge: 'No account · Works offline',
+    // Headline is split into 3 segments; a responsive <br> breaks after `lead` on
+    // desktop and after `mid` on mobile (see page.tsx).
+    heroTitle: { lead: 'Leave submission tracking', mid: ' to your', tail: ' student helpers.' },
+    heroSubtitle:
+      'You set the rules, your helpers carry them out. Do the teaching — manage less, stay in control.',
+
+    // Role cards (existing keys reused; layout only becomes horizontal)
     teacherTitle: "I'm a Teacher",
     teacherDesc: 'Create classes, manage student lists, and view submission reports',
     teacherCta: 'Go to Teacher Panel',
@@ -58,12 +81,31 @@ export const messages = {
     helperDesc:
       "Scan your teacher's QR code to join your class and help record who's turned in their work",
     helperCta: 'Scan QR Code to Join',
-    featureFastTitle: 'Fast Recording',
-    featureFastDesc: 'One tap updates instantly',
-    featureOfflineTitle: 'Works Offline',
-    featureOfflineDesc: 'Use it even without internet',
-    featureReportTitle: 'Clear Reports',
-    featureReportDesc: 'Easy-to-read stats at a glance',
+
+    // Feature row (2a: new copy / icons)
+    featureFastTitle: 'No Account Needed',
+    featureFastDesc: 'Scan to join a class — no sign-up or password',
+    featureOfflineTitle: 'Offline · Auto-sync',
+    featureOfflineDesc: 'Record even on shaky networks; syncs automatically once online',
+    featureReportTitle: 'Focused Alerts',
+    featureReportDesc: 'Notifies you only when a task stalls or looks off',
+
+    // Usage notes (dark band; strong = bold lead clause, rest = detail)
+    noticeTitle: 'Before you start, please know these',
+    notices: [
+      {
+        strong: 'Copy your “restore link” from Settings right after creating a class and keep it safe',
+        rest: ' — paste it on any device to get all your classes back.',
+      },
+      {
+        strong: 'The restore link is like a password — keep it to yourself',
+        rest: '; students join with the QR code, never the restore link.',
+      },
+      {
+        strong: 'When done, let the tablet finish syncing online',
+        rest: ' (it shows “Synced”) before handing it back.',
+      },
+    ],
   },
 
   // QR code scanning and display

@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui';
 import { getLocale } from '@/i18n/locale';
 import { getMessages } from '@/messages';
 import { MessagesProvider } from '@/i18n/MessagesProvider';
+import { getSiteUrl } from '@/lib/site';
 
 // Self-hosted via next/font (no runtime Google Fonts request). Exposes the
 // `--font-noto-sans` CSS variable consumed by the Tailwind `--font-sans` token.
@@ -17,15 +18,24 @@ const notoSansTC = Noto_Sans_TC({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const messages = getMessages(await getLocale());
+  const locale = await getLocale();
+  const messages = getMessages(locale);
+  const { app, seo } = messages;
+
+  // metadataBase 讓相對路徑（OG 圖、canonical）解析成絕對網址。
   return {
-    title: messages.app.name,
-    description: messages.app.description,
+    metadataBase: new URL(getSiteUrl()),
+    applicationName: app.name,
+    // default 是各頁的品牌分頁標題；template 讓有自訂標題的子頁自動補上品牌後綴。
+    // 首頁另在 app/page.tsx 以 absolute 覆寫為關鍵字化標題。
+    title: { default: app.name, template: `%s · ${app.name}` },
+    description: seo.description,
+    keywords: seo.keywords,
     manifest: '/manifest.json',
     appleWebApp: {
       capable: true,
       statusBarStyle: 'default',
-      title: messages.app.name,
+      title: app.name,
     },
     formatDetection: {
       telephone: false,
@@ -34,6 +44,37 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: '/icons/favicon.png',
       apple: '/icons/favicon.png',
     },
+    openGraph: {
+      type: 'website',
+      siteName: app.name,
+      title: seo.title,
+      description: seo.description,
+      locale: locale === 'zh-TW' ? 'zh_TW' : 'en_US',
+      images: [
+        {
+          url: '/icons/ig_1080.png',
+          width: 1080,
+          height: 1080,
+          alt: seo.ogImageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: seo.title,
+      description: seo.description,
+      images: ['/icons/ig_1080.png'],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+      },
+    },
+    category: 'education',
   };
 }
 

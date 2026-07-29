@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小老師助手 · 首頁 2a（RWD 參考實作）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+  :root{
+    --primary:#2563eb; --primary-btn:#3b82f6; --accent:#facc15;
+    --ink:#0f172a; --muted:#64748b; --amber-bg:#fffbeb; --ink-band:#0f172a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--amber-bg);font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+  .wrap{max-width:1120px;margin:0 auto;border-left:2px solid #000;border-right:2px solid #000;background:var(--amber-bg);min-height:100vh}
+  /* top bar */
+  .topbar{display:flex;align-items:center;gap:8px;padding:15px 40px;border-bottom:2px solid #000;background:#fff}
+  .logo{width:34px;height:34px;border-radius:9px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;border:2px solid #000}
+  .brand{font-size:16px;font-weight:900}
+  /* hero */
+  .hero{background:var(--accent);border-bottom:3px solid #000}
+  .hero-inner{display:grid;grid-template-columns:1.08fr .92fr;gap:36px;padding:40px 40px 38px;align-items:center}
+  .pill{display:inline-block;font-size:11px;font-weight:700;color:#3f3200;background:#fff;border:2px solid #000;border-radius:999px;padding:4px 12px;margin-bottom:18px}
+  h1{margin:0 0 16px;font-size:50px;font-weight:900;color:#000;line-height:1.08;letter-spacing:-.03em}
+  .sub{margin:0;font-size:16px;font-weight:500;color:#3f3200;line-height:1.55;max-width:380px}
+  /* role cards */
+  .roles{display:flex;flex-direction:column;gap:16px}
+  .role{background:#fff;border:2px solid #000;border-radius:14px;box-shadow:5px 5px 0 #000;padding:20px;display:flex;gap:16px;align-items:center}
+  .role .ic{width:54px;height:54px;flex:none;border-radius:12px;border:2px solid #000;display:inline-flex;align-items:center;justify-content:center}
+  .ic-teacher{background:#eff6ff}
+  .ic-helper{background:#ecfdf5}
+  .role h3{margin:0 0 3px;font-size:18px;font-weight:900}
+  .role p{margin:0 0 12px;font-size:12px;color:var(--muted);line-height:1.45}
+  .btn{display:block;border:2px solid #000;border-radius:8px;box-shadow:3px 3px 0 #000;font-weight:700;padding:10px;font-size:13px;text-align:center;text-decoration:none}
+  .btn-primary{background:var(--primary-btn);color:#fff}
+  .btn-secondary{background:var(--accent);color:#000}
+  /* features */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #000}
+  .feat{padding:20px 24px}
+  .feat:not(:last-child){border-right:2px solid #000}
+  .feat-h{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+  .feat-h span{font-size:14px;font-weight:900}
+  .feat p{margin:0;font-size:12px;color:var(--muted);line-height:1.5}
+  /* disclosures */
+  .notice{background:var(--ink-band);color:#fff;padding:26px 44px 30px}
+  .notice-h{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:15px;font-weight:900}
+  .notice ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+  .notice li{font-size:12.5px;line-height:1.6;color:#e2e8f0}
+  .notice li b{color:#fff}
+
+  /* ── RWD: 手機 ≤640px ── */
+  @media (max-width:640px){
+    .wrap{border-left:none;border-right:none}
+    .topbar{padding:13px 18px}
+    .hero-inner{grid-template-columns:1fr;gap:22px;padding:22px 18px 24px}
+    h1{font-size:34px;line-height:1.1;letter-spacing:-.02em;margin-bottom:12px}
+    .sub{font-size:13px;line-height:1.5;max-width:none}
+    .pill{margin-bottom:14px}
+    .role{border-radius:14px;box-shadow:4px 4px 0 #000;padding:16px;gap:13px}
+    .role .ic{width:46px;height:46px}
+    .features{grid-template-columns:1fr}
+    .feat{padding:13px 18px}
+    .feat:not(:last-child){border-right:none;border-bottom:2px solid #000}
+    .feat p{margin-left:25px}
+    .notice{padding:20px 18px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 頂欄 -->
+  <header class="topbar">
+    <span class="logo"><iconify-icon icon="lucide:book-open" width="18" style="color:#000"></iconify-icon></span>
+    <span class="brand">小老師助手</span>
+  </header>
+
+  <!-- Hero（大字報，壓在黃色色塊上） -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="pill">免帳號 · 離線可用</div>
+        <h1>把繳交登記<br>交給小老師。</h1>
+        <p class="sub">你定的規則，小老師執行。老師做老師的事，管得更少、管得住。</p>
+      </div>
+      <div class="roles">
+        <div class="role">
+          <span class="ic ic-teacher"><iconify-icon icon="lucide:graduation-cap" width="27" style="color:#2563eb"></iconify-icon></span>
+          <div style="flex:1">
+            <h3>我是老師</h3>
+            <p>建立班級、管理名單、查看報表</p>
+            <a class="btn btn-primary" href="/teacher">進入老師面板 →</a>
+          </div>
+        </div>
+        <div class="role">
+          <span class="ic ic-helper"><iconify-icon icon="lucide:hand" width="27" style="color:#059669"></iconify-icon></span>
+          <div style="flex:1">
+            <h3>我是小老師</h3>
+            <p>掃描老師的 QRCode 進入班級</p>
+            <a class="btn btn-secondary" href="/join">掃描 QRCode 加入班級</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 特色列（三欄，行動版轉直排） -->
+  <section class="features">
+    <div class="feat">
+      <div class="feat-h"><iconify-icon icon="lucide:qr-code" width="19" style="color:#2563eb"></iconify-icon><span>免帳號即用</span></div>
+      <p>掃碼進入班級，無需註冊或密碼</p>
+    </div>
+    <div class="feat">
+      <div class="feat-h"><iconify-icon icon="lucide:refresh-cw" width="19" style="color:#2563eb"></iconify-icon><span>離線可用 · 自動同步</span></div>
+      <p>網路不穩也能登記，連線後自動同步</p>
+    </div>
+    <div class="feat">
+      <div class="feat-h"><iconify-icon icon="lucide:bell-ring" width="19" style="color:#2563eb"></iconify-icon><span>重點式提醒</span></div>
+      <p>僅在任務停擺或異常時提醒</p>
+    </div>
+  </section>
+
+  <!-- 使用須知（對外，深色帶） -->
+  <section class="notice">
+    <div class="notice-h"><iconify-icon icon="lucide:info" width="18" style="color:#facc15"></iconify-icon><span>使用前，請先知道這幾件事</span></div>
+    <ul>
+      <li><b>建班後立刻到設定複製「還原連結」並妥善保管</b>，換裝置貼上就能取回所有班級。</li>
+      <li><b>還原連結像帳號密碼，只給自己用</b>；學生加入班級請用 QRCode，不要給還原連結。</li>
+      <li><b>登記完，記得讓平板連上網完成同步</b>（顯示「已同步」）再交還。</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

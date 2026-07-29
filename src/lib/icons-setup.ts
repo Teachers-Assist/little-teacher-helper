@@ -45,6 +45,8 @@ const USED_ICONS = [
   'pen-line',
   'loader-2',
   'refresh-cw',
+  'bell-ring',
+  'info',
   'door-open',
   'ellipsis-vertical',
   'archive',

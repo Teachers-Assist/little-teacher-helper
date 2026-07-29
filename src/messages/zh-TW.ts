@@ -31,6 +31,18 @@ export const messages = {
     description: '讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式',
   },
 
+  // SEO / 社群分享（layout 與首頁 metadata 引用；社群縮圖為 public/icons/ig_1080.png）
+  seo: {
+    // 首頁 <title> 與 og:title：品牌 + 主打訴求（含關鍵字）
+    title: '小老師助手 — 把繳交登記交給小老師',
+    // meta description / og:description：一句賣點 + 具體怎麼用 + 差異點（免帳號、離線同步）
+    description:
+      '把繳交登記交給小老師。免帳號、免安裝：老師出示 QRCode，小老師掃碼進班級，幫忙記錄誰交了作業或回條。離線也能登記、連線自動同步；你定規則，小老師執行，老師管得更少、管得住。',
+    keywords:
+      '小老師,繳交登記,收回條,作業繳交,班級管理,QRCode 點名,離線登記,免帳號,老師工具,教學工具',
+    ogImageAlt: '小老師助手：把繳交登記交給小老師，免費・免帳號、離線可用',
+  },
+
   // 側欄導覽
   nav: {
     appName: '小老師助手',
@@ -46,21 +58,49 @@ export const messages = {
     tasks: '任務列表',
   },
 
-  // 首頁
+  // 首頁（landing 2a：大字報分欄）
   landing: {
-    tagline: '讓收回條和登記作業變得更簡單',
+    tagline: '讓收回條和登記作業變得更簡單', // 保留給 PWA/meta；Hero 不再顯示
+
+    // Hero 大字報
+    heroBadge: '免帳號 · 離線可用',
+    // 主標分三段，桌機在 lead 後斷行、手機在 mid 後斷行（見 page.tsx 的響應式 <br>）：
+    //   桌機：把繳交登記 / 交給小老師。   手機：把繳交登記交給 / 小老師。
+    heroTitle: { lead: '把繳交登記', mid: '交給', tail: '小老師。' },
+    heroSubtitle: '你定的規則，小老師執行。老師做老師的事，管得更少、管得住。',
+
+    // 角色卡（沿用既有 key，僅版面改為橫向）
     teacherTitle: '我是老師',
     teacherDesc: '建立班級、管理學生名單、查看繳交報表',
     teacherCta: '進入老師面板',
     helperTitle: '我是小老師',
-    helperDesc: '用相機掃描老師的 QRCode，進入班級幫忙記錄誰有繳交',
+    helperDesc: '用相機掃描 QRCode，進入班級幫忙記錄誰有繳交',
     helperCta: '掃描 QRCode 加入班級',
-    featureFastTitle: '快速登記',
-    featureFastDesc: '一鍵勾選即時更新',
-    featureOfflineTitle: '離線支援',
-    featureOfflineDesc: '無網路也能使用',
-    featureReportTitle: '清晰報表',
-    featureReportDesc: '一目了然的統計',
+
+    // 特色三欄（2a 換新文案／icon）
+    featureFastTitle: '免帳號即用',
+    featureFastDesc: '掃碼進入班級，無需註冊或密碼',
+    featureOfflineTitle: '離線可用 · 自動同步',
+    featureOfflineDesc: '網路不穩也能登記，連線後自動同步',
+    featureReportTitle: '重點式提醒',
+    featureReportDesc: '僅在任務停擺或異常時提醒',
+
+    // 使用須知（深色帶，對外三點；strong 為粗體引導句、rest 為說明）
+    noticeTitle: '使用前，請先知道這幾件事',
+    notices: [
+      {
+        strong: '建班後立刻到設定複製「還原連結」並妥善保管',
+        rest: '，換裝置貼上就能取回所有班級。',
+      },
+      {
+        strong: '還原連結像帳號密碼，只給自己用',
+        rest: '；學生加入班級請用 QRCode，不要給還原連結。',
+      },
+      {
+        strong: '登記完，記得讓平板連上網完成同步',
+        rest: '（顯示「已同步」）再交還。',
+      },
+    ],
   },
 
   // QRCode 掃描與顯示
