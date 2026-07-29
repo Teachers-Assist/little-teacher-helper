@@ -64,9 +64,9 @@
 
 **Goal**: 出示假 QRCode，畫面內按鈕開新視窗載入小老師端示範。
 
-- [ ] T612 [US3] `/demo` 加「顯示 QRCode」（`teacher.showQrcode`）→ 彈出出示畫面（重用 `QRCodeModal` 樣式）：**假 QRCode**（僅呈現）+ 下方按鈕「用新視窗模擬小老師端」（`demo.qr.openHelperBtn`）+ 說明（`demo.qr.fakeHint`）
-- [ ] T613 [US3] 開窗：`window.open('/demo/helper', 尺寸/位置)`；被彈窗攔截 → 顯示 `demo.qr.popupBlocked`（US3 AS6，不靜默、不退同頁）；手機為新分頁（不做同頁 fallback，US3 AS5）
-- [ ] T614 [US3] 新增 `src/app/demo/helper/page.tsx`：頂部**模擬說明**（`demo.helper.simNotice`）+ 重用小老師端呈現（進場/選座號/登記，方案 A/B）；資料源 = demo store。**ISO-1/ISO-2/ISO-3**
+- [x] T612 [US3] `/demo` 加「顯示 QRCode」（`teacher.qrcode.showButton`）→ 彈出 `DemoQrModal`（**自寫**，非重用 `QRCodeModal`——後者產指向 `/join` 的真 QR、無擴充點；自寫版重用其視覺語言）：**假 QRCode**（編碼 `/demo`，不進真實加入）+ 下方「用新視窗模擬小老師端」（`demo.qr.openHelperBtn`）+ 說明（`demo.qr.fakeHint`） <!-- 2026-07-29 完成，dev 實測 modal 渲染 -->
+- [x] T613 [US3] 開窗：`window.open('/demo/helper?sid=<uuid>', 尺寸/位置)`（sid 事件內產生，供 US4 頻道）；被彈窗攔截（`!win`）→ `toast.error(demo.qr.popupBlocked)`（US3 AS6，不靜默、不退同頁）；手機為新分頁（不做同頁 fallback，US3 AS5） <!-- 2026-07-29 完成，dev 實測開窗載入 helper 頁 -->
+- [x] T614 [US3] 新增 `src/app/demo/helper/page.tsx`：頂部**模擬說明**（`demo.helper.simNotice`）+ 任務清單 → **重用 `RecordForm`**（props-driven，`values`+`onToggleSubmission`/`onChangeGrade`→`upsertDemoRecord`）；座號簡化為預設 `assignedSeat=1`（進場儀式省略，dev 顯示「登記者：1 號·你是老師指定的登記者」）；資料源 = demo store。**ISO-1/ISO-2/ISO-3** <!-- 2026-07-29 完成，dev 實測：勾選陳冠宇 → demo-s5 SUBMITTED 寫入 sessionStorage、teacherId 仍 null -->
 
 **Checkpoint**: 桌機新視窗、手機新分頁均能開小老師端；頂部標明「模擬」；小老師端可選座號、看到種子任務
 

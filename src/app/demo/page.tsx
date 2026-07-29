@@ -4,10 +4,13 @@
 // 顯示 QRCode（US3）、特色 hint（US6）、建班邀請（US5）於後續 task 接入。
 // 獨立入口，MUST NOT 寫 teacherId（FR-142）；資料源為 demo store（sessionStorage）。
 
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
 import { MonitoringStats } from '@/components/MonitoringStats';
+import { DemoQrModal } from '@/components/demo/DemoQrModal';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { TaskType } from '@/types';
 import type { Anomaly } from '@/lib/anomalyDetection';
@@ -66,14 +69,35 @@ function anomalyText(
 
 function DemoTeacherStage() {
   const messages = useMessages();
+  const toast = useToast();
   const cs = messages.teacher.classStatus;
   const room = useDemoRoom();
   const { stats, taskStats } = useDemoTeacherView();
   const warnings = taskStats.filter((t) => t.anomalies.length > 0);
+  const [qrOpen, setQrOpen] = useState(false);
+  const sidRef = useRef<string | null>(null);
+
+  // 開新視窗模擬小老師端；sid 在事件內產生（非 render），並經 URL 傳給 helper 視窗以共用頻道。
+  const handleOpenHelper = () => {
+    if (!sidRef.current) sidRef.current = crypto.randomUUID();
+    const win = window.open(
+      `/demo/helper?sid=${sidRef.current}`,
+      'demo-helper',
+      'width=430,height=850,left=120,top=80'
+    );
+    if (!win) toast.error(messages.demo.qr.popupBlocked);
+    else setQrOpen(false);
+  };
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-slate-900">{room.name}</h1>
+        <Button variant="secondary" size="sm" onClick={() => setQrOpen(true)}>
+          <Icon name="lucide:qr-code" size={15} />
+          {messages.teacher.qrcode.showButton}
+        </Button>
+      </div>
 
       <MonitoringStats stats={stats} />
 
@@ -124,6 +148,12 @@ function DemoTeacherStage() {
           </div>
         ))}
       </div>
+
+      <DemoQrModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        onOpenHelper={handleOpenHelper}
+      />
     </div>
   );
 }

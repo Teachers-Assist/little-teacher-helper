@@ -59,6 +59,8 @@ const USED_ICONS = [
   'play-circle',
   'play',
   'alert-triangle',
+  'external-link',
+  'chevron-right',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;
