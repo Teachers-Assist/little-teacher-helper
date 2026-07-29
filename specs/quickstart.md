@@ -4,7 +4,7 @@
 
 本指南說明如何快速設置開發環境並開始開發。
 
-> **資料層現況（2026-07）**：ORM 為 **Drizzle**（非 Prisma）。線上資料庫為 **Cloudflare D1**，本機開發用 **libsql** 讀本機 SQLite 檔（`prisma/dev.db`，資料夾名沿用）。部署走 **OpenNext + Cloudflare Workers**（非 Vercel）。schema 單一真實來源為 `src/db/schema.ts`。
+> **資料層現況（2026-07）**：ORM 為 **Drizzle**（非 Prisma）。線上資料庫為 **Cloudflare D1**，本機開發用 **libsql** 讀本機 SQLite 檔（根目錄 `local.db`）。部署走 **OpenNext + Cloudflare Workers**（非 Vercel）。schema 單一真實來源為 `src/db/schema.ts`。
 
 ---
 
@@ -46,7 +46,7 @@ cp .env.example .env.local
 
 ```env
 # 本機開發資料庫（libsql 讀本機 SQLite 檔，相對於專案根目錄）
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="file:./local.db"
 
 # 應用程式 URL (用於 QRCode 產生)
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -57,7 +57,7 @@ NODE_ENV="development"
 
 ### 4. 初始化資料庫
 
-本機開發直接用 Drizzle 把 schema 同步到本機 SQLite 檔（`prisma/dev.db`）：
+本機開發直接用 Drizzle 把 schema 同步到本機 SQLite 檔（`local.db`）：
 
 ```bash
 # 依 src/db/schema.ts 建立 / 更新本機資料表
@@ -97,10 +97,9 @@ pnpm dev
 │   ├── hooks/         # React Hooks
 │   └── types/         # TypeScript 型別
 ├── migrations/        # D1 遷移 SQL（wrangler d1 migrations apply 讀這裡）
-├── prisma/
-│   └── dev.db         # 本機開發用 SQLite 資料檔（資料夾名沿用；Prisma 已移除）
 ├── drizzle.config.ts  # drizzle-kit 設定（push / studio / generate）
 ├── wrangler.jsonc     # Cloudflare Workers + D1 綁定設定
+├── local.db           # 本機開發用 SQLite 資料檔（gitignore，db:push 產生）
 ├── public/            # 靜態資源
 ├── specs/             # 功能規格文件
 └── tests/             # 測試檔案
@@ -271,7 +270,7 @@ export type DB = DrizzleD1Database<typeof schema>;
 
 // 以 WebSocketPair（Workers 專屬全域）判斷環境：
 //  - 線上 Workers → drizzle-orm/d1 綁 env.DB
-//  - 本機 next dev → 動態載入 drizzle-orm/libsql 讀 file:./prisma/dev.db
+//  - 本機 next dev → 動態載入 drizzle-orm/libsql 讀 file:./local.db
 export async function getDb(): Promise<DB> { /* ... */ }
 ```
 
@@ -377,7 +376,7 @@ D1 綁定寫在 `wrangler.jsonc`（`d1_databases` 的 `binding: "DB"`），程�
 | 設定 | 位置 | 說明 |
 |----------|------|------|
 | `DB`（D1 binding） | `wrangler.jsonc` | 線上資料庫，`database_id` 指向 Cloudflare D1 |
-| `DATABASE_URL` | 本機 `.env.local` | 僅本機 libsql 用（`file:./prisma/dev.db`） |
+| `DATABASE_URL` | 本機 `.env.local` | 僅本機 libsql 用（`file:./local.db`） |
 | `NEXT_PUBLIC_APP_URL` | Cloudflare 專案環境變數 | 生產環境網址（QRCode 用） |
 
 ---

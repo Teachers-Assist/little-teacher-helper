@@ -12,7 +12,7 @@ const eslintConfig = [
       'public/',
       'coverage/',
       '*.min.js',
-      'prisma/migrations/',
+      'migrations/',
     ],
   },
   {
