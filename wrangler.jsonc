@@ -16,5 +16,8 @@
       // 存放 migration SQL 的資料夾（wrangler d1 migrations apply 會讀這裡）
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://helper.teachers-assist.com"
+  }
 }
