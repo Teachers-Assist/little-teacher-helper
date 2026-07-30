@@ -9,7 +9,7 @@
  * 目前 repo 的 .env.local / .env.example 都是 http://localhost:3000；正式部署（Cloudflare
  * OpenNext build）務必於 build 環境覆寫成正式網域，否則退回 PRODUCTION_URL。
  */
-export const PRODUCTION_URL = 'https://little-teacher-helper.app';
+export const PRODUCTION_URL = 'https://helper.teachers-assist.com/';
 
 export function getSiteUrl(): string {
   const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
