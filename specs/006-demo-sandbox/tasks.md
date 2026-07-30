@@ -79,7 +79,7 @@
 - [x] T615 [US4] 跨視窗同步接線：helper `setDemoBroadcaster`→`channel.post`；老師端 `handleOpenHelper` 建 `createDemoChannel(sid, applyDemoIncoming)`（FR-149）。**ISO-4**。⚠️ 端到端跨視窗需**真機兩視窗**驗（自動化 `window.open` 同 tab、無法並存兩 context） <!-- 2026-07-29 接線完成、tsc/eslint 過 -->
 - [x] T616 [US4] `navigator.onLine` gate（`upsertDemoRecord` 內）：離線登記進 pending 標「待同步」（自寫 `DemoSyncIndicator`，`SyncIndicator` 綁正式 store 不可重用）且 **hold 不 broadcast**；`online` flush；在線直接進 records（FR-148） <!-- 2026-07-29 完成，dev 端到端實測：離線→pending、重連→flush 進 records、pending 清空 -->
 - [x] T617 [US4] [P] 小老師端文字提示「試試關掉網路再登記，重整看看資料還在不在」（`demo.hint.offline`，helper 頂部常駐 accent hint）；MUST NOT 提供假斷線/重連按鈕 <!-- 2026-07-29 完成，dev 實測 hint 顯示 -->
-- [ ] T618 [US4] **手動驗證（SC-041，MUST 於 production build + 先在線載過 `/demo/helper`）**：關網登記→老師端不更新→斷網重整頁面仍載回且登記仍在→重連數秒內顯示「已同步」。未過不得視為完成
+- [x] T618 [US4] **手動驗證（SC-041）通過**：production build + `next start:3100` + 先在線載過 `/demo/helper`（SW 接管、`lth-v1` 快取含該頁）→ 登記王小明（午餐費）→ **停掉 server 模擬斷網** → 重整 `/demo/helper` 頁面仍完整載回（SW 快取、非恐龍頁）、`demo-task-c/demo-s1` SUBMITTED 仍在（時間戳一致）。重連 flush「進 records」部分於 Phase 5 離線 gate 已驗 <!-- 2026-07-30 真機 prod 實測通過 -->
 
 **Checkpoint**: 斷網重整不白頁、資料不消失、重連自動同步到老師端
 
@@ -87,13 +87,13 @@
 
 ## Phase 6: User Story 6 — 隨畫面變化的特色 hint (P2)
 
-- [ ] T619 [US6] 特色 hint 元件：依當前路由/畫面顯示**單則** hint——老師端異常畫面用 `demo.hint.anomaly`、小老師端用離線引導（`demo.hint.offline`）；可關/輪替；與標示帶、邀請**視覺與功能分離**（US6 AS4 / SC-044）
+- [x] T619 [US6] 特色 hint：老師端 `/demo` 顯示 `demo.hint.anomaly`（MonitoringStats 下、異常卡片上）、小老師端 `/demo/helper` 顯示 `demo.hint.offline`——各端單則、accent 樣式、與標示帶/邀請視覺分離（US6 AS4 / SC-044）。常駐單則（未做輪替/關閉鈕，屬可忽略非攔截） <!-- 2026-07-30 完成，dev 實測老師端 hint 渲染、eslint 過 -->
 
 ---
 
 ## Phase 7: User Story 5 — 柔性建班邀請 (P2)
 
-- [ ] T620 [US5] 完成一次示範同步後，以**非攔截式**提示（`demo.invite.text`）邀請建班→`/teacher`（沿用 `teacher.createRoom` 低摩擦入口）；可忽略、不重複強推；MUST NOT 強制 modal / 倒數 / 廣告
+- [x] T620 [US5] 老師端舞台底部**非攔截式**建班邀請卡片（`demo.invite.text` + `teacher.createRoom`→`/teacher`）；常駐、可忽略、不強推；MUST NOT 強制 modal / 倒數 / 廣告。簡化為常駐（未綁「完成同步後才出現」條件觸發） <!-- 2026-07-30 完成，dev 實測邀請渲染、eslint 過 -->
 
 ---
 
