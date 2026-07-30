@@ -221,7 +221,7 @@ enum SubmissionStatus {
 
 > **2026-07-28 起，ORM 為 Drizzle（取代 Prisma）。** Schema 的**單一真實來源是
 > `src/db/schema.ts`**；本節僅說明對映與相容性重點。線上資料庫為 **Cloudflare D1**
-> （SQLite 相容），本機開發用 **libsql** 讀本機 SQLite 檔（`prisma/dev.db`，資料夾名沿用）。
+> （SQLite 相容），本機開發用 **libsql** 讀本機 SQLite 檔（根目錄 `local.db`）。
 > 生產環境不再是 PostgreSQL。
 
 上表 6 個實體與 3 個 enum（TaskType / TaskStatus / SubmissionStatus）皆維持不變，只是改由

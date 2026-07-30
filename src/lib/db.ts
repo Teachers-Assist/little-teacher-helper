@@ -6,7 +6,7 @@ import { schema } from '@/db/schema';
 // 統一資料庫連線：兩種環境、同一套 Drizzle 查詢 API（型別皆為 DB）。
 //  - 線上（Cloudflare Workers）：drizzle-orm/d1 直接綁 D1。Worker bundle 只含 drizzle-orm
 //    （極小），不再有 Prisma 的 query-engine wasm（原本 ~2.1 MiB，是超過免費方案 3 MiB 的主因）。
-//  - 本機 next dev（純 Node）：drizzle-orm/libsql 讀本機 SQLite 檔（沿用既有 prisma/dev.db）。
+//  - 本機 next dev（純 Node）：drizzle-orm/libsql 讀本機 SQLite 檔（./local.db）。
 //    libsql 有 Windows 預編譯二進位，不需 node-gyp，避開本機原生 SQLite 編譯失敗的老問題。
 //
 // 用 WebSocketPair（Workers 專屬全域、Node 沒有）判斷環境。libsql 只在非 Workers 分支動態
@@ -30,7 +30,7 @@ export async function getDb(): Promise<DB> {
       const { createClient } = await import('@libsql/client');
       const url = process.env.DATABASE_URL?.startsWith('file:')
         ? process.env.DATABASE_URL
-        : 'file:./prisma/dev.db';
+        : 'file:./local.db';
       const client = createClient({ url });
       // libsql 與 D1 的查詢 API 相同（皆為 async SQLite）；型別統一對外呈現為 DB。
       globalForDb.__localDb = drizzleLibsql(client, { schema }) as unknown as DB;

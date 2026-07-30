@@ -18,7 +18,6 @@ dist/
 # Database
 *.db
 *.db-journal
-prisma/migrations/*.sql
 
 # Environment
 .env

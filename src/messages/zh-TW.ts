@@ -31,6 +31,18 @@ export const messages = {
     description: '讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式',
   },
 
+  // SEO / 社群分享（layout 與首頁 metadata 引用；社群縮圖為 public/icons/ig_1080.png）
+  seo: {
+    // 首頁 <title> 與 og:title：品牌 + 主打訴求（含關鍵字）
+    title: '小老師助手 — 把繳交登記交給小老師',
+    // meta description / og:description：一句賣點 + 具體怎麼用 + 差異點（免帳號、離線同步）
+    description:
+      '把繳交登記交給小老師。免帳號、免安裝：老師出示 QRCode，小老師掃碼進班級，幫忙記錄誰交了作業或回條。離線也能登記、連線自動同步；你定規則，小老師執行，老師管得更少、管得住。',
+    keywords:
+      '小老師,繳交登記,收回條,作業繳交,班級管理,QRCode 點名,離線登記,免帳號,老師工具,教學工具',
+    ogImageAlt: '小老師助手：把繳交登記交給小老師，免費・免帳號、離線可用',
+  },
+
   // 側欄導覽
   nav: {
     appName: '小老師助手',
@@ -46,21 +58,80 @@ export const messages = {
     tasks: '任務列表',
   },
 
-  // 首頁
+  // 首頁（landing 2a：大字報分欄）
   landing: {
-    tagline: '讓收回條和登記作業變得更簡單',
+    tagline: '讓收回條和登記作業變得更簡單', // 保留給 PWA/meta；Hero 不再顯示
+
+    // Hero 大字報
+    heroBadge: '免帳號 · 離線可用',
+    // 主標分三段，桌機在 lead 後斷行、手機在 mid 後斷行（見 page.tsx 的響應式 <br>）：
+    //   桌機：把繳交登記 / 交給小老師。   手機：把繳交登記交給 / 小老師。
+    heroTitle: { lead: '把繳交登記', mid: '交給', tail: '小老師。' },
+    heroSubtitle: '你定的規則，小老師執行。老師做老師的事，管得更少、管得住。',
+
+    // 角色卡（沿用既有 key，僅版面改為橫向）
     teacherTitle: '我是老師',
     teacherDesc: '建立班級、管理學生名單、查看繳交報表',
     teacherCta: '進入老師面板',
     helperTitle: '我是小老師',
-    helperDesc: '用相機掃描老師的 QRCode，進入班級幫忙記錄誰有繳交',
+    helperDesc: '用相機掃描 QRCode，進入班級幫忙記錄誰有繳交',
     helperCta: '掃描 QRCode 加入班級',
-    featureFastTitle: '快速登記',
-    featureFastDesc: '一鍵勾選即時更新',
-    featureOfflineTitle: '離線支援',
-    featureOfflineDesc: '無網路也能使用',
-    featureReportTitle: '清晰報表',
-    featureReportDesc: '一目了然的統計',
+
+    // 首頁「試用看看」次要入口（006 demo 沙盒）
+    tryDemoTitle: '試用看看',
+    tryDemoDesc: '用假資料先玩一遍，不會存檔',
+
+    // 特色三欄（2a 換新文案／icon）
+    featureFastTitle: '免帳號即用',
+    featureFastDesc: '掃碼進入班級，無需註冊或密碼',
+    featureOfflineTitle: '離線可用 · 自動同步',
+    featureOfflineDesc: '網路不穩也能登記，連線後自動同步',
+    featureReportTitle: '重點式提醒',
+    featureReportDesc: '僅在任務停擺或異常時提醒',
+
+    // 使用須知（深色帶，對外三點；strong 為粗體引導句、rest 為說明）
+    noticeTitle: '使用前，請先知道這幾件事',
+    notices: [
+      {
+        strong: '建班後立刻到設定複製「還原連結」並妥善保管',
+        rest: '，換裝置貼上就能取回所有班級。',
+      },
+      {
+        strong: '還原連結像帳號密碼，只給自己用',
+        rest: '；學生加入班級請用 QRCode，不要給還原連結。',
+      },
+      {
+        strong: '登記完，記得讓平板連上網完成同步',
+        rest: '（顯示「已同步」）再交還。',
+      },
+    ],
+  },
+
+  // 推廣示範沙盒（006）：僅列 demo 專屬新文案；共用文字沿用既有 key
+  // （顯示 QRCode → teacher.showQrcode；建立班級 → teacher.createRoom；
+  //  同步狀態 → sync.*；小老師端 UI → qr / join / helper.*）。
+  demo: {
+    banner: {
+      title: '示範模式',
+      desc: '這是示範班級，你的操作不會被儲存，也不會影響真實班級',
+      restart: '還原狀態',
+    },
+    qr: {
+      fakeHint: '實際上小老師是掃這個 QRCode 進入，示範用下面的按鈕代替掃描',
+      openHelperBtn: '用新視窗模擬小老師端',
+      popupBlocked: '瀏覽器擋住了新視窗，請允許彈出視窗後再試一次',
+    },
+    helper: {
+      simNotice: '這是模擬：實際上小老師是掃老師的 QRCode 進入，此視窗代表一台學生的平板',
+    },
+    hint: {
+      anomaly: '當任務發生異常（停擺、登記率過低）會顯示，老師不用一直監督小老師',
+      offline: '試試關掉網路再登記，重整看看資料還在不在',
+      reconnect: '重新連上網路，看登記自動同步到老師端',
+    },
+    invite: {
+      text: '喜歡嗎？建立你自己的班級只要填個名字',
+    },
   },
 
   // QRCode 掃描與顯示
@@ -441,6 +512,29 @@ export const messages = {
       fullscreen: '進入全螢幕',
       copySuccess: '已複製到剪貼簿',
       copyFailed: '複製失敗，請手動選取',
+    },
+
+    // 換裝置 / 換瀏覽器還原：teacherId 是帳號鑰匙，用連結傳遞省去手打 UUID。
+    // 與學生的「班級 QRCode」刻意區隔（不同文案、不同顏色、附警告彈窗），避免老師誤把帳號連結給學生。
+    restore: {
+      copyLink: '複製我的還原連結',
+      warnTitle: '這是你的專屬還原連結',
+      warnBody:
+        '這條連結等於你帳號的鑰匙——在別的瀏覽器或裝置貼上，就能取回你所有班級的資料。請像密碼一樣保管，千萬不要傳給學生（學生要加入班級，請改用「顯示 QRCode」的班級代碼）。',
+      warnConfirm: '我知道了，複製連結',
+      linkCopied: '還原連結已複製，請妥善保管',
+      copyFailed: '複製失敗，請手動複製',
+      linkInvalid: '這條還原連結無效或已失效——請確認你複製了完整的連結，或直接在下方建立帳號。',
+      // 連結無效、但本機已有老師 session：阻斷式提示（不顯示也不清除原資料）。
+      invalidTitle: '還原連結無效',
+      invalidKeepBody: '這條還原連結無效或已失效，資料仍安全保存。回到儀表板續用本裝置既有資料。',
+      invalidContinue: '回到我的儀表板',
+      // 還原連結指向另一位老師時，覆蓋前的確認。
+      switchTitle: '要換成另一位老師嗎？',
+      switchBody: (from: string, to: string) =>
+        `這個瀏覽器目前是「${from}」。這條還原連結屬於「${to}」，繼續就會改用「${to}」的資料。「${from}」的資料不會消失，之後用「${from}」的還原連結就能切回來。`,
+      switchConfirm: (to: string) => `改用「${to}」`,
+      switchCancel: (from: string) => `維持「${from}」`,
     },
 
     // ─── 002 新增：Dashboard 雙視角 ───────────────────────────

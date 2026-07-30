@@ -45,6 +45,8 @@ const USED_ICONS = [
   'pen-line',
   'loader-2',
   'refresh-cw',
+  'bell-ring',
+  'info',
   'door-open',
   'ellipsis-vertical',
   'archive',
@@ -54,6 +56,12 @@ const USED_ICONS = [
   'star',
   'copy',
   'table',
+  'play-circle',
+  'play',
+  'alert-triangle',
+  'external-link',
+  'chevron-right',
+  'lightbulb',
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;
