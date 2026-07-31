@@ -133,6 +133,7 @@ export const messages = {
       anomaly: 'Shows when a task looks off (stalled or low completion) — no need to keep watching your helpers',
       offline: 'Try going offline, register, then refresh — your data stays',
       reconnect: 'Reconnect and watch it sync to the teacher view',
+      multiHandler: 'Tap the recorder seat to switch seats, register the same student again — the teacher view will flag "multiple recorders"',
     },
     invite: {
       text: 'Like it? Creating your own class just takes a name',

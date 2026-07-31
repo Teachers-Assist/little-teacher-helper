@@ -13,10 +13,14 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { OfflineRecordEntry, Task } from '@/types';
 import { detectAnomalies, type Anomaly } from '@/lib/anomalyDetection';
+import { shouldAppendHandler } from '@/lib/recordHandlerRule';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { createDemoSeed, DEMO_ROOM, type DemoSeed } from './seed';
+import { createDemoSeed, DEMO_ROOM, type DemoHandler, type DemoSeed } from './seed';
 
 const STORAGE_KEY = 'little-helper-demo';
+
+/** 某任務受影響學生的最新經手鏈快照（廣播給老師端視窗；[] = 該筆已刪除）。 */
+export type DemoHandlerMap = { [studentId: string]: DemoHandler[] };
 
 interface DemoPendingOp {
   taskId: string;
@@ -27,6 +31,8 @@ interface DemoPendingOp {
 interface DemoData {
   seatNumber: number;
   records: { [taskId: string]: { [studentId: string]: OfflineRecordEntry } };
+  // 與 records 平行的經手鏈（004 US4 多人經手）；由 shouldAppendHandler 維護、跟記錄同生同死。
+  handlers: { [taskId: string]: { [studentId: string]: DemoHandler[] } };
   pending: DemoPendingOp[]; // 待同步（離線登記累積；線上時為空）
 }
 
@@ -46,6 +52,7 @@ function createInitial(): DemoData {
   return {
     seatNumber: seed.assignedSeat,
     records: clone(seed.records),
+    handlers: clone(seed.handlers),
     pending: [],
   };
 }
@@ -94,9 +101,11 @@ export function getDemoServerSnapshot(): DemoData {
 }
 
 // ===== broadcaster 注入（頁面接 channel.ts；store 不直接依賴 channel，避免耦合）=====
+// 廣播同時帶 records 與 handlers，老師端視窗才能重建經手鏈、細節頁看到「多人經手」。
 type Broadcaster = (
   taskId: string,
-  records: { [studentId: string]: OfflineRecordEntry | null }
+  records: { [studentId: string]: OfflineRecordEntry | null },
+  handlers: DemoHandlerMap
 ) => void;
 let broadcaster: Broadcaster | null = null;
 
@@ -122,6 +131,31 @@ function applyToRecords(
   }
 }
 
+/**
+ * 維護某 (taskId, studentId) 的經手鏈：entry=null（刪記錄）時一併清鏈；否則依
+ * `shouldAppendHandler`（與正式路徑同一純規則）僅在座號與鏈末筆不同時追加。
+ * 回傳該生更新後的鏈快照（供廣播；已刪除回 []）。
+ */
+function applyToHandlers(
+  data: DemoData,
+  taskId: string,
+  studentId: string,
+  entry: OfflineRecordEntry | null
+): DemoHandler[] {
+  const chains = (data.handlers[taskId] ??= {});
+  if (entry === null) {
+    delete chains[studentId];
+    return [];
+  }
+  const chain = chains[studentId] ?? [];
+  const lastSeat = chain.length ? chain[chain.length - 1].seatNumber : null;
+  const next = shouldAppendHandler(lastSeat, entry.recorderSeatNumber)
+    ? [...chain, { seatNumber: entry.recorderSeatNumber, handledAt: entry.updatedAt }]
+    : chain;
+  chains[studentId] = next;
+  return next;
+}
+
 // ===== 寫入 API =====
 
 /** 小老師端換座號 / 選座號。 */
@@ -144,8 +178,9 @@ export function upsertDemoRecord(
   const data = clone(getDemoSnapshot());
   if (isOnline()) {
     applyToRecords(data, taskId, studentId, entry);
+    const chain = applyToHandlers(data, taskId, studentId, entry);
     write(data);
-    broadcaster?.(taskId, { [studentId]: entry });
+    broadcaster?.(taskId, { [studentId]: entry }, { [studentId]: chain });
   } else {
     data.pending = data.pending.filter(
       (p) => !(p.taskId === taskId && p.studentId === studentId)
@@ -155,28 +190,40 @@ export function upsertDemoRecord(
   }
 }
 
-/** 重連後把待同步佇列依序套入 records 並 broadcast（online 事件觸發）。 */
+/** 重連後把待同步佇列依序套入 records + 經手鏈並 broadcast（online 事件觸發）。 */
 export function flushDemoPending(): void {
   const data = clone(getDemoSnapshot());
   if (data.pending.length === 0) return;
-  const touched: { [taskId: string]: { [studentId: string]: OfflineRecordEntry | null } } = {};
+  const touchedRecords: { [taskId: string]: { [studentId: string]: OfflineRecordEntry | null } } = {};
+  const touchedHandlers: { [taskId: string]: DemoHandlerMap } = {};
   for (const op of data.pending) {
     applyToRecords(data, op.taskId, op.studentId, op.entry);
-    (touched[op.taskId] ??= {})[op.studentId] = op.entry;
+    const chain = applyToHandlers(data, op.taskId, op.studentId, op.entry);
+    (touchedRecords[op.taskId] ??= {})[op.studentId] = op.entry;
+    (touchedHandlers[op.taskId] ??= {})[op.studentId] = chain;
   }
   data.pending = [];
   write(data);
-  for (const taskId of Object.keys(touched)) broadcaster?.(taskId, touched[taskId]);
+  for (const taskId of Object.keys(touchedRecords)) {
+    broadcaster?.(taskId, touchedRecords[taskId], touchedHandlers[taskId]);
+  }
 }
 
-/** 老師端視窗收到 BroadcastChannel 訊息時套入自己的 records。 */
+/** 老師端視窗收到 BroadcastChannel 訊息時套入自己的 records 與經手鏈。 */
 export function applyDemoIncoming(
   taskId: string,
-  records: { [studentId: string]: OfflineRecordEntry | null }
+  records: { [studentId: string]: OfflineRecordEntry | null },
+  handlers: DemoHandlerMap
 ): void {
   const data = clone(getDemoSnapshot());
   for (const [studentId, entry] of Object.entries(records)) {
     applyToRecords(data, taskId, studentId, entry);
+  }
+  // 經手鏈為權威快照，直接覆蓋（[] 表示該筆已刪除）。
+  const chains = (data.handlers[taskId] ??= {});
+  for (const [studentId, chain] of Object.entries(handlers)) {
+    if (chain.length === 0) delete chains[studentId];
+    else chains[studentId] = chain;
   }
   write(data);
 }
@@ -242,6 +289,12 @@ function mergeTaskRecords(
 export function useDemoRecords(taskId: string): { [studentId: string]: OfflineRecordEntry } {
   const data = useDemoData();
   return useMemo(() => mergeTaskRecords(data, taskId), [data, taskId]);
+}
+
+/** 某任務的經手鏈（studentId → 依序處理者）；供老師端細節頁呈現「多人經手」。 */
+export function useDemoHandlers(taskId: string): { [studentId: string]: DemoHandler[] } {
+  const data = useDemoData();
+  return useMemo(() => data.handlers[taskId] ?? {}, [data, taskId]);
 }
 
 export interface DemoTaskStat {

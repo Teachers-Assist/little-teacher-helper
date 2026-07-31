@@ -134,6 +134,17 @@ demo 專屬新 key **已寫入** `zh-TW.ts` / `en.ts`（`demo.*` + `landing.tryD
 
 ---
 
+## 8b. 擴充（2026-07-31）：任務細節頁 + 多人經手展示（US7）
+
+**動機**：原示範沒展示招牌特色「多人經手」（004 US4 順序處理者留痕）——老師端只有任務清單、小老師端座號固定。補上完整迴圈：小老師換座號重登同一生 → 老師端細節頁看到「多人經手」。
+
+- **經手鏈規則單一真相**：把 `shouldAppendHandler`（原在 `recordWrite.ts`，但該檔 import `@/lib/db` → 無法進 client bundle）抽到**無伺服器相依的純模組 `src/lib/recordHandlerRule.ts`**，`recordWrite.ts` re-export（既有匯入點與測試不變）。demo store 直接 import 該規則維護鏈，確保 demo 判定與正式同源、可追溯（SC-045）。
+- **demo store**：`DemoData` 加與 records 平行的 `handlers`（`applyToHandlers` 依規則追加 / 刪記錄時清鏈）；`upsertDemoRecord`（線上）、`flushDemoPending`、`applyDemoIncoming` 一併維護；`useDemoHandlers(taskId)` 供細節頁。
+- **跨視窗**：`DemoSyncMessage` 加 `handlers` 欄位，broadcaster 簽名加第三參數，老師端 `applyDemoIncoming` 覆蓋鏈快照。
+- **老師端細節頁**：**自寫平行 `DemoTaskDetail`**（不重用 `TaskResultView`——碰 `/api/records`、`HandlerTrail` 未匯出）；沿用 `teacher.taskDetail.*` / `report.*` 文案；in-page state（非新路由，保住 `BroadcastChannel`）。任務清單卡改為可點 `button`。
+- **小老師端換座號**：`RecordForm` 已有的 `onChangeSeat` 接上重用 `SeatSelector` 的 modal → `setDemoSeat`；加引導 hint `demo.hint.multiHandler`。
+- **驗證（本機 dev 實測通過）**：單分頁走 helper（座號 1 給陳冠宇 90 分 → 換座號 2 改 95 分）→ sessionStorage 鏈 = `[1,2]` → `/demo` 任務 B 細節頁該筆標「多人經手」、展開見「1 號→2 號」。ISO：`teacherId`/`teacherName`/`little-helper-offline-data` 皆 null、無 `/api/*` 請求。跨視窗即時同步仍需**桌機兩視窗真機驗**（同 tab window.open 無法並存兩 context）。tsc / eslint / recordWrite 測試皆過。
+
 ## 9. 文件影響
 
 見 `spec.md`「文件影響」表。重點：`data-model.md` **無需更新**（不新增 entity、不落庫）；`ui-spec.md` 可補「示範模式標示帶 / 模擬視窗說明 / hint chip」視覺規範；`anomaly-rules.md` 可於沿革補一句「006 示範重用 `detectAnomalies`」，並另案修正第 96 行「規則一、二排除繳交類」與程式碼矛盾。收尾以 `spec-align` 複核。

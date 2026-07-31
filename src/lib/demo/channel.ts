@@ -8,12 +8,15 @@
 // 頻道名帶 sessionId 以隔離多分頁（老師視窗開窗時產生、經 URL 傳給小老師端視窗）。
 
 import type { OfflineRecordEntry } from '@/types';
+import type { DemoHandler } from './seed';
 
 export interface DemoSyncMessage {
   type: 'RECORDS_SYNCED';
   taskId: string;
   /** 該任務受影響的 records（studentId → entry；null 表示刪除該筆）。 */
   records: { [studentId: string]: OfflineRecordEntry | null };
+  /** 受影響學生的最新經手鏈（studentId → 依序處理者；[] 表示該筆已刪除）——供老師端呈現多人經手。 */
+  handlers: { [studentId: string]: DemoHandler[] };
 }
 
 export interface DemoChannel {
