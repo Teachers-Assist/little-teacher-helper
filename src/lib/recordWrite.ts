@@ -5,6 +5,10 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
 import { record, recordHandler } from '@/db/schema';
 import { SubmissionStatus } from '@/types';
+import { shouldAppendHandler } from '@/lib/recordHandlerRule';
+
+// 追加規則已抽至無伺服器相依的純模組，供 demo 沙盒共用；此處 re-export 維持既有匯入點。
+export { shouldAppendHandler };
 
 /**
  * 刪除某 (taskId, studentId) 的登記記錄及其順序處理者名單（取消勾選 / 清空成績用）。
@@ -22,15 +26,6 @@ export async function deleteRecordByTaskStudent(taskId: string, studentId: strin
   const ids = rows.map((r) => r.id);
   await db.delete(recordHandler).where(inArray(recordHandler.recordId, ids));
   await db.delete(record).where(inArray(record.id, ids));
-}
-
-/**
- * 是否該把這次處理追加到名單（FR-093）：只有「與名單最後一筆座號不同」才追加，
- * 避免同一座號連續修正把名單灌爆。被其他座號穿插後的同座號再次修改仍各自記錄
- * （例：8 → 12 → 8 保留三筆；8 → 8 → 8 只留一筆）。純函式，供測試。
- */
-export function shouldAppendHandler(lastSeat: number | null | undefined, seat: number): boolean {
-  return lastSeat !== seat;
 }
 
 /**

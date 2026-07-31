@@ -21,12 +21,20 @@ const STUDENT_NAMES = ['王小明', '林曉華', '張博安', '李佳蓉', '陳�
 
 const HOUR = 60 * 60 * 1000;
 
+/** 一筆記錄的順序處理者名單項（鏡像正式 RecordHandler；demo 存於本機、不落庫）。 */
+export interface DemoHandler {
+  seatNumber: number;
+  handledAt: string;
+}
+
 export interface DemoSeed {
   room: typeof DEMO_ROOM;
   assignedSeat: number;
   students: Student[];
   tasks: Task[];
   records: { [taskId: string]: { [studentId: string]: OfflineRecordEntry } };
+  // 與 records 平行的經手鏈（studentId → 依序處理者）；種子皆單筆（座號 1）→ 初始不觸發多人經手。
+  handlers: { [taskId: string]: { [studentId: string]: DemoHandler[] } };
 }
 
 /**
@@ -107,5 +115,18 @@ export function createDemoSeed(now: number = Date.now()): DemoSeed {
     'demo-task-c': {},
   };
 
-  return { room: DEMO_ROOM, assignedSeat: DEMO_ASSIGNED_SEAT, students, tasks, records };
+  // 種子經手鏈：每筆記錄皆由指定座號 1 單獨經手 → 初始無多人經手 badge，
+  // 留給試用者親手換座號重登、製造 ≥2 個不同座號的經手鏈。
+  const seedHandler = (): DemoHandler[] => [{ seatNumber: DEMO_ASSIGNED_SEAT, handledAt: iso }];
+  const handlers: DemoSeed['handlers'] = {
+    'demo-task-a': Object.fromEntries(
+      Object.keys(records['demo-task-a']).map((sid) => [sid, seedHandler()])
+    ),
+    'demo-task-b': Object.fromEntries(
+      Object.keys(records['demo-task-b']).map((sid) => [sid, seedHandler()])
+    ),
+    'demo-task-c': {},
+  };
+
+  return { room: DEMO_ROOM, assignedSeat: DEMO_ASSIGNED_SEAT, students, tasks, records, handlers };
 }

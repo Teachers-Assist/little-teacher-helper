@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { MonitoringStats } from '@/components/MonitoringStats';
 import { DemoQrModal } from '@/components/demo/DemoQrModal';
+import { DemoTaskDetail } from '@/components/demo/DemoTaskDetail';
 import { createDemoChannel, type DemoChannel } from '@/lib/demo/channel';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { TaskType } from '@/types';
@@ -19,6 +20,7 @@ import {
   applyDemoIncoming,
   resetDemo,
   useDemoRoom,
+  useDemoStudents,
   useDemoTeacherView,
 } from '@/lib/demo/store';
 
@@ -78,11 +80,17 @@ function DemoTeacherStage() {
   const toast = useToast();
   const cs = messages.teacher.classStatus;
   const room = useDemoRoom();
+  const students = useDemoStudents();
   const { stats, taskStats } = useDemoTeacherView();
   const warnings = taskStats.filter((t) => t.anomalies.length > 0);
   const [qrOpen, setQrOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const sidRef = useRef<string | null>(null);
   const channelRef = useRef<DemoChannel | null>(null);
+
+  const selectedTask = selectedTaskId
+    ? taskStats.find((t) => t.task.id === selectedTaskId)?.task ?? null
+    : null;
 
   // 老師端視窗關閉時關閉頻道。
   useEffect(() => () => channelRef.current?.close(), []);
@@ -93,7 +101,8 @@ function DemoTeacherStage() {
     if (!sidRef.current) sidRef.current = crypto.randomUUID();
     if (!channelRef.current) {
       channelRef.current = createDemoChannel(sidRef.current, (msg) => {
-        if (msg.type === 'RECORDS_SYNCED') applyDemoIncoming(msg.taskId, msg.records);
+        if (msg.type === 'RECORDS_SYNCED')
+          applyDemoIncoming(msg.taskId, msg.records, msg.handlers);
       });
     }
     const win = window.open(
@@ -115,9 +124,52 @@ function DemoTeacherStage() {
         </Button>
       </div>
 
+      {selectedTask ? (
+        <DemoTaskDetail
+          task={selectedTask}
+          students={students}
+          onBack={() => setSelectedTaskId(null)}
+        />
+      ) : (
+        <DemoTeacherOverview
+          stats={stats}
+          taskStats={taskStats}
+          warnings={warnings}
+          cs={cs}
+          onSelectTask={setSelectedTaskId}
+        />
+      )}
+
+      <DemoQrModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        onOpenHelper={handleOpenHelper}
+      />
+    </div>
+  );
+}
+
+interface DemoTeacherOverviewProps {
+  stats: ReturnType<typeof useDemoTeacherView>['stats'];
+  taskStats: ReturnType<typeof useDemoTeacherView>['taskStats'];
+  warnings: ReturnType<typeof useDemoTeacherView>['taskStats'];
+  cs: ReturnType<typeof useMessages>['teacher']['classStatus'];
+  onSelectTask: (taskId: string) => void;
+}
+
+function DemoTeacherOverview({
+  stats,
+  taskStats,
+  warnings,
+  cs,
+  onSelectTask,
+}: DemoTeacherOverviewProps) {
+  const messages = useMessages();
+  return (
+    <>
       <MonitoringStats stats={stats} />
 
-      {/* 異常提醒（由真實 detectAnomalies 算出；demo 不導向任務細節頁） */}
+      {/* 異常提醒（由真實 detectAnomalies 算出） */}
       {warnings.length > 0 && (
         <div className="space-y-2">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
@@ -145,10 +197,15 @@ function DemoTeacherStage() {
         </div>
       )}
 
-      {/* 三任務：各自登記進度 */}
+      {/* 三任務：點入看細節頁（登記明細 + 多人經手） */}
       <div className="space-y-2">
         {taskStats.map(({ task, recordedCount, studentCount }) => (
-          <div key={task.id} className="card-sm flex items-center justify-between">
+          <button
+            key={task.id}
+            type="button"
+            onClick={() => onSelectTask(task.id)}
+            className="card-sm card-hover flex w-full items-center justify-between text-left"
+          >
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-slate-900">{task.name}</p>
               <span className="badge badge-md badge-neutral mt-1">
@@ -160,16 +217,11 @@ function DemoTeacherStage() {
             <div className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-slate-700">
               <Icon name="lucide:users" size={15} className="text-slate-400" />
               {recordedCount}/{studentCount}
+              <Icon name="lucide:chevron-right" size={16} className="text-slate-400" />
             </div>
-          </div>
+          </button>
         ))}
       </div>
-
-      <DemoQrModal
-        open={qrOpen}
-        onClose={() => setQrOpen(false)}
-        onOpenHelper={handleOpenHelper}
-      />
-    </div>
+    </>
   );
 }

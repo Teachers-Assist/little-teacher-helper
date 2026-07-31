@@ -104,6 +104,19 @@
 
 ---
 
+## Phase 9: US7 擴充 — 任務細節頁 + 多人經手（2026-07-31）
+
+**Goal**: 補招牌特色「多人經手」——老師端任務細節頁 + 小老師端換座號重登。
+
+- [x] T623 [US7] 抽 `shouldAppendHandler` 至無伺服器相依純模組 `src/lib/recordHandlerRule.ts`，`src/lib/recordWrite.ts` 改 import 並 re-export（既有匯入點/測試不變，避免把 `@/lib/db` 拖進 client bundle）<!-- 2026-07-31 完成，recordWrite 測試 5 passed -->
+- [x] T624 [US7] demo store（`src/lib/demo/store.ts`）+ 種子（`seed.ts`）：`DemoData.handlers` 平行結構、`applyToHandlers`（依 `shouldAppendHandler` 追加 / 刪記錄清鏈）、`upsertDemoRecord`/`flushDemoPending`/`applyDemoIncoming` 維護鏈、`useDemoHandlers`；種子記錄掛單筆鏈（座號 1）→ 初始不觸發多人經手。**ISO-1/2/3** <!-- 2026-07-31 完成，tsc/eslint 過 -->
+- [x] T625 [US7] 跨視窗廣播帶鏈：`DemoSyncMessage.handlers`（`channel.ts`）、broadcaster 簽名加第三參數、helper post 與老師端 `applyDemoIncoming` 接線。**ISO-4** <!-- 2026-07-31 完成 -->
+- [x] T626 [US7] 老師端細節頁：新增自寫 `src/components/demo/DemoTaskDetail.tsx`（摘要 + 全班登記明細 + `DemoHandlerTrail` 多人經手 badge/可展開），`src/app/demo/page.tsx` 任務清單卡改可點 + in-page `selectedTaskId`。不重用 `TaskResultView`（碰 `/api/records`）。沿用 `teacher.taskDetail.*` / `report.*` <!-- 2026-07-31 完成，dev 實測細節頁 + 多人經手展開 -->
+- [x] T627 [US7] 小老師端換座號：`src/app/demo/helper/page.tsx` 對 `RecordForm.onChangeSeat` 接重用 `SeatSelector` 的 modal → `setDemoSeat`；加引導 hint `demo.hint.multiHandler`（zh-TW / en 雙語）<!-- 2026-07-31 完成，dev 實測換座號 → 鏈 [1,2] -->
+- [x] T628 [US7] 驗證：dev 單分頁端到端（座號1→2 改同生成績 → 細節頁「多人經手」展開「1 號→2 號」）；ISO 檢查（三 key null、無 `/api/*`）；tsc + eslint + recordWrite 測試 0 error。**跨視窗即時同步待桌機兩視窗真機驗**（同 T615 限制） <!-- 2026-07-31 dev 實測通過 -->
+
+---
+
 ## Dependencies & 平行化
 
 - **Phase 1 先行**：T601（gate）→ T603；T602 / T604 / T605 可平行。

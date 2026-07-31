@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { RecordForm, type RecordValueMap } from '@/components/RecordForm';
+import { SeatSelector } from '@/components/SeatSelector';
 import { SubmissionStatus, TaskType } from '@/types';
 import type { OfflineRecordEntry } from '@/types';
 import { useMessages } from '@/i18n/MessagesProvider';
@@ -19,6 +20,7 @@ import {
   useDemoSeat,
   useDemoSyncStatus,
   upsertDemoRecord,
+  setDemoSeat,
   setDemoBroadcaster,
 } from '@/lib/demo/store';
 
@@ -32,8 +34,8 @@ export default function DemoHelperPage() {
     const sid = new URLSearchParams(window.location.search).get('sid');
     if (!sid) return;
     const channel = createDemoChannel(sid);
-    setDemoBroadcaster((taskId, records) =>
-      channel.post({ type: 'RECORDS_SYNCED', taskId, records })
+    setDemoBroadcaster((taskId, records, handlers) =>
+      channel.post({ type: 'RECORDS_SYNCED', taskId, records, handlers })
     );
     return () => {
       setDemoBroadcaster(null);
@@ -108,11 +110,12 @@ function valuesFromRecords(records: {
 }
 
 function DemoRecordPanel({ taskId, onBack }: { taskId: string; onBack: () => void }) {
-  const { task: taskMsg } = useMessages();
+  const { task: taskMsg, demo } = useMessages();
   const task = useDemoTask(taskId);
   const students = useDemoStudents();
   const records = useDemoRecords(taskId);
   const seat = useDemoSeat();
+  const [seatOpen, setSeatOpen] = useState(false);
 
   if (!task) return null;
   const values = valuesFromRecords(records);
@@ -130,6 +133,16 @@ function DemoRecordPanel({ taskId, onBack }: { taskId: string; onBack: () => voi
         {taskMsg.backToList}
       </button>
 
+      {/* 引導：換座號重登同一位同學 → 老師端看到「多人經手」（點上方登記者可換座號）。
+          只在成績型任務顯示——成績可重覆 upsert 出乾淨經手鏈；繳交型再點會取消勾選、
+          反而清掉記錄與鏈，照著提示做不會產生多人經手。 */}
+      {task.type === TaskType.GRADE && (
+        <div className="flex items-start gap-2 rounded-lg bg-accent-100 px-3 py-2">
+          <Icon name="lucide:users" size={15} className="mt-px shrink-0 text-amber-500" />
+          <p className="text-xs leading-snug text-slate-700">{demo.hint.multiHandler}</p>
+        </div>
+      )}
+
       <DemoSyncIndicator />
 
       <RecordForm
@@ -138,6 +151,7 @@ function DemoRecordPanel({ taskId, onBack }: { taskId: string; onBack: () => voi
         mySeatNumber={seat}
         values={values}
         lockReason={null}
+        onChangeSeat={() => setSeatOpen(true)}
         onToggleSubmission={(studentId, submitted) =>
           upsertDemoRecord(
             taskId,
@@ -168,6 +182,51 @@ function DemoRecordPanel({ taskId, onBack }: { taskId: string; onBack: () => voi
         }
         onMarkComplete={() => {}}
       />
+
+      {seatOpen && (
+        <DemoSeatModal
+          onSelect={(seatNumber) => {
+            setDemoSeat(seatNumber);
+            setSeatOpen(false);
+          }}
+          onClose={() => setSeatOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 換座號 modal：重用 SeatSelector（比照 DemoQrModal 的滿版遮罩 + 白卡視覺）。 */
+function DemoSeatModal({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (seatNumber: number) => void;
+  onClose: () => void;
+}) {
+  const { common } = useMessages();
+  const students = useDemoStudents();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-md rounded-2xl bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={common.cancel}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+        >
+          <Icon name="lucide:x" size={20} />
+        </button>
+        <SeatSelector students={students} onSelect={(s) => onSelect(s.seatNumber)} />
+      </div>
     </div>
   );
 }
