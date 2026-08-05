@@ -83,9 +83,9 @@ export function TeacherSidebarClassList({ onNavigate }: TeacherSidebarClassListP
                 className="nav-subitem"
               >
                 <span className="flex-1 truncate">{room.name}</span>
-                {room.inProgressTaskCount > 0 && (
+                {room.anomalyCount > 0 && (
                   <span className="rounded-full bg-slate-100 px-1.5 text-[10px] text-slate-500">
-                    {room.inProgressTaskCount}
+                    {room.anomalyCount}
                   </span>
                 )}
                 {room.anomalyCount > 0 && (
