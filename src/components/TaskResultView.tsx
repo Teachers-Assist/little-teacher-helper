@@ -15,9 +15,11 @@ import {
 } from '@/lib/report';
 import { formatDateTime } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
+import type { HandlerAction } from '@/lib/recordHandlerRule';
 
 interface RecordHandlerEntry {
   seatNumber: number;
+  action: HandlerAction;
   handledAt: string;
 }
 
@@ -78,10 +80,16 @@ function HandlerTrail({ rec, late = false }: { rec: RecordWithStudent; late?: bo
         <ol className="mt-1.5 space-y-0.5 border-l-2 border-amber-200 pl-3">
           {handlers.map((h, i) => (
             <li key={i} className="text-slate-500">
-              {messages.teacher.taskDetail.handlerChainAt(
-                h.seatNumber,
-                formatDateTime(new Date(h.handledAt))
-              )}
+              {/* 刪除也是一手（FR-093a）：分開敘述，否則老師會以為那次是改了值 */}
+              {h.action === 'DELETE'
+                ? messages.teacher.taskDetail.handlerChainDeletedAt(
+                    h.seatNumber,
+                    formatDateTime(new Date(h.handledAt))
+                  )
+                : messages.teacher.taskDetail.handlerChainAt(
+                    h.seatNumber,
+                    formatDateTime(new Date(h.handledAt))
+                  )}
             </li>
           ))}
         </ol>

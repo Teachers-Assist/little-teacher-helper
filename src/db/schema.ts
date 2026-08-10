@@ -109,19 +109,35 @@ export const record = sqliteTable(
   ]
 );
 
+/**
+ * 「誰依序動過這一格」的歷史（004 US4）。
+ *
+ * key 為 **(taskId, studentId)——那一格**，而非 Record.id。經手歷史屬於格子，不屬於
+ * 「目前存在的那筆登記」：資料被刪掉不代表歷史該一起消失。原本掛在 recordId 上並帶
+ * onDelete cascade，導致「清空成績再重打」「B 把 A 登的刪掉」都會把整條鏈抹掉，
+ * 老師因此看不出這一格被多人動過（2026-08-10 測試回饋問題四）。
+ *
+ * 代價是這裡會出現「該格已無登記、但鏈還在」的列——那正是要保留的證據，不是待清的垃圾。
+ * 生命週期改由 Task / Student 連坐（任務刪除時一併清理，見 tasks/[taskId] DELETE）。
+ */
 export const recordHandler = sqliteTable(
   'RecordHandler',
   {
     id: text('id').primaryKey().$defaultFn(uuid),
-    recordId: text('recordId')
+    taskId: text('taskId')
       .notNull()
-      .references(() => record.id, { onDelete: 'cascade' }),
+      .references(() => task.id, { onDelete: 'cascade' }),
+    studentId: text('studentId')
+      .notNull()
+      .references(() => student.id, { onDelete: 'cascade' }),
     seatNumber: integer('seatNumber').notNull(),
+    /** 'RECORD'（登記／修改）或 'DELETE'（清成沒登記）——見 lib/recordHandlerRule.ts */
+    action: text('action').notNull().default('RECORD'),
     handledAt: integer('handledAt', { mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index('RecordHandler_recordId_idx').on(t.recordId)]
+  (t) => [index('RecordHandler_taskId_studentId_idx').on(t.taskId, t.studentId)]
 );
 
 // ===== Relations（供 db.query 關聯查詢，取代 Prisma 的 include）=====
@@ -146,14 +162,16 @@ export const taskRelations = relations(task, ({ one, many }) => ({
   records: many(record),
 }));
 
-export const recordRelations = relations(record, ({ one, many }) => ({
+// Record 不再宣告 handlers 關聯——經手鏈以 (taskId, studentId) 為 key，與 record 的
+// 存在與否無關，故由 /api/records GET 另行查詢後併入回應，而非 with: { handlers }。
+export const recordRelations = relations(record, ({ one }) => ({
   task: one(task, { fields: [record.taskId], references: [task.id] }),
   student: one(student, { fields: [record.studentId], references: [student.id] }),
-  handlers: many(recordHandler),
 }));
 
 export const recordHandlerRelations = relations(recordHandler, ({ one }) => ({
-  record: one(record, { fields: [recordHandler.recordId], references: [record.id] }),
+  task: one(task, { fields: [recordHandler.taskId], references: [task.id] }),
+  student: one(student, { fields: [recordHandler.studentId], references: [student.id] }),
 }));
 
 // 供 drizzle(client, { schema }) 使用的完整 schema 物件

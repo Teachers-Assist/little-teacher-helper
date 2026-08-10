@@ -514,6 +514,8 @@ export const messages = {
       multiHandler: '多人經手',
       handlerChainTitle: '經手紀錄',
       handlerChainAt: (seat: number, time: string) => `${seat} 號・${time}`,
+      // FR-093a：刪除也是一手，且是老師最需要看見的那種——與「登記」分開敘述
+      handlerChainDeletedAt: (seat: number, time: string) => `${seat} 號刪除・${time}`,
       archivedLateRecord: '任務封存後才同步進來', // FR-097a：證據級標示（被動可見、不主動喊）
     },
 

@@ -202,10 +202,8 @@ function GradeRow({
   const messages = useMessages();
   const [text, setText] = useState(value != null ? String(value) : '');
   const [error, setError] = useState('');
-  // 聚焦中不讓 props 覆蓋本地輸入；debounce 送出，避免逐鍵登記／逐鍵同步（A4）。
-  // focused 用 state（渲染期可讀）；timer 用 ref（僅事件處理／卸載清理時存取，不在渲染期讀）。
+  // 聚焦中不讓 props 覆蓋本地輸入。
   const [focused, setFocused] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 未聚焦時，讓輸入框跟隨最新的 value（重連 refetch／他人登記回填才顯示得出來）。
   // 用「渲染期調整 state」而非 effect —— 避免 setState-in-effect 的串聯渲染，且即時反映。
@@ -215,16 +213,23 @@ function GradeRow({
     setText(value != null ? String(value) : '');
   }
 
-  // 卸載時清掉未觸發的 debounce，避免對已卸載元件送出
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    []
-  );
-
-  const commit = (raw: string) => {
+  /**
+   * 送出一次登記。**只在離開欄位（或頁面要走了）時呼叫**，不在打字過程中送。
+   *
+   * 原本停止輸入 500ms 就送，導致「把 80 改成 90」若在清空後停頓一下，中間那個空字串
+   * 會被當成一次真正的刪除送出去（測試回饋問題四）。改成 blur-only 後，暫時性的空白
+   * 不再有機會成為一次刪除。
+   *
+   * 與現值相同時直接略過：既省掉無謂的往返，也讓「點進欄位又離開」不再送出刪除
+   * ——舊實作的 blur 一律 commit('')，光是滑過空欄位就會排一筆刪除 op。
+   */
+  const commit = (raw: string, current: number | undefined) => {
     const trimmed = raw.trim();
+    const baseline = current != null ? String(current) : '';
+    if (trimmed === baseline) {
+      setError('');
+      return;
+    }
     if (trimmed === '') {
       setError('');
       onChange(null); // 清空＝刪除記錄
@@ -243,21 +248,33 @@ function GradeRow({
     onChange(num);
   };
 
-  const scheduleCommit = (raw: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      commit(raw);
-    }, 500);
-  };
+  // blur 之外的保命出口。blur-only 之後，若學生打完最後一格就鎖螢幕 / 切走 app，
+  // blur 不保證會觸發（iOS Safari 尤其不可靠），那個值會直接消失——原本的 debounce
+  // 剛好兼任了這個角色，拿掉就得補回來。
+  //
+  // 兩個 ref 的分工：latestRef 讓非 React 事件流（pagehide）讀得到當下的輸入內容與現值；
+  // flushRef 讓監聽器只掛一次也永遠呼叫到最新的 commit（onChange 是行內箭頭函式，
+  // 每次渲染換身分，放進依賴陣列會讓監聽器每次渲染重掛、卸載清理誤觸 flush）。
+  const latestRef = useRef({ text, value });
+  const flushRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    latestRef.current = { text, value };
+    flushRef.current = () => commit(latestRef.current.text, latestRef.current.value);
+  });
 
-  const flushCommit = (raw: string) => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    commit(raw);
-  };
+  useEffect(() => {
+    const onPageHide = () => flushRef.current();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushRef.current();
+    };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flushRef.current(); // 卸載（切頁 / 名單變動）時把還沒送出的值送出，不丟棄
+    };
+  }, []);
 
   return (
     <div className="flex min-h-[56px] items-center gap-3 rounded-xl border-2 border-black bg-white p-3">
@@ -271,13 +288,10 @@ function GradeRow({
           value={text}
           disabled={disabled}
           onFocus={() => setFocused(true)}
-          onChange={(e) => {
-            setText(e.target.value);
-            scheduleCommit(e.target.value); // 停止輸入 500ms 後才登記
-          }}
+          onChange={(e) => setText(e.target.value)}
           onBlur={(e) => {
             setFocused(false);
-            flushCommit(e.target.value); // 離開欄位立即送出未觸發的 debounce
+            commit(e.target.value, value); // 離開欄位才登記
           }}
         />
         {error && <span className="mt-0.5 text-xs font-medium text-red-600">{error}</span>}

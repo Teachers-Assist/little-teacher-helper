@@ -545,6 +545,8 @@ export const messages = {
       multiHandler: 'Multiple handlers',
       handlerChainTitle: 'Handler History',
       handlerChainAt: (seat: number, time: string) => `Seat ${seat} · ${time}`,
+      // FR-093a: a deletion is a handling step too — worded apart from a recording
+      handlerChainDeletedAt: (seat: number, time: string) => `Seat ${seat} deleted · ${time}`,
       archivedLateRecord: 'Synced after the task was archived', // FR-097a: evidence-level marker (passive, no active alert)
     },
 

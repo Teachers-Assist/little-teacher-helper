@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
 import { record, recordHandler, student, task } from '@/db/schema';
 import { TaskStatus, SubmissionStatus } from '@/types';
@@ -130,14 +130,11 @@ export async function DELETE(
     const db = await getDb();
     const { taskId } = await params;
 
-    // 刪除任務前先清掉其登記記錄與名單（無 soft delete，直接移除）。
+    // 刪除任務前先清掉其登記記錄與經手鏈（無 soft delete，直接移除）。
     // D1 無互動式 transaction，循序刪除：handlers → records → task。
-    const recIds = (
-      await db.select({ id: record.id }).from(record).where(eq(record.taskId, taskId))
-    ).map((r) => r.id);
-    if (recIds.length > 0) {
-      await db.delete(recordHandler).where(inArray(recordHandler.recordId, recIds));
-    }
+    // 經手鏈以 (taskId, studentId) 為 key，可直接依 taskId 刪，不需先查 record id
+    // ——鏈本來就可能存在於「已無登記」的格子（該格被清空過），繞 record 會漏掉那些。
+    await db.delete(recordHandler).where(eq(recordHandler.taskId, taskId));
     await db.delete(record).where(eq(record.taskId, taskId));
     await db.delete(task).where(eq(task.id, taskId));
 

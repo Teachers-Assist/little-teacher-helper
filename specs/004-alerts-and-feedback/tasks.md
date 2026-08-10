@@ -189,6 +189,8 @@
 
 - [x] T348 [US4] 修改 `src/app/api/records/route.ts` 與 `src/app/api/sync/route.ts` 的 Record 寫入：每次處理（建立或修改）追加一筆 `RecordHandler`（座號, 時間）依 `handledAt` 排序（FR-092） <!-- 2026-07-27 已實作（sync/records 寫 RecordHandler（writeRecordWithHandler）） -->
 - [x] T349 [US4] 同上：連續同座號去重——若名單最後一筆座號 === 本次座號則不追加相鄰重複項（FR-093 / 名單灌爆防護） <!-- 2026-07-27 已實作（連續同座號相鄰去重） -->
+- [x] T349a [US4] `RecordHandler` 改以 `(taskId, studentId)` 為 key（migration `0002_record_handler_by_cell.sql`，backfill 既有列），新增 `action` 欄位；刪除登記改為**追加一筆 DELETE 經手**而非清鏈；`shouldAppendHandler` 去重同時比對座號與動作；老師端 / demo 展開時分開敘述刪除（FR-093a） <!-- 2026-08-10 測試回饋問題四：清空重打會抹掉經手鏈，多人經手因此漏標記 -->
+- [x] T349b [US4] `RecordForm` 的 `GradeRow` 改 blur-only 送出（移除 500ms 計時器），與現值相同不送，並於 `pagehide` / `visibilitychange→hidden` / 卸載補送（FR-093b） <!-- 2026-08-10 打字中送出會讓暫時性空白變成真的刪除；計時器原本兼任的保命 flush 一併補回 -->
 - [x] T350 [US4] 離線經手鏈（FR-097）：離線期間的（座號, 時間）隨 `/api/sync` 送出並依 `handledAt` 正確併入名單，MUST NOT 因離線遺失或錯置（在 `OfflineSyncQueueItem` 帶上 `handledAt` 供 server 併入） <!-- 2026-07-27 已實作（離線經手鏈 handledAt 隨 op 送出） -->
 
 ### 老師端查閱
