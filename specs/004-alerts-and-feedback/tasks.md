@@ -76,6 +76,7 @@
 
 - [x] T318 [US1] 修改 `src/components/SyncIndicator.tsx`：新增**失敗態**（與「同步中」「待上傳」視覺可區分），顯示受影響筆數（FR-081）；失敗態文案指向「去找老師」（沿用 003 FR-065 升級模式，FR-082） <!-- 2026-07-27 已實作（failedCount 優先態 + messages.sync.failed） -->
 - [x] T319 [P] [US1] 在 `src/messages/zh-TW.ts`、`en.ts` 新增同步失敗態文案（指出 N 筆送不出去 + 下一步找老師；文案定稿 #1） <!-- 2026-07-27 已實作（sync.failed，zh-TW + en） -->
+- [x] T319a [US1] 佇列 op 保留 `failReason`（`reconcileSync` 寫入、`resetRetryJudgment` 清除），新增 `dominantFailReason` 優先序純函式，`SyncIndicator` 以 `resolveError` 顯示成因文案（FR-112a） <!-- 2026-08-10 測試回饋問題二：座號被移除卻只顯示「有 N 筆送不出去」 -->
 
 ### 同步正確性驗證
 

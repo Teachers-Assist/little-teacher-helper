@@ -1,5 +1,7 @@
 // 基於 data-model.md 的型別定義
 
+import type { ErrorCode } from '@/i18n/errorCodes';
+
 // ===== Enums (SQLite 以 String 儲存，TS 層做型別約束) =====
 export enum TaskType {
   SUBMISSION = 'SUBMISSION', // 繳交與否
@@ -274,6 +276,10 @@ export interface OfflineSyncQueueItem {
   // 驗證失敗）時設為 true，不再送出、但**保留於佇列**（INV-1 不靜默移除）。
   // 屬 session 範圍的重試判定，MUST 於頁面載入時重置（S11 / FR-079 / NFR-013）。
   nonRetryable?: boolean;
+  // 本次失敗的伺服器錯誤碼（004 US1 / FR-112）：供 SyncIndicator 說出**成因**而非一律
+  // 「有 N 筆送不出去」。只在收到不可重試衝突時寫入——可重試的失敗還會再送，
+  // 過早說死成因會誤導。與 nonRetryable 同屬 session 範圍，MUST 於載入時一併重置。
+  failReason?: ErrorCode;
 }
 
 // ===== API Response Types =====

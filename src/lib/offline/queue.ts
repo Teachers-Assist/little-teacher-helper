@@ -3,7 +3,7 @@ import { resolveRecordMutation } from '@/lib/task';
 import { getOfflineData, saveOfflineData } from './storage';
 import { applyAckedOp } from './overlay';
 import { isServerReachable } from './connectivity';
-import { NON_RETRYABLE_ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
+import { ERROR_CODES, NON_RETRYABLE_ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 
 const MAX_RETRY_COUNT = 3;
 
@@ -106,7 +106,38 @@ export function isOpFailed(op: OfflineSyncQueueItem): boolean {
 }
 
 /**
- * 重置佇列所有 op 的**重試判定**（retryCount 歸零、清除 nonRetryable），但**保留所有 op**。
+ * 失敗成因的顯示優先序（FR-112a）：一批 op 可能帶著不同的碼失敗，畫面只有一句話的位置，
+ * 依「最根本、且最能指向正確補救對象」排序，取排最前面的那個碼。
+ *
+ *   1. STUDENT_NOT_IN_ROOM —— 登記者不在班上，這批**全部**都會失敗，其餘碼都是它的後果；
+ *      補救對象是「我還在不在這個班」，跟任務層級的問題完全不同。
+ *   2. TASK_NOT_FOUND —— 任務被刪，資料無處可去，不可回復。
+ *   3. TASK_LOCKED —— 任務被收起來，老師重新開放後重整即可重送，三者中最輕。
+ *
+ * RECORD_VALIDATION_FAILED **刻意不列入**：它是 client 送出非法資料（理應被 UI 擋下）的
+ * 內部錯誤，其文案 `record.saveFailed` 說的是「可能是網路斷掉了，連上網路再試試看」——
+ * 對一個重送也不會過的錯誤而言是誤導。落到泛用的「送不出去，去找老師看看吧」反而正確。
+ */
+const FAIL_REASON_PRIORITY: readonly ErrorCode[] = [
+  ERROR_CODES.STUDENT_NOT_IN_ROOM,
+  ERROR_CODES.TASK_NOT_FOUND,
+  ERROR_CODES.TASK_LOCKED,
+];
+
+/**
+ * 佇列中處於失敗態的 op 裡，最該說出口的那個成因碼；沒有可說的成因時回 null
+ * （呼叫端退回泛用的「有 N 筆送不出去」）。
+ */
+export function dominantFailReason(queue: OfflineSyncQueueItem[]): ErrorCode | null {
+  const reasons = new Set(
+    queue.filter(isOpFailed).map((op) => op.failReason).filter((r): r is ErrorCode => r != null)
+  );
+  return FAIL_REASON_PRIORITY.find((code) => reasons.has(code)) ?? null;
+}
+
+/**
+ * 重置佇列所有 op 的**重試判定**（retryCount 歸零、清除 nonRetryable / failReason），
+ * 但**保留所有 op**。
  *
  * 供頁面載入時呼叫（FR-079 / INV-2 / NFR-013）：重試判定為 session 範圍、刻意不持久化，
  * 每次載入重置並重試一次——支援老師重新開放任務後，學生只要重整即自動重送卡住的登記，
@@ -118,9 +149,9 @@ export function resetRetryJudgment(): boolean {
   const data = getOfflineData();
   let changed = false;
   data.syncQueue = data.syncQueue.map((op) => {
-    if (op.retryCount !== 0 || op.nonRetryable) {
+    if (op.retryCount !== 0 || op.nonRetryable || op.failReason) {
       changed = true;
-      return { ...op, retryCount: 0, nonRetryable: false };
+      return { ...op, retryCount: 0, nonRetryable: false, failReason: undefined };
     }
     return op;
   });
@@ -184,7 +215,8 @@ export function reconcileSync(params: {
     const reason = conflictReason.get(op.id);
     if (reason !== undefined) {
       if (NON_RETRYABLE_ERROR_CODES.has(reason as ErrorCode)) {
-        nextQueue.push({ ...op, nonRetryable: true }); // (3) 不可重試 → 標記保留
+        // (3) 不可重試 → 標記保留，並記下成因碼供畫面說出「為什麼」（FR-112a）
+        nextQueue.push({ ...op, nonRetryable: true, failReason: reason as ErrorCode });
       } else {
         nextQueue.push({ ...op, retryCount: op.retryCount + 1 }); // (3) 可重試
       }

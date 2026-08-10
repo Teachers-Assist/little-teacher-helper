@@ -458,6 +458,7 @@ US7 在小老師按「我登記完了」的當下輕推一次，但那是**可�
 
 - **FR-111**【補機制】: `/api/sync` 與 `/api/records` 的所有錯誤回應 MUST 改走 `ERROR_CODES`（`src/i18n/errorCodes.ts`），MUST NOT 回傳硬編中文字串（含 `conflicts[].reason`、`errors[].reason` 與各 400 / 404 / 500 的 `error` 欄位）
 - **FR-112**【補機制】: `/api/sync` 回傳的 `conflicts[].reason`（及 `/api/records` 的 `errors[].reason`）MUST 為 `ERROR_CODES` 碼值，供 FR-078 分類使用；「任務已鎖定」「找不到任務」「資料驗證失敗」等 MUST 各有可辨識的碼
+- **FR-112a**【補機制】: 不可重試衝突的碼值 MUST 隨 op 保留於佇列（`failReason`），供失敗態說出**成因**而非一律「有 N 筆送不出去」。畫面只有一句話的位置，多筆 op 帶不同碼時 MUST 依固定優先序取一：`STUDENT_NOT_IN_ROOM` > `TASK_NOT_FOUND` > `TASK_LOCKED`——愈根本、愈能指向正確補救對象者愈前，且結果 MUST NOT 取決於佇列順序。`RECORD_VALIDATION_FAILED` MUST NOT 列入（其文案 `record.saveFailed` 指向「連上網路再試」，對重送也不會過的錯誤是誤導），退回泛用文案。`failReason` 與 `nonRetryable` 同屬 session 範圍，MUST 於 FR-079 的載入重置一併清除（2026-08-10 測試回饋問題二）
 - **FR-113**【補文案】: 會傳達到學生的錯誤碼 MUST 在 messages 字典中有兒童語氣對應文案（`resolveError()` 可解析）；純內部錯誤（如 500）沿用既有 catch-all `common.error`，不需個別文案
 
 **US7 — 標記完成前的承諾核對**

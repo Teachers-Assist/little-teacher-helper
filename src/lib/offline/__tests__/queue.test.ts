@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { nextSyncOp, reconcileSync } from '../queue';
-import { ERROR_CODES } from '@/i18n/errorCodes';
+import { dominantFailReason, nextSyncOp, reconcileSync } from '../queue';
+import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 import { OfflineData, OfflineSyncQueueItem, UpdateRecordInput } from '@/types';
 
 const payload = (gradeValue: number): UpdateRecordInput => ({
@@ -102,7 +102,34 @@ describe('reconcileSync', () => {
     });
     expect(r.nextQueue).toHaveLength(1); // 不靜默移除（INV-1）
     expect(r.nextQueue[0].nonRetryable).toBe(true);
+    expect(r.nextQueue[0].failReason).toBe(ERROR_CODES.TASK_LOCKED); // 成因留存供畫面說明
     expect(r.failed).toBe(1);
+  });
+
+  it('不可重試衝突（學生已移除）→ 成因碼原樣留存，不被壓成泛用失敗', () => {
+    const op = qop({ id: 'a' });
+    const r = reconcileSync({
+      queue: [op],
+      records: {},
+      sentRev: { a: 0 },
+      acked: new Set(),
+      conflicts: [{ operationId: 'a', reason: ERROR_CODES.STUDENT_NOT_IN_ROOM }],
+      attemptedIds: new Set(['a']),
+    });
+    expect(r.nextQueue[0].failReason).toBe(ERROR_CODES.STUDENT_NOT_IN_ROOM);
+  });
+
+  it('可重試衝突不寫 failReason（還會再送，過早說死成因會誤導）', () => {
+    const op = qop({ id: 'a' });
+    const r = reconcileSync({
+      queue: [op],
+      records: {},
+      sentRev: { a: 0 },
+      acked: new Set(),
+      conflicts: [{ operationId: 'a', reason: ERROR_CODES.INTERNAL_ERROR }],
+      attemptedIds: new Set(['a']),
+    });
+    expect(r.nextQueue[0].failReason).toBeUndefined();
   });
 
   it('可重試衝突（500/INTERNAL_ERROR）→ retryCount+1、保留、不標記 nonRetryable', () => {
@@ -163,5 +190,65 @@ describe('reconcileSync', () => {
       attemptedIds: new Set(['a']),
     });
     expect(records.t1.s1).toBeUndefined();
+  });
+});
+
+// dominantFailReason 測試 --------------------------------------------------
+
+describe('dominantFailReason（失敗成因顯示優先序 FR-112a）', () => {
+  /** 失敗態的 op（nonRetryable + 成因碼） */
+  const failed = (id: string, failReason?: ErrorCode) =>
+    qop({ id, nonRetryable: true, failReason });
+
+  it('佇列全空 → null', () => {
+    expect(dominantFailReason([])).toBeNull();
+  });
+
+  it('只有待送 op（未失敗）→ null，不預告成因', () => {
+    expect(dominantFailReason([qop({ id: 'a' })])).toBeNull();
+  });
+
+  it('單一成因 → 回該碼', () => {
+    expect(dominantFailReason([failed('a', ERROR_CODES.TASK_LOCKED)])).toBe(
+      ERROR_CODES.TASK_LOCKED
+    );
+  });
+
+  // 這組是核心：學生座號被移除時，同一批 op 也會因任務鎖定等其他碼失敗，
+  // 但「你不在這個班上了」才是根本成因，其餘都是它的後果
+  it('學生已移除與任務鎖定並存 → 取學生已移除（最根本）', () => {
+    const queue = [
+      failed('a', ERROR_CODES.TASK_LOCKED),
+      failed('b', ERROR_CODES.STUDENT_NOT_IN_ROOM),
+      failed('c', ERROR_CODES.TASK_LOCKED),
+    ];
+    expect(dominantFailReason(queue)).toBe(ERROR_CODES.STUDENT_NOT_IN_ROOM);
+  });
+
+  it('任務不存在與任務鎖定並存 → 取任務不存在（不可回復者優先）', () => {
+    const queue = [
+      failed('a', ERROR_CODES.TASK_LOCKED),
+      failed('b', ERROR_CODES.TASK_NOT_FOUND),
+    ];
+    expect(dominantFailReason(queue)).toBe(ERROR_CODES.TASK_NOT_FOUND);
+  });
+
+  it('佇列順序不影響結果（優先序由碼決定，非誰先失敗）', () => {
+    const a = [failed('a', ERROR_CODES.STUDENT_NOT_IN_ROOM), failed('b', ERROR_CODES.TASK_LOCKED)];
+    const b = [failed('b', ERROR_CODES.TASK_LOCKED), failed('a', ERROR_CODES.STUDENT_NOT_IN_ROOM)];
+    expect(dominantFailReason(a)).toBe(dominantFailReason(b));
+  });
+
+  it('驗證失敗不列入優先序 → null（退回泛用文案，其文案講網路會誤導）', () => {
+    expect(dominantFailReason([failed('a', ERROR_CODES.RECORD_VALIDATION_FAILED)])).toBeNull();
+  });
+
+  it('重試耗盡但無成因碼 → null（退回帶筆數的泛用文案）', () => {
+    expect(dominantFailReason([qop({ id: 'a', retryCount: 3 })])).toBeNull();
+  });
+
+  it('尚未失敗的 op 帶著上一輪的成因碼也不列入（只看失敗態）', () => {
+    const stillPending = qop({ id: 'a', retryCount: 1, failReason: ERROR_CODES.TASK_LOCKED });
+    expect(dominantFailReason([stillPending])).toBeNull();
   });
 });

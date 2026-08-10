@@ -4,7 +4,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { OfflineData, OfflineRecordEntry, Student, Task } from '@/types';
 import { subscribe, getSnapshot, getServerSnapshot } from './storage';
 import { mergeRecords } from './overlay';
-import { isOpFailed } from './queue';
+import { dominantFailReason, isOpFailed } from './queue';
 import {
   subscribeSync,
   getSyncRuntime,
@@ -89,12 +89,15 @@ export function useSyncStatus() {
   const { isOnline } = useNetworkStatus();
 
   // 失敗態（004 US1）：不可重試或重試耗盡的 op 數。這些 op 仍在佇列（未靜默移除），
-  // 重整會重置判定並再試一次（S11）。
+  // 重整會重置判定並再試一次（S11）。failReason 為其中最該說出口的成因碼（FR-112a），
+  // 無可說成因（重試耗盡 / 驗證失敗）時為 null，畫面退回泛用文案。
   const failedCount = data.syncQueue.filter(isOpFailed).length;
+  const failReason = dominantFailReason(data.syncQueue);
 
   return {
     pendingCount: data.syncQueue.length,
     failedCount,
+    failReason,
     isSyncing: runtime.isSyncing,
     lastSyncTime: runtime.lastSyncTime,
     isOnline,
