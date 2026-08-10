@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { RecorderBadge, AssignmentState } from '@/components/RecorderBadge';
 import { Student, Task, TaskType, SubmissionStatus } from '@/types';
-import { GRADE_MAX, GRADE_MIN } from '@/lib/task';
+import { GRADE_MAX, GRADE_MIN, type TaskLockReason } from '@/lib/task';
 import { cn } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
 
@@ -21,7 +21,7 @@ interface RecordFormProps {
   students: Student[];
   mySeatNumber: number;
   values: RecordValueMap;
-  lockReason: 'COMPLETED' | 'DUE_PASSED' | null;
+  lockReason: TaskLockReason | null;
   onToggleSubmission: (studentId: string, submitted: boolean) => void;
   onChangeGrade: (studentId: string, grade: number | null) => void;
   onMarkComplete: () => void;
@@ -70,13 +70,16 @@ export function RecordForm({
         onClick={onChangeSeat}
       />
 
-      {/* 鎖定唯讀提示（截止逾期 vs 已標記完成，兩種文案） */}
+      {/* 鎖定唯讀提示：三種成因三種說法（截止逾期 / 老師結案 / 自己標記完成）。
+          MUST 依成因分流——說錯成因會讓學生找錯補救對象（見測試回饋問題一）。 */}
       {locked && (
         <div className="flex items-center gap-2 rounded-xl border-2 border-black bg-red-100 p-3 text-sm font-medium text-red-900">
           <Icon name="lucide:lock" size={16} />
           {lockReason === 'DUE_PASSED'
             ? messages.task.lockedDuePassed
-            : messages.task.lockedCompleted}
+            : lockReason === 'CLOSED'
+              ? messages.task.lockedClosedByTeacher
+              : messages.task.lockedCompleted}
         </div>
       )}
 

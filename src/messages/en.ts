@@ -268,9 +268,12 @@ export const messages = {
     markCompleteWarning:
       "Once you mark this done, you won't be able to change it yourself. If you need to fix something, you'll have to ask your teacher to reopen it.",
     completedNote: 'Marked: Recording Complete',
-    // Two read-only lock states
+    // Three read-only lock states (branched by cause; see TaskLockReason in lib/task.ts)
     lockedCompleted:
       'You already marked this done! If you need to make changes, ask your teacher to reopen it.',
+    // Teacher closing the task is not the same as the helper marking it done
+    lockedClosedByTeacher:
+      "Your teacher has finished this task, so it can't be changed anymore. If you still need to record something, go let your teacher know.",
     lockedDuePassed:
       "The due date has passed, so this task is now locked. Data has a deadline — once it's over, it can't be changed anymore. If you still need to record something, go find your teacher!",
     // 004 US5: task lifecycle wording (tell "put away by teacher" apart from "class not found")

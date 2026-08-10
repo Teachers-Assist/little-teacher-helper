@@ -246,7 +246,9 @@ US1（FR-079）與 US9（FR-126）都假設「同步佇列（`syncQueue`）↔ �
 3. **Given** 載入失敗成因為網路（fetch 拋錯或離線且無快取）, **When** 渲染, **Then** MUST 顯示連線相關文案並指向「連上網路再試」，可沿用既有 `common.networkError` 語氣
 4. **Given** 本機無此房間紀錄（未加入班級 / 已清除快取）, **When** 渲染, **Then** 才顯示 `room.notFoundTitle` + 重新進入入口（現有行為）
 5. **Given** `/helper/[roomId]` 任務清單頁的載入失敗, **When** 渲染, **Then** MUST 比照 AS3 區分網路問題與無資料，不得沿用同一句文案
-6. **Given** 任務因截止或已標記完成而鎖定, **When** 學生檢視, **Then** 維持既有 `task.lockedDuePassed` / `task.lockedCompleted` 行為不變（此處已符合設計）
+6. **Given** 任務因截止而鎖定, **When** 學生檢視, **Then** 顯示 `task.lockedDuePassed`（既有行為不變）
+6a. **Given** 任務因**小老師自己標記完成**而鎖定, **When** 學生檢視, **Then** 顯示 `task.lockedCompleted`（既有行為不變）
+6b. **Given** 任務因**老師結案**（`CLOSED`）而鎖定, **When** 學生檢視, **Then** MUST 顯示 `task.lockedClosedByTeacher`，MUST NOT 顯示 `task.lockedCompleted` —— 學生並未標記完成，說成「你已經標記完畢了」會歸因到他沒做過的事，並暗示錯誤的補救對象（2026-08-10 測試回饋問題一）
 
 ---
 

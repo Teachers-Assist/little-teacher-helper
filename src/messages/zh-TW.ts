@@ -251,8 +251,10 @@ export const messages = {
     markComplete: '我登記完了',
     markCompleteWarning: '標記之後你就不能自己修改了。如果需要更改，要請老師重新開放。',
     completedNote: '已標記：登記完畢',
-    // 兩種唯讀鎖定文案
+    // 三種唯讀鎖定文案（依成因分流，見 lib/task.ts 的 TaskLockReason）
     lockedCompleted: '你已經標記完畢了！如果需要修改，告訴老師幫你重新開放就好',
+    // 老師結案 ≠ 自己標記完成：不能說成「你已經標記完畢了」（測試回饋問題一）
+    lockedClosedByTeacher: '老師把這個任務結束了，沒辦法再改囉。如果還需要登記，去跟老師說一聲吧',
     lockedDuePassed:
       '截止時間到了，這個任務鎖起來了，沒辦法再改。資料都有截止時間 — 時間一到就會自動鎖定。如果還需要繼續登記，去找老師吧！',
     // 004 US5：任務生命週期語意（區分「被老師收起來」與「找不到班級」）

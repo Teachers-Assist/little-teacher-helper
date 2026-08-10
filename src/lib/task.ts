@@ -11,13 +11,23 @@ export interface TaskLike {
 
 /**
  * 任務的鎖定原因（小老師無法修改記錄）。
- * - 'COMPLETED'：小老師已標記完成或老師已結案
+ * - 'HELPER_COMPLETED'：小老師自己按了「我登記完了」
+ * - 'CLOSED'：老師把任務結案
  * - 'DUE_PASSED'：截止時間已過（status 仍可能為 ACTIVE）
  * - null：未鎖定
+ *
+ * 前兩者都讓任務唯讀，但**成因不同、對學生的說法也不同**，MUST NOT 合併成單一狀態：
+ * 合併後老師結案時，學生會被告知「你已經標記完畢了」——那是他沒做過的事，
+ * 且暗示錯誤的補救對象（見測試回饋問題一）。
  */
-export function getTaskLockReason(task: TaskLike): 'COMPLETED' | 'DUE_PASSED' | null {
-  if (task.status === TaskStatus.HELPER_COMPLETED || task.status === TaskStatus.CLOSED) {
-    return 'COMPLETED';
+export type TaskLockReason = 'HELPER_COMPLETED' | 'CLOSED' | 'DUE_PASSED';
+
+export function getTaskLockReason(task: TaskLike): TaskLockReason | null {
+  if (task.status === TaskStatus.HELPER_COMPLETED) {
+    return 'HELPER_COMPLETED';
+  }
+  if (task.status === TaskStatus.CLOSED) {
+    return 'CLOSED';
   }
   if (task.dueDate && new Date(task.dueDate).getTime() < Date.now()) {
     return 'DUE_PASSED';

@@ -152,7 +152,9 @@
 - [x] T341 [US5] 離線登記於同步時發現任務已封存者：學生端視為**成功**（非衝突、不擋），以生命週期文案告知「這個任務老師已經收起來了」（用「已收起/已封存」非「遲交」）（FR-101a；文案 #10） <!-- 2026-07-27 已實作（封存離線同步視為成功 + 生命週期文案） -->
 - [x] T342 [P] [US5] 在 `src/messages/zh-TW.ts`、`en.ts` 新增任務已收起 / 封存告知文案 <!-- 2026-07-27 已實作（任務已收起文案） -->
 
-> 任務因截止或已完成而鎖定者，維持既有 `task.lockedDuePassed` / `task.lockedCompleted`（AS6，已符合設計）
+- [x] T342a [US5] 拆分 `src/lib/task.ts` 的 `getTaskLockReason`：`'COMPLETED'` 拆成 `'HELPER_COMPLETED'` / `'CLOSED'`，`RecordForm` 依三態分流文案，新增 `task.lockedClosedByTeacher`（AS6b） <!-- 2026-08-10 測試回饋問題一：老師結案時學生被告知「你已經標記完畢了」 -->
+
+> 任務因截止或小老師自行標記完成而鎖定者，維持既有 `task.lockedDuePassed` / `task.lockedCompleted`（AS6 / AS6a）
 
 **Checkpoint**: 三種成因三種對話（SC-024）
 
