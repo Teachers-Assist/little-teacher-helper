@@ -2,6 +2,7 @@ import { OfflineData, OfflineSyncQueueItem, SubmissionStatus, UpdateRecordInput 
 import { resolveRecordMutation } from '@/lib/task';
 import { getOfflineData, saveOfflineData } from './storage';
 import { applyAckedOp } from './overlay';
+import { isServerReachable } from './connectivity';
 import { NON_RETRYABLE_ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 
 const MAX_RETRY_COUNT = 3;
@@ -219,6 +220,7 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
 
   const acked = new Set<string>();
   let conflicts: SyncConflict[] = [];
+  let threw = false;
   try {
     const response = await fetch('/api/sync', {
       method: 'POST',
@@ -240,8 +242,20 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
     result.operationIds?.forEach((id) => acked.add(id));
     conflicts = result.conflicts ?? [];
   } catch (error) {
-    // 網路層失敗 → acked / conflicts 皆空 → 所有送出的 op 走暫時性 retry（可重試）
+    // 例外可能是「真的連不到伺服器（離線 / lie-fi）」，也可能另有原因（序列化 bug、請求異常等）。
+    threw = true;
     console.error('Sync failed:', error);
+  }
+
+  // 例外發生時，先「實際探測」伺服器是否真的連不到（不用 navigator.onLine——它在 DevTools 離線 /
+  // lie-fi 仍回報 true，見 connectivity.ts）：
+  //   - 連不到 → 就是離線：**不動佇列、不累加 retryCount**，資料維持「等待上傳」。避免登記頁因
+  //     navigator.onLine 誤判為線上、每次登記都觸發同步，把 retryCount 燒到 MAX 誤報「送不出去請找老師」。
+  //   - 連得到 → 例外另有原因（非離線，可能是真的 bug）：照常往下 reconcile（acked/conflicts 皆空 →
+  //     可重試 retry+1），讓問題最終浮現、不被離線邏輯靜默吞掉。
+  // 「找老師」失敗態因此只留給「連得到伺服器」的情形（衝突 / 不可重試 / 反覆 5xx / 非離線例外）。
+  if (threw && !(await isServerReachable())) {
+    return { success: 0, failed: 0 };
   }
 
   const data = getOfflineData(); // 重讀（飛行期間可能已被改動）

@@ -36,8 +36,22 @@ export function TaskList({ roomId, tasks, mySeatNumber }: TaskListProps) {
         const isMine = task.assignedSeatNumber === mySeatNumber;
         const lock = getTaskLockReason(task);
 
+        const href = `/helper/${roomId}/${task.id}`;
         return (
-          <Link key={task.id} href={`/helper/${roomId}/${task.id}`}>
+          // 線上維持 <Link> 的 SPA client 切頁（快速、不重載）；只有離線時才改整頁導覽
+          // （window.location）——因為離線的 client 端 RSC 切頁會「點了沒反應」或「顯示到別的
+          // 任務」（stale 路由快取），整頁導覽則走 SW navigate 後備命中正確文件（見 public/sw.js、
+          // primeShell.ts）。<Link> 的 prefetch 也會順手快取此路由共用的 JS chunk。
+          <Link
+            key={task.id}
+            href={href}
+            onClick={(e) => {
+              if (!navigator.onLine) {
+                e.preventDefault();
+                window.location.assign(href);
+              }
+            }}
+          >
             <div className="card-sm card-hover">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <h3 className="font-bold text-slate-900">{task.name}</h3>

@@ -388,3 +388,5 @@ interface OfflineData {
 
 **換座號（clearRoom）對離線資料的影響**（003 US4 引入）：
 小老師換座號（`clearRoom(roomId)`）時，只清掉 `rooms` / `students` / `tasks` 三類本機快取讓使用者重新從 `/join` 入場；**`records` 與 `syncQueue` 刻意保留**。理由：未同步的登記是不可逆資料，不可因換座號而遺失（守 vision「不可逆操作不破壞資料」）。未送出的登記仍掛在佇列裡、連線後照常上傳，並保留原 `recorderSeatNumber`（問責不丟）。同一台裝置換座號後可繼續累積登記；對同一 `taskId + studentId` 再次登記則沿用既有去重邏輯更新該筆。
+
+> **（2026-08-05）換座號改為線上限定**：helper 端點「登記者：」badge 換座號時以 `isOnline` 判斷，**離線一律擋下**（不 `clearRoom`、不導 `/join`，只顯示提示）。原因與上一段的去重邏輯直接相關：`syncQueue` 去重鍵是 `taskId + studentId`（**不含座號**），命中即整包覆寫 payload。若允許離線換座號，共用裝置上「前一座號尚未同步的登記」會被「換座號後同一 (task, student) 的登記」原地吃掉，該手永不進資料庫、也不進順序處理者名單（多人經手，004 FR-092/097）。線上限定讓連線先排空佇列、每手各自成 op，藉此保住經手鏈正確性。詳見 `open-questions.md` 2026-08-05。

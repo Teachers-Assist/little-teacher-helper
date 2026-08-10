@@ -269,6 +269,30 @@ walk-through 過程中浮現的議題，超出 002 / 003 範圍但必須處理�
 
 ---
 
+<a name="2026-08-05"></a>
+
+## 2026-08-05 · 離線換座號與 syncQueue 去重鍵的張力
+
+<a name="離線換座號去重鍵"></a>
+
+### 🔲 離線換座號是否安全：syncQueue 去重鍵不含座號
+
+**背景**：規劃「讓學生離線時幾乎所有操作皆可」時，檢視是否連「換座號」也開放離線就地進行（不必回線上限定的 `/join` 重新入場）。
+
+**前因後果**：`addToSyncQueue` 的去重鍵是 `type + taskId + studentId`（**不含座號**，`src/lib/offline/queue.ts:39-44`），命中既有 op 時 `nextSyncOp` 直接**整包覆寫 payload**（含 `recorderSeatNumber`，`queue.ts:26-27`），佇列裡仍只剩一個 op。老師端看到的「多人經手」順序處理者名單，是 server 端 `/api/sync` 對**每一個實際收到的 op** 依 `shouldAppendHandler` 追加建成的（`src/app/api/sync/route.ts:102-112`）。
+
+因此在**共用裝置**情境——「座號 A 離線登記某 (task, student) 但尚未同步 → 座號 B 經換座號後對同一 (task, student) 再登記」——A 那筆 pending op 會被 B 的 op **原地吃掉**：server 從頭到尾只收到一個 `recorderSeatNumber=B` 的 op，**A 這一手永不進資料庫、也不進經手鏈**。老師看不出中間 A 經手過，直接違反「離線期間的（座號, 時間）MUST NOT 因離線遺失或錯置經手鏈」（004 US4 / FR-092 / FR-097、SC-023）——而多人經手正是本專案「班級自治仍留痕可查」的招牌信任機制。
+
+現況之所以**沒有**這個 bug：換座號被 003 US4 逼上線（`clearRoom` + 導回線上限定 `/join`），連線會先把 syncQueue **排空**，A 的 op 先同步進經手鏈，B 才換座號重登 → 兩手各自成 op → 鏈 = [A, B]，完整。也就是說「換座號必須線上」這條約束，實際上承載了離線經手鏈的正確性。
+
+**決策（2026-08-05）**：本次「學生端離線操作修復」採**選項一**——換座號**維持線上限定**，離線時於「登記者：」badge 直接擋下（不 `clearRoom`、不導 `/join`，僅顯示兒童語氣提示），**不改動去重鍵**。同步以 Service Worker 讓離線主流程（選任務 / 回列表 / 硬重整 / 登記）可用。已將此調整回寫 `003 spec US4 / AS4 / FR-075` 與 `data-model.md` 換座號段。
+
+**離線偵測的可靠度（2026-08-05 補充）**：實測 `navigator.onLine` 在 DevTools Network Offline 與「連了 WiFi 但無網（lie-fi）」都仍回報 `true`、`offline` 事件也不觸發，故**不足以** gate 破壞性動作。因此換座號改用實際探測伺服器的 `isServerReachable()`（`src/lib/offline/connectivity.ts`，打一個 `/api` 路徑，SW 不介入 `/api` → 離線必失敗）。**刻意只有換座號這個「不可逆且無法復原」的動作用探測**；其餘離線判斷（sync gate、join 停用鈕、refresh/load、指示燈、預熱、導覽 SPA/整頁選擇）維持 `navigator.onLine`——這些即使誤判，最壞只是送出一個會被既有重試 / 快取 / 錯誤訊息接住的請求，不造成資料遺失。若日後要讓指示燈 / join 提示在 lie-fi 下也準確，宜建一個「以 fetch 成敗更新的集中連線狀態 store」而非到處打 API（暫緩，無明確需求）。
+
+**待決**：若日後要支援**離線換座號**，最低必須先把去重鍵擴充為 `taskId + studentId + recorderSeatNumber`——同座號重登同一項仍併成一筆（該座號最後一手，符合 FR-093 連續同座號去重），**不同座號**則各自成獨立 op，由 `handledAt` 依序併入經手鏈（FR-097）。此改動牽涉 reconcile / 測試成本較高，且需相應更新 004 FR-097 與 003 US4，暫緩至有明確需求再評估。
+
+---
+
 _文件建立：2026-05-29_  
-_最後更新：2026-07-20_  
+_最後更新：2026-08-05_  
 _對應文件：`vision.md`、各 feature folder 的 `spec.md`、`data-model.md`_

@@ -323,6 +323,8 @@ export const messages = {
     changeSeatTitle: 'Want to change seats?',
     changeSeatMessage: "You'll need to enter the class again",
     changeSeatConfirm: 'Re-enter',
+    // Change-seat offline gate (2026-08-05): offline taps only show a hint, no re-entry flow
+    changeSeatOfflineHint: "There's no internet right now — you can change seats once you're back online",
   },
 
   // Teacher-facing — reports

@@ -300,6 +300,8 @@ export const messages = {
     changeSeatTitle: '想換座號嗎？',
     changeSeatMessage: '需要重新進入班級喔',
     changeSeatConfirm: '重新進入',
+    // 換座號離線 gate（2026-08-05）：離線時不啟動換座號流程，只提示
+    changeSeatOfflineHint: '現在沒有網路喔，等連上網路才能換座號',
   },
 
   // 報表
