@@ -263,8 +263,7 @@ export const messages = {
     commitContinue: '確認完成',
     commitGoBack: '先回去補登',
     // 004 US9：載入時「已有人登過」提示
-    alreadyRecordedNotice: (seat: number, done: number, total: number) =>
-      `這個任務座號 ${seat} 已經登了 ${done}/${total}，你要接手嗎?`,
+    alreadyRecordedNotice: (seat: number) => `這個任務座號 ${seat} 已經在登記了，你要接手嗎?`,
     takeOver: '接手繼續',
     backToList: '返回任務清單',
   },
@@ -314,7 +313,7 @@ export const messages = {
     copied: '已複製到剪貼簿',
     gradesCopied: '成績表已複製，可直接貼到 Excel',
     copyFailed: '複製失敗',
-    recorded: (done: number, total: number) => `已登記 ${done}/${total}`,
+    recorded: (done: number, total: number) => `已登記 ${done}/${total} 人`,
     submitted: '已繳交',
     notSubmitted: '未繳交',
     submissionRate: '繳交率',
@@ -389,7 +388,7 @@ export const messages = {
     taskListTitle: '任務列表',
     noTasks: '尚無任務',
     noTasksHint: '建立任務後，小老師就可以開始登記',
-    recorded: (done: number, total: number) => `已登記 ${done}/${total}`,
+    recorded: (done: number, total: number) => `已登記 ${done}/${total} 人`,
     assignedSeatLabel: (seat: number) => `指定 ${seat} 號`,
     manageTask: '管理任務',
 
@@ -480,10 +479,17 @@ export const messages = {
       retry: '重新載入',
       unknownCount: '—', // dashboard 異常數無法取得時顯示，MUST NOT 顯示 0 或過期值（FR-086）
       // 004 US2/US6：異常卡片的時間 / 閾值資訊（規則重整後的文案）
-      anomalyIdle: (hours: number) => `已經 ${hours} 小時沒有新的登記了（超過 24 小時就會提醒）`,
+      anomalyIdle: (idleMs: number) => {
+        const hours = Math.floor(idleMs / (60 * 60 * 1000));
+        if (hours >= 24) {
+          const days = Math.floor(hours / 24);
+          return `已經 ${days} 天沒有新的登記了（超過 24 小時就會提醒）`;
+        }
+        return `已經 ${hours} 小時沒有新的登記了（超過 24 小時就會提醒）`;
+      },
       anomalyNearDue: (due: string) => `截止 ${due}，目前還沒有任何登記`,
       // 004 US8：規則三 — 完成但登記率過低
-      anomalyLowCompletion: (done: number, total: number) => `標記完成了，但只登了 ${done}/${total}`,
+      anomalyLowCompletion: (done: number, total: number) => `標記完成了，但只登了 ${done}/${total} 人`,
     },
 
     // ─── 002 新增：任務細節頁 ─────────────────────────────────
@@ -552,7 +558,7 @@ export const messages = {
       statInProgressTasks: '進行中任務',
       statAnomalies: '異常',
       inProgressUnit: (n: number) => `${n} 個進行中`,
-      recordedRatio: (done: number, total: number) => `已登記 ${done}/${total}`,
+      recordedRatio: (done: number, total: number) => `已登記 ${done}/${total} 人`,
       lastActivityMinutesAgo: (n: number) => `${n} 分鐘前`,
       lastActivityHoursAgo: (n: number) => `${n} 小時前`,
       lastActivityToday: '剛剛',

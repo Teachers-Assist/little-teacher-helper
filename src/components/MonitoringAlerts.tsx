@@ -24,8 +24,7 @@ export function MonitoringAlerts({ roomId, warnings }: MonitoringAlertsProps) {
 
   const reasonText = (a: Anomaly, dueDate: string | Date | null): string => {
     if (a.type === 'TASK_STALLED') {
-      const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
-      return messages.teacher.classStatus.anomalyIdle(hours);
+      return messages.teacher.classStatus.anomalyIdle(a.idleMs ?? 0);
     }
     if (a.type === 'LOW_COMPLETION') {
       return messages.teacher.classStatus.anomalyLowCompletion(

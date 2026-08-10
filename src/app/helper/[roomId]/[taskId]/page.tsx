@@ -18,6 +18,7 @@ import { queueRecordUpdate, resetRetryJudgment } from '@/lib/offline/queue';
 import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
+import { detectTakeOver } from '@/lib/takeOver';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { useToast } from '@/components/ui/Toast';
 
@@ -57,8 +58,8 @@ export default function RecordPage({
   // 'gone'=任務被刪/封存；'network'=連線問題；'server'=伺服器錯誤；null=正常。
   const [loadError, setLoadError] = useState<'gone' | 'network' | 'server' | null>(null);
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
-  // US9：載入時「已有非本人座號登過」提示（只在載入/重連時判斷一次，非即時 presence）。
-  const [alreadyRecorded, setAlreadyRecorded] = useState<{ seat: number; done: number; total: number } | null>(null);
+  // US9：載入時「已有人登過」提示，值為目前接手者座號（只在載入/重連時判斷一次，非即時 presence）。
+  const [alreadyRecorded, setAlreadyRecorded] = useState<number | null>(null);
   const alreadyRecordedShownRef = useRef(false);
   const { isOnline } = useNetworkStatus();
 
@@ -169,21 +170,15 @@ export default function RecordPage({
     };
   }, [roomId, taskId, isOnline]);
 
-  // US9：載入完成後判斷一次——若本機/剛同步資料顯示已有「非自己座號」登過，提示接手（FR-126-129）。
-  // 只判一次（ref 守門）；離線冷啟動無快取時 records 為空 → 不提示、不阻擋進入（FR-129）。
+  // US9：載入完成後判斷一次——判準見 detectTakeOver（以最新一筆登記決定目前接手者，FR-126-129）。
+  // 只提示一次（ref 守門）；離線冷啟動無快取時 records 為空 → 不提示、不阻擋進入（FR-129）。
   useEffect(() => {
     if (isLoading || alreadyRecordedShownRef.current || seatNumber == null) return;
-    const others = Object.values(records).filter((r) => r.recorderSeatNumber !== seatNumber);
-    if (others.length === 0) return; // 全新 / 只有自己登過 → 不提示（FR-128）
-    // 取登記最多的他人座號代表
-    const counts = new Map<number, number>();
-    for (const r of others) counts.set(r.recorderSeatNumber, (counts.get(r.recorderSeatNumber) ?? 0) + 1);
-    let topSeat = others[0].recorderSeatNumber;
-    let topN = 0;
-    for (const [s, n] of counts) if (n > topN) { topSeat = s; topN = n; }
+    const handlerSeat = detectTakeOver(records, seatNumber);
+    if (handlerSeat == null) return;
     alreadyRecordedShownRef.current = true;
-    setAlreadyRecorded({ seat: topSeat, done: Object.keys(records).length, total: students.length });
-  }, [isLoading, records, seatNumber, students]);
+    setAlreadyRecorded(handlerSeat);
+  }, [isLoading, records, seatNumber]);
 
   const persist = useCallback(
     (studentId: string, value: { submissionStatus?: SubmissionStatus; gradeValue?: number | null }) => {
@@ -339,13 +334,7 @@ export default function RecordPage({
         open={alreadyRecorded != null}
         title={messages.task.listTitle}
         message={
-          alreadyRecorded
-            ? messages.task.alreadyRecordedNotice(
-                alreadyRecorded.seat,
-                alreadyRecorded.done,
-                alreadyRecorded.total
-              )
-            : ''
+          alreadyRecorded != null ? messages.task.alreadyRecordedNotice(alreadyRecorded) : ''
         }
         confirmLabel={messages.task.takeOver}
         cancelLabel={messages.task.backToList}

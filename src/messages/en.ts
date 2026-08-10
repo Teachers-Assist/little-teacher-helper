@@ -282,8 +282,8 @@ export const messages = {
     commitContinue: 'Confirm Done',
     commitGoBack: 'Go Back and Finish',
     // 004 US9: "someone already recorded" notice on load
-    alreadyRecordedNotice: (seat: number, done: number, total: number) =>
-      `Seat ${seat} already recorded ${done}/${total} here — want to take over?`,
+    alreadyRecordedNotice: (seat: number) =>
+      `Seat ${seat} is already recording this task — want to take over?`,
     takeOver: 'Take Over',
     backToList: 'Back to Task List',
   },
@@ -337,7 +337,8 @@ export const messages = {
     copied: 'Copied to clipboard',
     gradesCopied: 'Grade table copied — paste straight into Excel',
     copyFailed: 'Copy failed',
-    recorded: (done: number, total: number) => `Recorded ${done}/${total}`,
+    recorded: (done: number, total: number) =>
+      `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
     submitted: 'Submitted',
     notSubmitted: 'Not Submitted',
     submissionRate: 'Submission Rate',
@@ -412,7 +413,8 @@ export const messages = {
     taskListTitle: 'Task List',
     noTasks: 'No tasks yet',
     noTasksHint: 'Once you create a task, student helpers can start recording',
-    recorded: (done: number, total: number) => `Recorded ${done}/${total}`,
+    recorded: (done: number, total: number) =>
+      `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
     assignedSeatLabel: (seat: number) => `Assigned to Seat ${seat}`,
     manageTask: 'Manage Task',
 
@@ -506,12 +508,18 @@ export const messages = {
       retry: 'Reload',
       unknownCount: '—', // shown when the dashboard anomaly count is unavailable; never show 0 or a stale value (FR-086)
       // 004 US2/US6: anomaly card time / threshold info (post-refactor wording)
-      anomalyIdle: (hours: number) =>
-        `No new records for ${hours} hour${hours === 1 ? '' : 's'} (alerts after 24 hours)`,
+      anomalyIdle: (idleMs: number) => {
+        const hours = Math.floor(idleMs / (60 * 60 * 1000));
+        if (hours >= 24) {
+          const days = Math.floor(hours / 24);
+          return `No new records for ${days} day${days === 1 ? '' : 's'} (alerts after 24 hours)`;
+        }
+        return `No new records for ${hours} hour${hours === 1 ? '' : 's'} (alerts after 24 hours)`;
+      },
       anomalyNearDue: (due: string) => `Due ${due}, still no records`,
       // 004 US8: rule three — completed but low recording rate
       anomalyLowCompletion: (done: number, total: number) =>
-        `Marked complete, but only ${done}/${total} recorded`,
+        `Marked complete, but only ${done}/${total} student${total === 1 ? '' : 's'} recorded`,
     },
 
     // ─── 002 new: task detail page ─────────────────────────────
@@ -581,7 +589,8 @@ export const messages = {
       statInProgressTasks: 'In Progress',
       statAnomalies: 'Anomalies',
       inProgressUnit: (n: number) => `${n} in progress`,
-      recordedRatio: (done: number, total: number) => `Recorded ${done}/${total}`,
+      recordedRatio: (done: number, total: number) =>
+        `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
       lastActivityMinutesAgo: (n: number) => `${n} min${n === 1 ? '' : 's'} ago`,
       lastActivityHoursAgo: (n: number) => `${n} hour${n === 1 ? '' : 's'} ago`,
       lastActivityToday: 'Just now',

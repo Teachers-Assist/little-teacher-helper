@@ -33,8 +33,7 @@ export function TasksView({ tasks }: { tasks: DashboardTask[] }) {
     anomalies
       .map((a) => {
         if (a.type === 'TASK_STALLED') {
-          const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
-          return messages.teacher.classStatus.anomalyIdle(hours);
+          return messages.teacher.classStatus.anomalyIdle(a.idleMs ?? 0);
         }
         if (a.type === 'LOW_COMPLETION') {
           return messages.teacher.classStatus.anomalyLowCompletion(

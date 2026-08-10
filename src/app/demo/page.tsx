@@ -65,8 +65,7 @@ function anomalyText(
   cs: ReturnType<typeof useMessages>['teacher']['classStatus']
 ): string {
   if (a.type === 'TASK_STALLED') {
-    const hours = a.idleMs ? Math.floor(a.idleMs / (60 * 60 * 1000)) : 0;
-    return cs.anomalyIdle(hours);
+    return cs.anomalyIdle(a.idleMs ?? 0);
   }
   if (a.type === 'LOW_COMPLETION') {
     return cs.anomalyLowCompletion(a.recordedCount ?? 0, a.classStudentCount ?? 0);
@@ -216,7 +215,7 @@ function DemoTeacherOverview({
             </div>
             <div className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-slate-700">
               <Icon name="lucide:users" size={15} className="text-slate-400" />
-              {recordedCount}/{studentCount}
+              {messages.teacher.dashboard.recordedRatio(recordedCount, studentCount)}
               <Icon name="lucide:chevron-right" size={16} className="text-slate-400" />
             </div>
           </button>
