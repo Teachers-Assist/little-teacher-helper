@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
@@ -18,9 +19,12 @@ interface TeacherSidebarClassListProps {
  */
 export function TeacherSidebarClassList({ onNavigate }: TeacherSidebarClassListProps) {
   const messages = useMessages();
+  const pathname = usePathname();
   const [rooms, setRooms] = useState<DashboardRoom[] | null>(null);
   const [open, setOpen] = useState(true);
 
+  // 側欄與各頁面各自獨立 fetch（無共用 store），改用 pathname 當依賴：
+  // 新增班級等操作後會 router.push 到新路徑，藉此讓側欄清單重新抓取最新結果。
   useEffect(() => {
     let active = true;
     (async () => {
@@ -40,7 +44,7 @@ export function TeacherSidebarClassList({ onNavigate }: TeacherSidebarClassListP
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <div>
@@ -83,9 +87,9 @@ export function TeacherSidebarClassList({ onNavigate }: TeacherSidebarClassListP
                 className="nav-subitem"
               >
                 <span className="flex-1 truncate">{room.name}</span>
-                {room.inProgressTaskCount > 0 && (
+                {room.anomalyCount > 0 && (
                   <span className="rounded-full bg-slate-100 px-1.5 text-[10px] text-slate-500">
-                    {room.inProgressTaskCount}
+                    {room.anomalyCount}
                   </span>
                 )}
                 {room.anomalyCount > 0 && (

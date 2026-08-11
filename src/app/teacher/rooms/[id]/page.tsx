@@ -457,7 +457,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* 列表欄（反饋 #3）：較小、置於左側（手機在上方） */}
-            <div className="order-1 flex flex-col lg:w-2/5 lg:shrink-0 lg:min-h-0">
+            <div className="order-1 flex flex-col lg:w-3/5 lg:shrink-0 lg:min-h-0">
               {activeTab === 'students' && (
                 <div className="card-sm flex flex-col lg:min-h-0 lg:flex-1">
                   <div className="mb-3 flex shrink-0 items-center justify-between">

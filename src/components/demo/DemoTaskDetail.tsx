@@ -50,10 +50,16 @@ function DemoHandlerTrail({ handlers }: { handlers: DemoHandler[] }) {
         <ol className="mt-1.5 space-y-0.5 border-l-2 border-amber-200 pl-3">
           {handlers.map((h, i) => (
             <li key={i} className="text-slate-500">
-              {messages.teacher.taskDetail.handlerChainAt(
-                h.seatNumber,
-                formatDateTime(new Date(h.handledAt))
-              )}
+              {/* 刪除也是一手（FR-093a），比照 TaskResultView 分開敘述 */}
+              {h.action === 'DELETE'
+                ? messages.teacher.taskDetail.handlerChainDeletedAt(
+                    h.seatNumber,
+                    formatDateTime(new Date(h.handledAt))
+                  )
+                : messages.teacher.taskDetail.handlerChainAt(
+                    h.seatNumber,
+                    formatDateTime(new Date(h.handledAt))
+                  )}
             </li>
           ))}
         </ol>

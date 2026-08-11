@@ -7,6 +7,7 @@
 
 import { SubmissionStatus, TaskStatus, TaskType } from '@/types';
 import type { OfflineRecordEntry, Student, Task } from '@/types';
+import type { HandlerAction } from '@/lib/recordHandlerRule';
 
 export const DEMO_ROOM = {
   id: 'demo-room',
@@ -24,6 +25,7 @@ const HOUR = 60 * 60 * 1000;
 /** 一筆記錄的順序處理者名單項（鏡像正式 RecordHandler；demo 存於本機、不落庫）。 */
 export interface DemoHandler {
   seatNumber: number;
+  action: HandlerAction;
   handledAt: string;
 }
 
@@ -117,7 +119,9 @@ export function createDemoSeed(now: number = Date.now()): DemoSeed {
 
   // 種子經手鏈：每筆記錄皆由指定座號 1 單獨經手 → 初始無多人經手 badge，
   // 留給試用者親手換座號重登、製造 ≥2 個不同座號的經手鏈。
-  const seedHandler = (): DemoHandler[] => [{ seatNumber: DEMO_ASSIGNED_SEAT, handledAt: iso }];
+  const seedHandler = (): DemoHandler[] => [
+    { seatNumber: DEMO_ASSIGNED_SEAT, action: 'RECORD', handledAt: iso },
+  ];
   const handlers: DemoSeed['handlers'] = {
     'demo-task-a': Object.fromEntries(
       Object.keys(records['demo-task-a']).map((sid) => [sid, seedHandler()])

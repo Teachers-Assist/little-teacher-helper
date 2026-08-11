@@ -268,9 +268,12 @@ export const messages = {
     markCompleteWarning:
       "Once you mark this done, you won't be able to change it yourself. If you need to fix something, you'll have to ask your teacher to reopen it.",
     completedNote: 'Marked: Recording Complete',
-    // Two read-only lock states
+    // Three read-only lock states (branched by cause; see TaskLockReason in lib/task.ts)
     lockedCompleted:
       'You already marked this done! If you need to make changes, ask your teacher to reopen it.',
+    // Teacher closing the task is not the same as the helper marking it done
+    lockedClosedByTeacher:
+      "Your teacher has finished this task, so it can't be changed anymore. If you still need to record something, go let your teacher know.",
     lockedDuePassed:
       "The due date has passed, so this task is now locked. Data has a deadline — once it's over, it can't be changed anymore. If you still need to record something, go find your teacher!",
     // 004 US5: task lifecycle wording (tell "put away by teacher" apart from "class not found")
@@ -282,8 +285,8 @@ export const messages = {
     commitContinue: 'Confirm Done',
     commitGoBack: 'Go Back and Finish',
     // 004 US9: "someone already recorded" notice on load
-    alreadyRecordedNotice: (seat: number, done: number, total: number) =>
-      `Seat ${seat} already recorded ${done}/${total} here — want to take over?`,
+    alreadyRecordedNotice: (seat: number) =>
+      `Seat ${seat} is already recording this task — want to take over?`,
     takeOver: 'Take Over',
     backToList: 'Back to Task List',
   },
@@ -323,6 +326,8 @@ export const messages = {
     changeSeatTitle: 'Want to change seats?',
     changeSeatMessage: "You'll need to enter the class again",
     changeSeatConfirm: 'Re-enter',
+    // Change-seat offline gate (2026-08-05): offline taps only show a hint, no re-entry flow
+    changeSeatOfflineHint: "There's no internet right now — you can change seats once you're back online",
   },
 
   // Teacher-facing — reports
@@ -335,7 +340,8 @@ export const messages = {
     copied: 'Copied to clipboard',
     gradesCopied: 'Grade table copied — paste straight into Excel',
     copyFailed: 'Copy failed',
-    recorded: (done: number, total: number) => `Recorded ${done}/${total}`,
+    recorded: (done: number, total: number) =>
+      `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
     submitted: 'Submitted',
     notSubmitted: 'Not Submitted',
     submissionRate: 'Submission Rate',
@@ -410,7 +416,8 @@ export const messages = {
     taskListTitle: 'Task List',
     noTasks: 'No tasks yet',
     noTasksHint: 'Once you create a task, student helpers can start recording',
-    recorded: (done: number, total: number) => `Recorded ${done}/${total}`,
+    recorded: (done: number, total: number) =>
+      `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
     assignedSeatLabel: (seat: number) => `Assigned to Seat ${seat}`,
     manageTask: 'Manage Task',
 
@@ -504,12 +511,18 @@ export const messages = {
       retry: 'Reload',
       unknownCount: '—', // shown when the dashboard anomaly count is unavailable; never show 0 or a stale value (FR-086)
       // 004 US2/US6: anomaly card time / threshold info (post-refactor wording)
-      anomalyIdle: (hours: number) =>
-        `No new records for ${hours} hour${hours === 1 ? '' : 's'} (alerts after 24 hours)`,
+      anomalyIdle: (idleMs: number) => {
+        const hours = Math.floor(idleMs / (60 * 60 * 1000));
+        if (hours >= 24) {
+          const days = Math.floor(hours / 24);
+          return `No new records for ${days} day${days === 1 ? '' : 's'} (alerts after 24 hours)`;
+        }
+        return `No new records for ${hours} hour${hours === 1 ? '' : 's'} (alerts after 24 hours)`;
+      },
       anomalyNearDue: (due: string) => `Due ${due}, still no records`,
       // 004 US8: rule three — completed but low recording rate
       anomalyLowCompletion: (done: number, total: number) =>
-        `Marked complete, but only ${done}/${total} recorded`,
+        `Marked complete, but only ${done}/${total} student${total === 1 ? '' : 's'} recorded`,
     },
 
     // ─── 002 new: task detail page ─────────────────────────────
@@ -532,6 +545,8 @@ export const messages = {
       multiHandler: 'Multiple handlers',
       handlerChainTitle: 'Handler History',
       handlerChainAt: (seat: number, time: string) => `Seat ${seat} · ${time}`,
+      // FR-093a: a deletion is a handling step too — worded apart from a recording
+      handlerChainDeletedAt: (seat: number, time: string) => `Seat ${seat} deleted · ${time}`,
       archivedLateRecord: 'Synced after the task was archived', // FR-097a: evidence-level marker (passive, no active alert)
     },
 
@@ -579,7 +594,8 @@ export const messages = {
       statInProgressTasks: 'In Progress',
       statAnomalies: 'Anomalies',
       inProgressUnit: (n: number) => `${n} in progress`,
-      recordedRatio: (done: number, total: number) => `Recorded ${done}/${total}`,
+      recordedRatio: (done: number, total: number) =>
+        `Recorded ${done}/${total} student${total === 1 ? '' : 's'}`,
       lastActivityMinutesAgo: (n: number) => `${n} min${n === 1 ? '' : 's'} ago`,
       lastActivityHoursAgo: (n: number) => `${n} hour${n === 1 ? '' : 's'} ago`,
       lastActivityToday: 'Just now',

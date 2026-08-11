@@ -26,6 +26,9 @@ interface DemoPendingOp {
   taskId: string;
   studentId: string;
   entry: OfflineRecordEntry | null; // null = 刪除該筆（取消勾選 / 清空成績）
+  // 操作當下的登記者座號。刪除的 entry 為 null、無從得知是誰做的，但刪除同樣要記一手
+  // （FR-093a），故在入佇列時就記下；不可於 flush 時改讀當前座號（期間可能已換座號）。
+  recorderSeatNumber: number;
 }
 
 interface DemoData {
@@ -132,26 +135,29 @@ function applyToRecords(
 }
 
 /**
- * 維護某 (taskId, studentId) 的經手鏈：entry=null（刪記錄）時一併清鏈；否則依
- * `shouldAppendHandler`（與正式路徑同一純規則）僅在座號與鏈末筆不同時追加。
- * 回傳該生更新後的鏈快照（供廣播；已刪除回 []）。
+ * 維護某 (taskId, studentId) 的經手鏈，依 `shouldAppendHandler`（與正式路徑同一純規則）
+ * 決定是否追加。
+ *
+ * 刪除（entry=null）**不清鏈**，而是追加一筆 action='DELETE' —— 鏡射正式路徑：經手歷史
+ * 屬於那一格，不隨記錄消失，否則「把別人登的清掉」這種最該被看見的經手會被抹掉
+ * （FR-093a）。回傳該生更新後的鏈快照（供廣播）。
  */
 function applyToHandlers(
   data: DemoData,
   taskId: string,
   studentId: string,
+  studentSeat: number,
   entry: OfflineRecordEntry | null
 ): DemoHandler[] {
   const chains = (data.handlers[taskId] ??= {});
-  if (entry === null) {
-    delete chains[studentId];
-    return [];
-  }
   const chain = chains[studentId] ?? [];
-  const lastSeat = chain.length ? chain[chain.length - 1].seatNumber : null;
-  const next = shouldAppendHandler(lastSeat, entry.recorderSeatNumber)
-    ? [...chain, { seatNumber: entry.recorderSeatNumber, handledAt: entry.updatedAt }]
-    : chain;
+  const last = chain.length ? chain[chain.length - 1] : null;
+  const step: DemoHandler = {
+    seatNumber: entry ? entry.recorderSeatNumber : studentSeat,
+    action: entry ? 'RECORD' : 'DELETE',
+    handledAt: entry ? entry.updatedAt : new Date().toISOString(),
+  };
+  const next = shouldAppendHandler(last, step) ? [...chain, step] : chain;
   chains[studentId] = next;
   return next;
 }
@@ -178,14 +184,14 @@ export function upsertDemoRecord(
   const data = clone(getDemoSnapshot());
   if (isOnline()) {
     applyToRecords(data, taskId, studentId, entry);
-    const chain = applyToHandlers(data, taskId, studentId, entry);
+    const chain = applyToHandlers(data, taskId, studentId, data.seatNumber, entry);
     write(data);
     broadcaster?.(taskId, { [studentId]: entry }, { [studentId]: chain });
   } else {
     data.pending = data.pending.filter(
       (p) => !(p.taskId === taskId && p.studentId === studentId)
     );
-    data.pending.push({ taskId, studentId, entry });
+    data.pending.push({ taskId, studentId, entry, recorderSeatNumber: data.seatNumber });
     write(data);
   }
 }
@@ -198,7 +204,13 @@ export function flushDemoPending(): void {
   const touchedHandlers: { [taskId: string]: DemoHandlerMap } = {};
   for (const op of data.pending) {
     applyToRecords(data, op.taskId, op.studentId, op.entry);
-    const chain = applyToHandlers(data, op.taskId, op.studentId, op.entry);
+    const chain = applyToHandlers(
+      data,
+      op.taskId,
+      op.studentId,
+      op.recorderSeatNumber,
+      op.entry
+    );
     (touchedRecords[op.taskId] ??= {})[op.studentId] = op.entry;
     (touchedHandlers[op.taskId] ??= {})[op.studentId] = chain;
   }
@@ -219,11 +231,11 @@ export function applyDemoIncoming(
   for (const [studentId, entry] of Object.entries(records)) {
     applyToRecords(data, taskId, studentId, entry);
   }
-  // 經手鏈為權威快照，直接覆蓋（[] 表示該筆已刪除）。
+  // 經手鏈為權威快照，直接覆蓋。鏈不再因刪除而清空（刪除是鏈上的一手），
+  // 故不需要「空陣列＝已刪除」的特例——該筆是否還在看 records 即可。
   const chains = (data.handlers[taskId] ??= {});
   for (const [studentId, chain] of Object.entries(handlers)) {
-    if (chain.length === 0) delete chains[studentId];
-    else chains[studentId] = chain;
+    chains[studentId] = chain;
   }
   write(data);
 }

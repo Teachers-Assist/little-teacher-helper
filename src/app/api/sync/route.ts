@@ -87,9 +87,19 @@ export async function POST(request: Request) {
       }
 
       try {
+        // handledAt 用操作原始時間，使離線經手鏈依正確順序併入（FR-097）；
+        // timestamp 無效時退回 now。刪除與寫入共用同一時間基準。
+        const rawHandledAt = operation.timestamp ? new Date(operation.timestamp) : new Date();
+        const handledAt = isNaN(rawHandledAt.getTime()) ? new Date() : rawHandledAt;
+
         if (mutation.action === 'delete') {
-          // 取消勾選 / 清空成績 → 刪除記錄
-          await deleteRecordByTaskStudent(taskId, studentId);
+          // 取消勾選 / 清空成績 → 刪除記錄，但經手鏈保留並記下這次刪除（FR-093a）
+          await deleteRecordByTaskStudent({
+            taskId,
+            studentId,
+            recorderSeatNumber,
+            handledAt,
+          });
           syncedIds.push(operation.id);
           continue;
         }
@@ -99,9 +109,7 @@ export async function POST(request: Request) {
           recorderSeatNumber
         );
 
-        // 寫入紀錄並維護順序處理者名單（US4）。handledAt 用操作原始時間，使離線經手鏈
-        // 依正確順序併入（FR-097）；timestamp 無效時退回 now。
-        const handledAt = operation.timestamp ? new Date(operation.timestamp) : new Date();
+        // 寫入紀錄並維護順序處理者名單（US4）
         await writeRecordWithHandler({
           taskId,
           studentId,
@@ -109,7 +117,7 @@ export async function POST(request: Request) {
           gradeValue: mutation.data.gradeValue,
           recorderSeatNumber,
           isAssignedRecorder,
-          handledAt: isNaN(handledAt.getTime()) ? new Date() : handledAt,
+          handledAt,
         });
 
         syncedIds.push(operation.id);

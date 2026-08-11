@@ -105,16 +105,18 @@
 
 點「登記者：」badge 觸發換座號流程：彈窗詢問「想換座號嗎？需要重新進入房間喔」+「重新進入」按鈕。確認後清掉本機房間 cache 並跳回 `/join`；網路狀態的處理統一由 `/join` 接手（不在彈窗判斷網路）。**不提供「回到剛才的房間」連結**，避免讓「換座號」變得太容易（避免聯想到身份冒用）。
 
+> **（2026-08-05 調整）換座號改為線上限定**：離線時點 badge **不啟動**換座號流程（不 `clearRoom`、不導 `/join`），改於原頁顯示兒童語氣離線提示（`room.changeSeatOfflineHint`），連線後才可換座號。原因：syncQueue 去重鍵不含座號，若允許離線換座號，共用裝置上「前一座號未同步的登記」會被「換座號後同一 (task, student) 的登記」原地吃掉，破壞多人經手的順序處理者名單（004 FR-092/097）。詳見 `specs/open-questions.md` 2026-08-05。以下 AS4 / FR-075 已據此修訂；線上行為維持不變。
+
 **Why this priority**: 選錯座號是真實情境，必須給出路；但出路必須是「顯式行為」（重新入場）而非「就地切換」，以維持身份選擇的儀式感與責任感。
 
-**Independent Test**: 點登記者 badge → 彈窗 → 確認 → 跳回 `/join`；離線情境下流程相同，由 `/join` 顯示離線提示。
+**Independent Test**: 線上點登記者 badge → 彈窗 → 確認 → 跳回 `/join`；**離線點 badge → 只顯示離線提示、留在原頁、無任何資料變動（不 `clearRoom`、不導頁）**（2026-08-05 調整）。
 
 **Acceptance Scenarios**:
 
 1. **Given** 小老師在登記頁, **When** 點「登記者：[座號]」badge, **Then** 系統彈出對話框「想換座號嗎？需要重新進入房間喔」+「重新進入」+「取消」按鈕
 2. **Given** 使用者按「重新進入」, **When** 系統處理, **Then** MUST 呼叫 `clearRoom(roomId)`（清掉本機房間 / 座號 / 學生 / 任務 cache）→ `router.push('/join')`
 3. **Given** 使用者按「取消」或關閉對話框, **When** 系統處理, **Then** 對話框關閉、回到原本登記頁、無任何資料變動
-4. **Given** 使用者抵達 `/join` 後處於離線狀態, **When** `/join` 渲染, **Then** 由 `/join` 顯示離線提示「現在沒有網路喔，先去找一個有 WiFi 的地方再試試」（US1 AS 8）；**彈窗本身不判斷網路**
+4. **Given** 小老師處於離線狀態, **When** 點「登記者：[座號]」badge, **Then** MUST NOT 觸發換座號流程（不彈窗、不 `clearRoom`、不導 `/join`），MUST 於原頁顯示兒童語氣離線提示（`room.changeSeatOfflineHint`）、留在原頁、無任何資料變動；連線後再點 badge 才正常彈窗（2026-08-05 調整；原設計為「離線抵達 /join 由 /join 提示」，改為在 badge 前置擋下以保護離線經手鏈，見 open-questions 2026-08-05）
 5. **Given** 本機曾經有 cache 過的房間, **When** 換座號流程清掉 cache 後抵達 `/join`, **Then** **MUST NOT** 提供「回到剛才的房間」這類捷徑連結
 
 ---
@@ -150,7 +152,7 @@
 - **FR-072**: `RecordForm.tsx` 中間的「指定就是你」彩色 banner MUST 移除（資訊已由 FR-071 的身份標示承載）
 - **FR-073**: 學生名單區塊頂部的「N 已繳 / N 未繳」徽章 MUST 移除（違反角色分工，催繳責任在老師 / 家長）
 - **FR-074**: 點「登記者：」badge MUST 觸發換座號彈窗（「想換座號嗎？需要重新進入房間喔」+「重新進入」+「取消」）
-- **FR-075**: 「重新進入」MUST 呼叫 `clearRoom(roomId)` 後跳 `/join`；網路狀態判斷統一由 `/join` 接手
+- **FR-075**: 「重新進入」MUST 呼叫 `clearRoom(roomId)` 後跳 `/join`（線上）。**（2026-08-05 調整）離線時 MUST NOT 觸發換座號**：點 badge 不 `clearRoom`、不導 `/join`，MUST 於原頁顯示離線提示（`room.changeSeatOfflineHint`）；離線判斷 MUST 以**實際探測伺服器**（`isServerReachable`，打一個 `/api` 路徑，見 `src/lib/offline/connectivity.ts`）而非 `navigator.onLine`——後者在 DevTools 離線模擬與「連了 WiFi 但無網（lie-fi）」都仍回報 `true`，會誤放行。探測在 badge 點擊（開對話框前）與「重新進入」確認（`clearRoom` 前）各做一次，連不到即只提示、不清資料、不導頁。理由見 `open-questions.md` 2026-08-05（避免跨座號 pending op 併吞破壞經手鏈，以及避免 lie-fi 下清空本機班級後卡在 `/join`）
 - **FR-076**: `/join` 與相關離線流程 MUST NOT 提供「回到剛才的房間」捷徑連結
 
 ### Non-Functional Requirements

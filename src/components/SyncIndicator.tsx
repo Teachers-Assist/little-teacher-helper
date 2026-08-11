@@ -4,6 +4,7 @@ import { useSyncStatus } from '@/lib/offline/store';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useMessages } from '@/i18n/MessagesProvider';
+import { resolveError } from '@/i18n/resolveError';
 
 interface SyncIndicatorProps {
   className?: string;
@@ -11,7 +12,8 @@ interface SyncIndicatorProps {
 
 export function SyncIndicator({ className }: SyncIndicatorProps) {
   const messages = useMessages();
-  const { pendingCount, failedCount, isSyncing, lastSyncTime, isOnline, sync } = useSyncStatus();
+  const { pendingCount, failedCount, failReason, isSyncing, lastSyncTime, isOnline, sync } =
+    useSyncStatus();
 
   if (pendingCount === 0 && !isSyncing) {
     return null;
@@ -19,7 +21,13 @@ export function SyncIndicator({ className }: SyncIndicatorProps) {
 
   // 失敗態優先（US1 FR-081）：有送不出去的登記時，蓋過「同步中 / 待上傳」，指向找老師。
   // 資料仍在佇列（未消失），重整會再試一次（S11）。
+  //
+  // 成因已知時說成因（FR-112a）——「你好像不在這個班級了」對學生的行動指引，遠比
+  // 「有 N 筆送不出去」精確；成因不明（重試耗盡）才退回帶筆數的泛用文案。
   if (failedCount > 0 && !isSyncing) {
+    const text = failReason
+      ? resolveError(messages, failReason)
+      : messages.sync.failed(failedCount);
     return (
       <div
         className={cn(
@@ -28,9 +36,7 @@ export function SyncIndicator({ className }: SyncIndicatorProps) {
         )}
       >
         <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
-        <span className="text-sm text-red-700 dark:text-red-300">
-          {messages.sync.failed(failedCount)}
-        </span>
+        <span className="text-sm text-red-700 dark:text-red-300">{text}</span>
       </div>
     );
   }

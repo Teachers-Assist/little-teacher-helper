@@ -13,8 +13,11 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { getRoom, saveTasks, saveStudents, clearRoom } from '@/lib/offline/storage';
+import { primeOfflineDocs } from '@/lib/offline/primeShell';
+import { isServerReachable } from '@/lib/offline/connectivity';
 import { useOfflineRoom, useOfflineTasks } from '@/lib/offline/store';
 import { useMessages } from '@/i18n/MessagesProvider';
+import { useToast } from '@/components/ui/Toast';
 
 export default function HelperRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
@@ -27,12 +30,30 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   const [refreshError, setRefreshError] = useState<'network' | 'server' | null>(null);
   const { isOnline } = useNetworkStatus();
   const router = useRouter();
+  const toast = useToast();
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
 
-  // 點登記者身份 → 換座號（重新進入房間）：清本機 cache 後跳 /join（US4 / FR-074-075）
-  const handleChangeSeat = () => {
+  // 點登記者身份 → 換座號（重新進入房間）：清本機 cache 後跳 /join（US4 / FR-074-075）。
+  // 離線 gate（2026-08-05）：離線 MUST NOT 觸發（不 clearRoom、不導 /join），保留防禦性 guard。
+  const handleChangeSeat = async () => {
+    // 破壞性動作前實際探測伺服器（navigator.onLine 不可靠，見 connectivity.ts）：連不到就不清資料、
+    // 不導頁，避免在 lie-fi 下清空本機班級後卡在 /join。
+    if (!(await isServerReachable())) {
+      setChangeSeatOpen(false);
+      toast.info(messages.room.changeSeatOfflineHint);
+      return;
+    }
     clearRoom(roomId);
     router.push('/join');
+  };
+
+  // 點「登記者：」badge：探測實際連線（非 navigator.onLine）才開換座號對話框；連不到只提示、留在原頁。
+  const handleChangeSeatTap = async () => {
+    if (!(await isServerReachable())) {
+      toast.info(messages.room.changeSeatOfflineHint);
+      return;
+    }
+    setChangeSeatOpen(true);
   };
 
   const refresh = useCallback(async () => {
@@ -65,6 +86,18 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // 離線文件預熱（2026-08-05）：連線時把本清單頁與各任務頁的 SSR 文件請 SW 先快取，
+  // 讓學生斷網後仍能進任一任務 / 回列表 / 硬重整（見 src/lib/offline/primeShell.ts）。
+  const taskIdsKey = tasks.map((t) => t.id).join(',');
+  useEffect(() => {
+    if (!isOnline) return;
+    primeOfflineDocs([
+      `/helper/${roomId}`,
+      ...tasks.map((t) => `/helper/${roomId}/${t.id}`),
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, isOnline, taskIdsKey]);
 
   if (isLoading) {
     return (
@@ -139,7 +172,7 @@ export default function HelperRoomPage({ params }: { params: Promise<{ roomId: s
           <RecorderBadge
             seatNumber={room.seatNumber}
             assignmentState="noAssignment"
-            onClick={() => setChangeSeatOpen(true)}
+            onClick={handleChangeSeatTap}
           />
         </div>
 

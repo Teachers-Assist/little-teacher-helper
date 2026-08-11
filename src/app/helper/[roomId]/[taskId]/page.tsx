@@ -12,10 +12,13 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { Task, TaskStatus, TaskType, SubmissionStatus, OfflineRecordEntry } from '@/types';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { saveTask, saveStudents, cacheSyncedRecords, clearRoom } from '@/lib/offline/storage';
+import { primeOfflineDocs } from '@/lib/offline/primeShell';
+import { isServerReachable } from '@/lib/offline/connectivity';
 import { queueRecordUpdate, resetRetryJudgment } from '@/lib/offline/queue';
 import { requestSync } from '@/lib/offline/syncController';
 import { useOfflineRoom, useOfflineStudents, useOfflineTask, useOfflineRecords } from '@/lib/offline/store';
 import { getTaskLockReason } from '@/lib/task';
+import { detectTakeOver } from '@/lib/takeOver';
 import { useMessages } from '@/i18n/MessagesProvider';
 import { useToast } from '@/components/ui/Toast';
 
@@ -55,19 +58,56 @@ export default function RecordPage({
   // 'gone'=任務被刪/封存；'network'=連線問題；'server'=伺服器錯誤；null=正常。
   const [loadError, setLoadError] = useState<'gone' | 'network' | 'server' | null>(null);
   const [changeSeatOpen, setChangeSeatOpen] = useState(false);
-  // US9：載入時「已有非本人座號登過」提示（只在載入/重連時判斷一次，非即時 presence）。
-  const [alreadyRecorded, setAlreadyRecorded] = useState<{ seat: number; done: number; total: number } | null>(null);
+  // US9：載入時「已有人登過」提示，值為目前接手者座號（只在載入/重連時判斷一次，非即時 presence）。
+  const [alreadyRecorded, setAlreadyRecorded] = useState<number | null>(null);
   const alreadyRecordedShownRef = useRef(false);
   const { isOnline } = useNetworkStatus();
 
-  // 換座號：清掉本機房間/座號/名單/任務快取（保留未同步登記）後回 /join 重新入場（FR-075）
-  const handleChangeSeat = useCallback(() => {
+  // 換座號：清掉本機房間/座號/名單/任務快取（保留未同步登記）後回 /join 重新入場（FR-075）。
+  // 離線 gate（2026-08-05）：離線時 MUST NOT 觸發（不 clearRoom、不導 /join），改由 badge 顯示提示；
+  // 此處保留防禦性 guard，確保即使對話框被開也不會在離線時清資料。詳見 open-questions.md 2026-08-05。
+  const handleChangeSeat = useCallback(async () => {
+    // 破壞性動作前，實際探測伺服器是否連得到（navigator.onLine 不可靠，見 connectivity.ts）。
+    // 連不到就不清資料、不導頁，避免在 lie-fi 下清空本機班級後卡在 /join。
+    if (!(await isServerReachable())) {
+      setChangeSeatOpen(false);
+      toast.info(messages.room.changeSeatOfflineHint);
+      return;
+    }
     clearRoom(roomId);
     router.push('/join');
-  }, [roomId, router]);
+  }, [roomId, router, toast, messages]);
+
+  // 點「登記者：」badge：線上才開換座號對話框；離線只提示、留在原頁（選項一）。
+  const handleChangeSeatTap = useCallback(async () => {
+    // 探測實際連線（非 navigator.onLine）：連得到才開換座號對話框；連不到只提示、留在原頁。
+    if (!(await isServerReachable())) {
+      toast.info(messages.room.changeSeatOfflineHint);
+      return;
+    }
+    setChangeSeatOpen(true);
+  }, [toast, messages]);
+
+  // 回任務清單：線上維持 <Link> SPA 切頁；只有離線才整頁導覽（避免 client 端 RSC 切頁在離線時
+  // 無反應 / 顯示錯頁），走 SW navigate 後備命中正確文件（見 public/sw.js）。
+  const goToTaskList = useCallback(
+    (e: { preventDefault: () => void }) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        e.preventDefault();
+        window.location.assign(`/helper/${roomId}`);
+      }
+    },
+    [roomId]
+  );
 
   const seatNumber = room?.seatNumber ?? null;
   const values = useMemo(() => valuesFromRecords(records), [records]);
+
+  // 離線文件預熱（2026-08-05）：連線時把本登記頁 SSR 文件請 SW 先快取，供離線硬重整 /
+  // 直接進入時命中正確文件（見 src/lib/offline/primeShell.ts）。
+  useEffect(() => {
+    if (isOnline) primeOfflineDocs([`/helper/${roomId}/${taskId}`]);
+  }, [roomId, taskId, isOnline]);
 
   // US7：標記完成前的承諾核對缺口。僅成績類（繳交類不觸發，FR-118）；登滿→null（FR-117）。
   // 以本機可見資料推算（含 overlay 未同步值）；快取不準不阻擋（FR-114 註 / AS7）。
@@ -130,21 +170,15 @@ export default function RecordPage({
     };
   }, [roomId, taskId, isOnline]);
 
-  // US9：載入完成後判斷一次——若本機/剛同步資料顯示已有「非自己座號」登過，提示接手（FR-126-129）。
-  // 只判一次（ref 守門）；離線冷啟動無快取時 records 為空 → 不提示、不阻擋進入（FR-129）。
+  // US9：載入完成後判斷一次——判準見 detectTakeOver（以最新一筆登記決定目前接手者，FR-126-129）。
+  // 只提示一次（ref 守門）；離線冷啟動無快取時 records 為空 → 不提示、不阻擋進入（FR-129）。
   useEffect(() => {
     if (isLoading || alreadyRecordedShownRef.current || seatNumber == null) return;
-    const others = Object.values(records).filter((r) => r.recorderSeatNumber !== seatNumber);
-    if (others.length === 0) return; // 全新 / 只有自己登過 → 不提示（FR-128）
-    // 取登記最多的他人座號代表
-    const counts = new Map<number, number>();
-    for (const r of others) counts.set(r.recorderSeatNumber, (counts.get(r.recorderSeatNumber) ?? 0) + 1);
-    let topSeat = others[0].recorderSeatNumber;
-    let topN = 0;
-    for (const [s, n] of counts) if (n > topN) { topSeat = s; topN = n; }
+    const handlerSeat = detectTakeOver(records, seatNumber);
+    if (handlerSeat == null) return;
     alreadyRecordedShownRef.current = true;
-    setAlreadyRecorded({ seat: topSeat, done: Object.keys(records).length, total: students.length });
-  }, [isLoading, records, seatNumber, students]);
+    setAlreadyRecorded(handlerSeat);
+  }, [isLoading, records, seatNumber]);
 
   const persist = useCallback(
     (studentId: string, value: { submissionStatus?: SubmissionStatus; gradeValue?: number | null }) => {
@@ -231,7 +265,7 @@ export default function RecordPage({
       <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6 text-center">
         <Icon name={icon} size={40} className="mb-3 text-slate-300" />
         <p className="mb-4 text-slate-600">{text}</p>
-        <Link href={`/helper/${roomId}`}>
+        <Link href={`/helper/${roomId}`} onClick={goToTaskList}>
           <Button variant="primary" size="sm">{messages.common.back}</Button>
         </Link>
       </div>
@@ -244,7 +278,7 @@ export default function RecordPage({
       <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 p-6">
         <Icon name="lucide:frown" size={40} className="mb-3 text-slate-300" />
         <p className="mb-4 text-slate-600">{messages.room.notFoundTitle}</p>
-        <Link href={`/helper/${roomId}`}>
+        <Link href={`/helper/${roomId}`} onClick={goToTaskList}>
           <Button variant="primary" size="sm">{messages.common.back}</Button>
         </Link>
       </div>
@@ -255,7 +289,7 @@ export default function RecordPage({
     <div className="min-h-screen bg-amber-50 pb-12">
       <div className="lp-header">
         <div className="lp-body-narrow" style={{ paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
-          <Link href={`/helper/${roomId}`} className="mb-1.5 link-back">
+          <Link href={`/helper/${roomId}`} className="mb-1.5 link-back" onClick={goToTaskList}>
             <Icon name="lucide:arrow-left" size={13} />
             {messages.task.listTitle}
           </Link>
@@ -279,7 +313,7 @@ export default function RecordPage({
           }
           onChangeGrade={(studentId, grade) => persist(studentId, { gradeValue: grade })}
           onMarkComplete={handleMarkComplete}
-          onChangeSeat={() => setChangeSeatOpen(true)}
+          onChangeSeat={handleChangeSeatTap}
           markCompleteGapCount={markCompleteGapCount}
         />
 
@@ -300,13 +334,7 @@ export default function RecordPage({
         open={alreadyRecorded != null}
         title={messages.task.listTitle}
         message={
-          alreadyRecorded
-            ? messages.task.alreadyRecordedNotice(
-                alreadyRecorded.seat,
-                alreadyRecorded.done,
-                alreadyRecorded.total
-              )
-            : ''
+          alreadyRecorded != null ? messages.task.alreadyRecordedNotice(alreadyRecorded) : ''
         }
         confirmLabel={messages.task.takeOver}
         cancelLabel={messages.task.backToList}

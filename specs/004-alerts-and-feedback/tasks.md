@@ -76,6 +76,7 @@
 
 - [x] T318 [US1] 修改 `src/components/SyncIndicator.tsx`：新增**失敗態**（與「同步中」「待上傳」視覺可區分），顯示受影響筆數（FR-081）；失敗態文案指向「去找老師」（沿用 003 FR-065 升級模式，FR-082） <!-- 2026-07-27 已實作（failedCount 優先態 + messages.sync.failed） -->
 - [x] T319 [P] [US1] 在 `src/messages/zh-TW.ts`、`en.ts` 新增同步失敗態文案（指出 N 筆送不出去 + 下一步找老師；文案定稿 #1） <!-- 2026-07-27 已實作（sync.failed，zh-TW + en） -->
+- [x] T319a [US1] 佇列 op 保留 `failReason`（`reconcileSync` 寫入、`resetRetryJudgment` 清除），新增 `dominantFailReason` 優先序純函式，`SyncIndicator` 以 `resolveError` 顯示成因文案（FR-112a） <!-- 2026-08-10 測試回饋問題二：座號被移除卻只顯示「有 N 筆送不出去」 -->
 
 ### 同步正確性驗證
 
@@ -152,7 +153,9 @@
 - [x] T341 [US5] 離線登記於同步時發現任務已封存者：學生端視為**成功**（非衝突、不擋），以生命週期文案告知「這個任務老師已經收起來了」（用「已收起/已封存」非「遲交」）（FR-101a；文案 #10） <!-- 2026-07-27 已實作（封存離線同步視為成功 + 生命週期文案） -->
 - [x] T342 [P] [US5] 在 `src/messages/zh-TW.ts`、`en.ts` 新增任務已收起 / 封存告知文案 <!-- 2026-07-27 已實作（任務已收起文案） -->
 
-> 任務因截止或已完成而鎖定者，維持既有 `task.lockedDuePassed` / `task.lockedCompleted`（AS6，已符合設計）
+- [x] T342a [US5] 拆分 `src/lib/task.ts` 的 `getTaskLockReason`：`'COMPLETED'` 拆成 `'HELPER_COMPLETED'` / `'CLOSED'`，`RecordForm` 依三態分流文案，新增 `task.lockedClosedByTeacher`（AS6b） <!-- 2026-08-10 測試回饋問題一：老師結案時學生被告知「你已經標記完畢了」 -->
+
+> 任務因截止或小老師自行標記完成而鎖定者，維持既有 `task.lockedDuePassed` / `task.lockedCompleted`（AS6 / AS6a）
 
 **Checkpoint**: 三種成因三種對話（SC-024）
 
@@ -186,6 +189,8 @@
 
 - [x] T348 [US4] 修改 `src/app/api/records/route.ts` 與 `src/app/api/sync/route.ts` 的 Record 寫入：每次處理（建立或修改）追加一筆 `RecordHandler`（座號, 時間）依 `handledAt` 排序（FR-092） <!-- 2026-07-27 已實作（sync/records 寫 RecordHandler（writeRecordWithHandler）） -->
 - [x] T349 [US4] 同上：連續同座號去重——若名單最後一筆座號 === 本次座號則不追加相鄰重複項（FR-093 / 名單灌爆防護） <!-- 2026-07-27 已實作（連續同座號相鄰去重） -->
+- [x] T349a [US4] `RecordHandler` 改以 `(taskId, studentId)` 為 key（migration `0002_record_handler_by_cell.sql`，backfill 既有列），新增 `action` 欄位；刪除登記改為**追加一筆 DELETE 經手**而非清鏈；`shouldAppendHandler` 去重同時比對座號與動作；老師端 / demo 展開時分開敘述刪除（FR-093a） <!-- 2026-08-10 測試回饋問題四：清空重打會抹掉經手鏈，多人經手因此漏標記 -->
+- [x] T349b [US4] `RecordForm` 的 `GradeRow` 改 blur-only 送出（移除 500ms 計時器），與現值相同不送，並於 `pagehide` / `visibilitychange→hidden` / 卸載補送（FR-093b） <!-- 2026-08-10 打字中送出會讓暫時性空白變成真的刪除；計時器原本兼任的保命 flush 一併補回 -->
 - [x] T350 [US4] 離線經手鏈（FR-097）：離線期間的（座號, 時間）隨 `/api/sync` 送出並依 `handledAt` 正確併入名單，MUST NOT 因離線遺失或錯置（在 `OfflineSyncQueueItem` 帶上 `handledAt` 供 server 併入） <!-- 2026-07-27 已實作（離線經手鏈 handledAt 隨 op 送出） -->
 
 ### 老師端查閱
@@ -231,6 +236,8 @@
 - [x] T364 [US9] 任務全新無記錄、或既有記錄全由本人座號所登時不顯示（FR-128 / 避免「一律彈確認」反例）；A 是指定小老師但已有他人代登時仍顯示（AS4） <!-- 2026-07-27 已實作（全新或自己登過不顯示） -->
 - [x] T365 [US9] A 離線且本機無此任務記錄快取時不顯示、不阻擋進入（FR-129 / AS5）——此情境覆蓋由 US4 老師端名單於同步後接住 <!-- 2026-07-27 已實作（離線冷啟動不顯示不阻擋） -->
 - [x] T366 [P] [US9] 在 `src/messages/zh-TW.ts`、`en.ts` 新增載入時「已有人登過」提示文案（含兩出路） <!-- 2026-07-27 已實作（已有人登過文案） -->
+- [x] T367 [US9] 修正接手者判定：由「登記筆數最多的他人座號」改為「所有登記中最新一筆（`updatedAt` 最晚）的登記者」，含平手處理與「最新一筆是自己則不提示」（FR-126 / FR-126a / FR-128）。判定抽為 `src/lib/takeOver.ts` 的 `detectTakeOver` 純函式並補單元測試 `src/lib/__tests__/takeOver.test.ts` <!-- 2026-08-10 已實作（舊多數決會指向已交棒的舊接手者） -->
+- [x] T368 [US9] 提示文案移除登記筆數：改為「這個任務座號 X 已經在登記了，你要接手嗎?」（zh-TW / en 同步）。改判定為「最新一筆」後，任務層級的 N/M 並非該座號一人所登，並列會誤導（FR-126；文案 #14） <!-- 2026-08-10 已實作（連帶移除 detectTakeOver 的 done/total 回傳） -->
 
 **Checkpoint**: 碰撞前攔一次（SC-032）
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
-import { record, task } from '@/db/schema';
+import { record, recordHandler, task } from '@/db/schema';
 import { computeIsAssignedRecorder, getTaskLockReason, resolveRecordMutation } from '@/lib/task';
 import { ERROR_CODES, type ErrorCode } from '@/i18n/errorCodes';
 import { deleteRecordByTaskStudent, writeRecordWithHandler } from '@/lib/recordWrite';
@@ -31,20 +31,37 @@ export async function GET(request: Request) {
         student: {
           columns: { id: true, name: true, seatNumber: true, isRemoved: true },
         },
-        // US4：順序處理者名單（依時間），供老師端查閱經手鏈
-        handlers: {
-          columns: { seatNumber: true, handledAt: true },
-          orderBy: (h, { asc }) => [asc(h.handledAt)],
-        },
       },
     });
 
+    // US4：順序處理者名單（依時間）。鏈以 (taskId, studentId) 為 key、與 record 的存在
+    // 與否無關，故另行查詢後依 studentId 併入，而非走 record 的關聯。
+    const handlerRows = await db
+      .select({
+        studentId: recordHandler.studentId,
+        seatNumber: recordHandler.seatNumber,
+        action: recordHandler.action,
+        handledAt: recordHandler.handledAt,
+      })
+      .from(recordHandler)
+      .where(eq(recordHandler.taskId, taskId))
+      .orderBy(asc(recordHandler.handledAt));
+
+    const chains = new Map<string, Array<Omit<(typeof handlerRows)[number], 'studentId'>>>();
+    for (const { studentId, ...step } of handlerRows) {
+      const chain = chains.get(studentId);
+      if (chain) chain.push(step);
+      else chains.set(studentId, [step]);
+    }
+
+    const withHandlers = records.map((r) => ({ ...r, handlers: chains.get(r.studentId) ?? [] }));
+
     // 依 student.seatNumber、name 排序（關聯欄位無法於 DB 端排序，改於記憶體排序）
-    records.sort(
+    withHandlers.sort(
       (a, b) => a.student.seatNumber - b.student.seatNumber || a.student.name.localeCompare(b.student.name)
     );
 
-    return NextResponse.json(records);
+    return NextResponse.json(withHandlers);
   } catch (error) {
     console.error('Failed to fetch records:', error);
     return NextResponse.json({ error: ERROR_CODES.INTERNAL_ERROR }, { status: 500 });
@@ -98,9 +115,10 @@ export async function PATCH(request: Request) {
         continue;
       }
 
-      // 取消勾選（繳交）或清空成績 → 刪除記錄，回到「沒登記過」
+      // 取消勾選（繳交）或清空成績 → 刪除記錄，回到「沒登記過」。
+      // 經手鏈保留並記下這次刪除是誰做的（FR-093a）。
       if (mutation.action === 'delete') {
-        await deleteRecordByTaskStudent(taskId, studentId);
+        await deleteRecordByTaskStudent({ taskId, studentId, recorderSeatNumber });
         results.push({ taskId, studentId, deleted: true });
         continue;
       }

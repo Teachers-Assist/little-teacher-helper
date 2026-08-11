@@ -26,7 +26,7 @@ export default function Error({ error, reset }: ErrorProps) {
         <h2 className="mb-4 text-xl font-semibold text-slate-700 dark:text-slate-300">
           {messages.errorPage.errorHeading}
         </h2>
-        <p className="mb-8 max-w-md text-slate-600 dark:text-slate-400">
+        <p className="mb-8 text-slate-600 dark:text-slate-400">
           {messages.errorPage.errorDesc}
         </p>
         {error.message && (
