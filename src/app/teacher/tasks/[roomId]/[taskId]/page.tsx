@@ -8,11 +8,14 @@ import { TaskResultView } from '@/components/TaskResultView';
 import { Student, Task, TaskType } from '@/types';
 import { getTaskDisplayState, type TaskBadge } from '@/lib/task';
 import { formatDate } from '@/lib/utils';
+import { SCREEN, setFeedbackScreen } from '@/lib/feedback';
 import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Room {
   id: string;
   name: string;
+  /** 只給回報問題用（[B13] 班級代碼）；畫面上不顯示。 */
+  code: string;
 }
 
 /**
@@ -50,6 +53,12 @@ export default function TaskDetailPage({
     };
     fetchData();
   }, [roomId, taskId]);
+
+  // 畫面本身由路由就推得出來，這裡回報是為了順便帶上班級代碼（[B13]）。
+  useEffect(() => {
+    setFeedbackScreen({ screen: SCREEN.teacherTaskDetail, roomCode: room?.code });
+    return () => setFeedbackScreen(null);
+  }, [room?.code]);
 
   if (isLoading) {
     return (

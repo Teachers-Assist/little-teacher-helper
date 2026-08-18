@@ -62,6 +62,7 @@ const USED_ICONS = [
   'external-link',
   'chevron-right',
   'lightbulb',
+  'message-square-warning', // 回報問題（FeedbackMenuItem / 首頁回饋連結）
 ] as const;
 
 const rawIcons = (lucideData as unknown as { icons: RawIcons }).icons;

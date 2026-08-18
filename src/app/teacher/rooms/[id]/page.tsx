@@ -20,6 +20,7 @@ import { QRCodeModal } from '@/components/QRCodeModal';
 import { Student, Task, TaskStatus } from '@/types';
 import { getTaskDisplayState, type TaskBadge } from '@/lib/task';
 import { cn, formatDate } from '@/lib/utils';
+import { SCREEN, setFeedbackScreen } from '@/lib/feedback';
 import { useMessages } from '@/i18n/MessagesProvider';
 
 interface Room {
@@ -111,6 +112,19 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     };
     fetchData();
   }, [id]);
+
+  // 回報問題（feedback.ts）要知道老師「現在在哪個畫面」。三個 tab 共用同一條路由、
+  // 切 tab 只改 state 不寫回網址，光看 usePathname 推不出來，所以由這一頁自己回報。
+  useEffect(() => {
+    const screen =
+      activeTab === 'students'
+        ? SCREEN.teacherRoomStudents
+        : activeTab === 'tasks'
+          ? SCREEN.teacherRoomTasks
+          : SCREEN.teacherRoomStatus;
+    setFeedbackScreen({ screen, roomCode: room?.code });
+    return () => setFeedbackScreen(null);
+  }, [activeTab, room?.code]);
 
   // US6/US7：支援 ?tab= 深連結與 ?qr=open 自動開啟 modal
   useEffect(() => {

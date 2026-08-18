@@ -4,10 +4,17 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { useMessages } from '@/i18n/MessagesProvider';
+import { buildFeedbackUrl, INTENT } from '@/lib/feedback';
 
 export default function HomePage() {
   const messages = useMessages();
   const { landing, app } = messages;
+
+  // 首頁的入口一律走「功能建議」分流：這裡沒有畫面／班級可以帶，
+  // 而會從首頁點進來的多半是想講想法的人。真的要回報問題的老師
+  // 在表單第一題就能改選（側欄的「回報問題」才預填 bug 並帶上情境）。
+  // 只依賴 build 時注入的版本號，所以在伺服器與瀏覽器算出來一樣，不會 hydration 不一致。
+  const ideaFormUrl = buildFeedbackUrl({ intent: INTENT.idea });
 
   return (
     <div className="mx-auto w-full max-w-[1120px] sm:border-x-2 sm:border-black">
@@ -71,6 +78,18 @@ export default function HomePage() {
                 · {landing.tryDemoDesc}
               </span>
             </Link>
+
+            {/* 意見回饋：緊接試用之下，同為一行式次要入口，但用白底黑框（沿用 heroBadge 的
+                語彙）壓在黃色底上，比試用醒目、又不與上面兩張角色卡搶主要動線。 */}
+            <a
+              href={ideaFormUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="-mt-2 inline-flex items-center justify-center gap-1.5 self-center rounded-full border-2 border-black bg-white px-3.5 py-1.5 text-xs font-bold text-slate-900 transition-transform hover:bg-accent-100 active:scale-95"
+            >
+              <Icon name="lucide:message-square-warning" size={15} />
+              {landing.feedbackCta}
+            </a>
           </div>
         </div>
       </section>

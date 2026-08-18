@@ -50,6 +50,8 @@ export const messages = {
     dashboard: '儀表板',
     rooms: '班級', // DEPRECATED（002 US8）：偽按鈕，待程式移除
     settings: '設定',
+    // 老師端側欄專用：這個選單裡多了「回報問題」，標題要說出來才有人找得到
+    settingsAndFeedback: '設定及問題回報',
     language: '語言',
     // 002 US8：新增「我的班級」可展開清單
     myClasses: '我的班級',
@@ -105,6 +107,9 @@ export const messages = {
         rest: '（顯示「已同步」）再交還。',
       },
     ],
+
+    // 意見回饋入口（緊接「試用看看」之下，免帳號也看得到）
+    feedbackCta: '給我們建議或是回報問題',
   },
 
   // 推廣示範沙盒（006）：僅列 demo 專屬新文案；共用文字沿用既有 key
@@ -192,6 +197,11 @@ export const messages = {
     globalTitle: '嚴重錯誤',
     globalHeading: '應用程式發生嚴重問題',
     globalDesc: '很抱歉，發生了無法恢復的錯誤。請重新載入頁面或聯繫技術支援。',
+  },
+
+  // 意見回饋（開 Google 表單，見 src/lib/feedback.ts）
+  feedback: {
+    menuLabel: '回報問題及建議',
   },
 
   join: {

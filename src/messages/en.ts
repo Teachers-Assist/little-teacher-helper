@@ -53,6 +53,8 @@ export const messages = {
     dashboard: 'Dashboard',
     rooms: 'Classes', // DEPRECATED (002 US8): dead button, pending code removal
     settings: 'Settings',
+    // Teacher sidebar only: this menu also holds "Report a problem", so say so in the label
+    settingsAndFeedback: 'Settings & feedback',
     language: 'Language',
     // 002 US8: new "My Classes" expandable list
     myClasses: 'My Classes',
@@ -110,6 +112,9 @@ export const messages = {
         rest: ' (it shows “Synced”) before handing it back.',
       },
     ],
+
+    // Feedback entry point (right under "Try the demo"; visible without signing in)
+    feedbackCta: 'Send us an idea or report a problem',
   },
 
   // Promo demo sandbox (006): only demo-specific new copy; shared text reuses existing keys
@@ -206,6 +211,11 @@ export const messages = {
     globalHeading: 'A critical error occurred',
     globalDesc:
       'Sorry, an unrecoverable error has occurred. Please reload the page or contact technical support.',
+  },
+
+  // Feedback (opens a Google Form; see src/lib/feedback.ts)
+  feedback: {
+    menuLabel: 'Report a problem or give feedback',
   },
 
   // Student-facing — joining a class
