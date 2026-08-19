@@ -1,8 +1,53 @@
 # Data Model: 小老師助手系統
 
-**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-07-28（ORM 改 Drizzle + Cloudflare D1，取代 Prisma／PostgreSQL；schema 真實來源移至 `src/db/schema.ts`）｜前次 2026-07-20（004 增量：新增 RecordHandler 子表；Task.dueDate 寫入慣例改 17:00）
+**Branch**: `001-little-teacher-helper` | **Date**: 2024-12-02 | **Updated**: 2026-08-17（新增「時間欄位語意」章節：釐清 `Record.*` 時間欄位為伺服器時間、`RecordHandler.handledAt` 為裝置端操作時間；修正登記生命週期中已移除的 `synced` 欄位敘述）｜前次 2026-07-28（ORM 改 Drizzle + Cloudflare D1，取代 Prisma／PostgreSQL；schema 真實來源移至 `src/db/schema.ts`）｜2026-07-20（004 增量：新增 RecordHandler 子表；Task.dueDate 寫入慣例改 17:00）
 
 本文件定義系統的資料模型，基於 Feature Spec 中的 Key Entities。
+
+---
+
+## ⚠️ 時間欄位語意（讀本文件前必看）
+
+本系統有**兩種語意完全不同的時間**。它們的物理儲存一模一樣（都是 INTEGER 毫秒），
+所以型別看不出差別 —— 但混用會讓時間相關的分析與判斷得出**與事實相反**的結論。
+
+| 欄位 | 語意 | 由誰的時鐘產生 | 寫入時機 |
+|---|---|---|---|
+| `Record.createdAt` / `updatedAt` | **伺服器時間** | 伺服器 | API route 執行時，由 `$defaultFn` / `$onUpdateFn` 寫入 |
+| `Record.syncedAt` | **伺服器時間** | 伺服器 | 每次 upsert 覆寫（`lib/recordWrite.ts`），故只保有最後一次 |
+| `Task` / `Student` / `Room` / `Teacher` 的 `createdAt` / `updatedAt`、`Task.archivedAt` | **伺服器時間** | 伺服器 | 同上 |
+| **`RecordHandler.handledAt`** | **操作原始時間** | **小老師的裝置** | 離線同步時由 `syncQueue` op 的 `createdAt` 帶入（`api/sync/route.ts`）；線上直寫時退回伺服器 now |
+
+### 關鍵後果
+
+**離線登記的 `Record.createdAt` 是「同步進來的時間」，不是「小老師登記的時間」。**
+
+例：小老師 10:15 在離線狀態登記，回家 20:30 才連上網路完成同步 ——
+
+- `Record.createdAt` ＝ `Record.syncedAt` ＝ **20:30**（伺服器收到的那一刻）
+- `RecordHandler.handledAt` ＝ **10:15**（實際操作的那一刻）
+
+⇒ 凡是要回答「**這件事什麼時候發生**」（登記行為的時段分布、任務完成耗時、操作節奏），
+一律用 `RecordHandler.handledAt`，**MUST NOT** 用 `Record.createdAt`。用錯的話，所有登記
+時間都會塌到同步時刻，離線使用愈多、結論偏得愈遠。
+
+⇒ 凡是要回答「**伺服器什麼時候知道這件事**」（同步延遲、異常偵測的觀測窗），才用
+`syncedAt` / `updatedAt`。異常規則（`anomaly-rules.md`）依賴伺服器端可見的時間是**正確的** ——
+偵測「停擺」問的就是「伺服器多久沒看到新資料」，而不是「學生多久沒操作」；學生保持離線
+本身即為 vision 原則二要讓老師看見的行為，不該用裝置端時間去補平。
+
+### 兩個已知限制
+
+1. **`handledAt` 是裝置端時鐘，不可當作可信的絕對時間。** 平板時鐘偏差會直接反映在此欄位。
+   `syncedAt − handledAt` 可推導離線滯留時間，但時鐘偏快的裝置會算出負值。若需要精確的離線
+   滯留時間，應另加伺服器端的 `receivedAt` 欄位（尚未實作）。
+2. **`syncedAt` 只保有最後一次寫入的時間。** 同一格被多次寫入時，只有最後一次算得出同步延遲。
+   `RecordHandler` 的鏈保有每一手的 `handledAt`，但沒有對應的「這一手何時到達伺服器」。
+
+### 時區
+
+所有時間欄位為 **INTEGER Unix 毫秒（UTC）**。呈現、依日期分組、與截止日比較時 MUST 轉為
+台灣時間（UTC+8，見 `lib/timezone.ts`）；直接對 UTC 取小時或取日期會在跨日邊界出錯。
 
 ---
 
@@ -165,9 +210,12 @@ ACTIVE / HELPER_COMPLETED ──[老師結案]──→ CLOSED
 | gradeValue | Int | Optional, 0-100 | 成績數值（GRADE 類型任務使用） |
 | recorderSeatNumber | Int | Required | 實際操作登記的小老師座號（**最後一手**；每次 upsert 覆寫。等於 RecordHandler 名單最後一筆的座號） |
 | isAssignedRecorder | Boolean | Required | 此次登記者是否為任務指定的小老師（跟隨 recorderSeatNumber，即「最後一手」的身份） |
-| syncedAt | DateTime | Optional | 同步至伺服器的時間（null 表示待同步） |
-| createdAt | DateTime | Auto | 建立時間 |
-| updatedAt | DateTime | Auto | 更新時間 |
+| syncedAt | DateTime | Optional | **伺服器**寫入此筆的時間；每次 upsert 覆寫，故只保有最後一次。null 表示尚未同步 |
+| createdAt | DateTime | Auto | **伺服器**建立時間。⚠️ 離線登記時這是「同步進來的時間」，**不是**小老師登記的時間 |
+| updatedAt | DateTime | Auto | **伺服器**更新時間（`$onUpdateFn`；走 `onConflictDoUpdate` 的 upsert 亦會更新） |
+
+> ⚠️ **本表三個時間欄位全為伺服器時間。** 要取得「小老師實際操作的時刻」必須查
+> `RecordHandler.handledAt`（見 §6 與文件開頭「時間欄位語意」）。
 
 **關聯**:
 - 屬於一個任務 (N:1 → Task)
@@ -205,7 +253,7 @@ enum SubmissionStatus {
 | studentId | String | FK → Student, cascade | 被登記的學生 |
 | seatNumber | Int | Required | 該次處理者座號 |
 | action | Enum | Required, 預設 RECORD | 該次做了什麼：`RECORD`（登記／修改）或 `DELETE`（清成沒登記） |
-| handledAt | DateTime | Required | 該次處理時間（名單排序依據） |
+| handledAt | DateTime | Required | 該次處理的**原始操作時間**（名單排序依據）。離線同步時由 `syncQueue` op 的 `createdAt` 帶入 → **來自小老師裝置的時鐘**；線上直寫時退回伺服器 now。⚠️ 全系統唯一保有「操作實際發生時刻」的欄位，見文件開頭「時間欄位語意」 |
 
 **關聯**: 屬於一個任務 (N:1 → Task)、一位學生 (N:1 → Student)
 
@@ -222,6 +270,8 @@ enum SubmissionStatus {
 - 名單**第一筆**＝最初建立者；**最後一筆**＝最後一手（該格仍有 Record 時，等於 `Record.recorderSeatNumber`）
 - 因此不需要另立「最初建立者座號」「最後修改者座號」純量欄位 —— 由名單首尾推導
 - **只留人、動作與順序，不留前值**：查得到誰、何時、第幾手、是登記還是刪除，查不到每一手改成什麼值（升級為完整 audit log 仍待決，見 `open-questions.md` 2026-07-20）
+- **本表是全系統唯一保有「操作實際發生時刻」的地方**：`Record` 的時間欄位全為伺服器時間，離線登記的 `Record.createdAt` 等於同步時刻。任何「什麼時候發生」的查詢都必須以 `handledAt` 為準（見文件開頭「時間欄位語意」）
+- **去重規則會吃掉重複次數**：同座號 + 同動作連續處理只留一筆（見下方「寫入規則」），因此「同一個人反覆修正同一格」的**次數**在本表中查不到，只看得到最後一次的 `handledAt`。若需量測此行為（例如「小老師自己發現登錯並改正」），需另加計數欄位
 
 **寫入規則**:
 - 追加去重同時比對**座號與動作**：兩者都與名單最後一筆相同才不追加（避免同一人連續修正灌爆名單）。被其他座號穿插後的同座號再次修改仍各自記錄（`8 → 12 → 8` 與 `8 → 8 → 8` 意義不同）；同座號「先刪再登」也各自記錄，否則名單會停在刪除、與畫面上的值不符
@@ -252,6 +302,9 @@ enum SubmissionStatus {
 
 - 時間戳**不依賴** SQL 的 `DEFAULT CURRENT_TIMESTAMP`（那會寫入 TEXT）；一律由
   `$defaultFn` / `$onUpdateFn` 在應用層寫入 `Date`，維持毫秒整數形式。
+- ⚠️ **物理儲存一致不代表語意一致**：上表把所有 DateTime 歸為一列，但 `handledAt` 來自
+  小老師裝置的時鐘、其餘全部來自伺服器。新增時間欄位時務必一併說明它是哪一種，見文件開頭
+  「時間欄位語意」。
 - 唯一約束（`Record` 的 `(taskId, studentId)`、`Student` 的 `(roomId, seatNumber)`）以
   `uniqueIndex` 定義，供 `onConflictDoUpdate` upsert 使用。
 - 關聯（`relations()`）供 `db.query.X.findFirst/findMany({ with })` 使用，取代 Prisma 的
@@ -378,14 +431,23 @@ interface OfflineData {
 ```
 初始：無記錄（＝未登記 / 未繳交）
   │
-  [小老師登記] → 建立 Record（本機儲存，synced: false）
+  [小老師登記] → 寫入本機 syncQueue（op.createdAt ＝ 裝置端操作時間）
+  │              畫面由 base ⊕ queue 派生為「待上傳」
   │
-  [網路同步] → syncedAt 填入，synced: true
+  [網路同步] → 伺服器 upsert Record，寫入伺服器端 createdAt / syncedAt；
+  │              op 帶的操作時間成為 RecordHandler.handledAt
+  │              op 移出佇列後畫面轉為「已同步」
   │
-  [修改] → 更新 Record（任務未鎖定時）
+  [修改] → 更新 Record（任務未鎖定時）；syncedAt / updatedAt 覆寫為新的伺服器時間
   │
   [取消勾選 / 清空成績] → 刪除 Record，回到「無記錄」（任務未鎖定時）
+                          經手鏈保留並追加 action='DELETE'
 ```
+
+> **（2026-08-17 更正）** 本流程原寫作「建立 Record（本機儲存，`synced: false`）→ 同步後
+> `synced: true`」，與同文件 §Offline Data Structure 矛盾：`records[].synced` 欄位已於
+> 004 S3 移除，未同步狀態改由「該筆是否還在 `syncQueue`」派生。且本機端不存在 `syncedAt`
+> ——它是伺服器寫入時才產生的欄位。已依實際實作改寫。
 
 ### 離線同步流程
 ```
@@ -393,7 +455,7 @@ interface OfflineData {
 2. 加入 syncQueue
 3. 偵測網路恢復
 4. 依序處理 syncQueue
-5. 成功 → 移出佇列，標記 synced: true，填入 syncedAt
+5. 成功 → op 移出佇列（畫面因此不再派生「待上傳」）；伺服器端寫入 syncedAt
 6. 失敗 → retryCount++，session 內重試（上限屬調參）
 ```
 
