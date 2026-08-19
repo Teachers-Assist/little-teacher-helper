@@ -146,6 +146,9 @@ export function StudentImport({ roomId, onImported, onParsed }: StudentImportPro
               </li>
             ))}
           </ul>
+          <p className="mt-2 border-t border-red-200 pt-2 text-xs font-medium text-red-700">
+            {messages.teacher.studentList.importConflictAllOrNothing}
+          </p>
         </div>
       )}
     </div>

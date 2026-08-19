@@ -453,6 +453,8 @@ export const messages = {
       importSuccess: (count: number) => `成功匯入 ${count} 位學生`,
       importConflict: '匯入有衝突，請修正後重試',
       importConflictTitle: '無法匯入，請修正以下問題後再上傳：',
+      importConflictAllOrNothing:
+        '只要有一列有問題，整份檔案都不會上傳，故目前尚未新增任何學生。修正問題後，請再重新上傳整份檔案。',
       removeConfirmTitle: '移除學生',
       removeConfirmMessage: (name: string) =>
         `確定要移除「${name}」嗎？歷史登記記錄會保留，可在「已移除學生」還原。`,
