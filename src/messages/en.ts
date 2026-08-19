@@ -483,6 +483,8 @@ export const messages = {
       importSuccess: (count: number) => `Imported ${count} student${count === 1 ? '' : 's'}`,
       importConflict: 'Import has conflicts. Please fix and retry.',
       importConflictTitle: 'Cannot import. Please fix the following and re-upload:',
+      importConflictAllOrNothing:
+        'A single problem row blocks the entire file, so no students have been added yet. Once the problems are fixed, please upload the whole file again.',
       removeConfirmTitle: 'Remove Student',
       removeConfirmMessage: (name: string) =>
         `Remove "${name}"? Past records are kept and you can restore from "Removed Students".`,
