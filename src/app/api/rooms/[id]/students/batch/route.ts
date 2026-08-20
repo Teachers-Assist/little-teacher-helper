@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, isUniqueConstraintError } from '@/lib/db';
-import { student } from '@/db/schema';
+import { insertStudents } from '@/lib/studentInsert';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 interface StudentInput {
@@ -49,11 +49,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    // 單一多列 INSERT ＝ 全或無（任一座號與現有衝突則整批失敗，不會部分寫入）
-    const createdStudents = await db
-      .insert(student)
-      .values(students.map((s) => ({ name: s.name.trim(), seatNumber: s.seatNumber, roomId })))
-      .returning();
+    // 全或無：依 D1 綁定參數上限分段後，用單一 transaction 送出
+    //（任一座號與現有衝突則整批失敗，不會部分寫入）
+    const createdStudents = await insertStudents(
+      db,
+      students.map((s) => ({ name: s.name.trim(), seatNumber: s.seatNumber, roomId }))
+    );
 
     return NextResponse.json(
       {

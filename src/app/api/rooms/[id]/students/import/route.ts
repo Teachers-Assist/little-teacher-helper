@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
 import { student } from '@/db/schema';
+import { insertStudents } from '@/lib/studentInsert';
 
 // 學生 Excel 批次匯入的「後端」endpoint（002 US1）。
 // 前端已完成格式驗證與檔案內衝突偵測，此處只收乾淨 JSON，負責：
@@ -106,11 +107,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ conflicts }, { status: 409 });
     }
 
-    // 4. 全或無原子寫入（單一多列 INSERT）
-    const created = await db
-      .insert(student)
-      .values(incoming.map((row) => ({ name: row.name.trim(), seatNumber: row.seatNumber, roomId })))
-      .returning();
+    // 4. 全或無原子寫入（依 D1 綁定參數上限分段，單一 transaction）
+    const created = await insertStudents(
+      db,
+      incoming.map((row) => ({ name: row.name.trim(), seatNumber: row.seatNumber, roomId }))
+    );
 
     return NextResponse.json({ created: created.length, students: created }, { status: 201 });
   } catch (error) {
