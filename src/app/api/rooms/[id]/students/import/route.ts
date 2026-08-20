@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
 import { student } from '@/db/schema';
 import { insertStudents } from '@/lib/studentInsert';
+import { buildSeatIndex } from '@/lib/seatHolder';
+import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // 學生 Excel 批次匯入的「後端」endpoint（002 US1）。
 // 前端已完成格式驗證與檔案內衝突偵測，此處只收乾淨 JSON，負責：
@@ -28,6 +30,8 @@ interface Conflict {
   rowNumber: number;
   field: 'seat' | 'name' | null;
   code: string;
+  /** 文案為函式時的替換值（如座號被已移除學生佔用，需帶出座號與姓名）。 */
+  params?: { seatNumber: number; name: string };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -87,14 +91,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .select({ seatNumber: student.seatNumber, name: student.name, isRemoved: student.isRemoved })
       .from(student)
       .where(eq(student.roomId, roomId));
-    const existingSeats = new Set(existing.map((s) => s.seatNumber));
+    // 已移除學生佔用的座號要分開處理：老師在名單上看不到這些人，訊息必須點名是誰，
+    // 否則他對著 Excel 找重複只會找到「根本沒有重複」。
+    const { activeSeats, removedBySeat } = buildSeatIndex(existing);
     const existingActiveNames = new Set(
       existing.filter((s) => !s.isRemoved).map((s) => s.name)
     );
 
     for (const row of incoming) {
-      if (existingSeats.has(row.seatNumber)) {
+      const removedHolder = removedBySeat.get(row.seatNumber);
+      if (activeSeats.has(row.seatNumber)) {
         conflicts.push({ rowNumber: row.rowNumber, field: 'seat', code: `${P}.seatDupExisting` });
+      } else if (removedHolder !== undefined) {
+        conflicts.push({
+          rowNumber: row.rowNumber,
+          field: 'seat',
+          // 與手動新增 / 編輯共用同一句文案，故碼指向 student.* 而非 importErrors.*
+          code: ERROR_CODES.STUDENT_SEAT_DUPLICATE_REMOVED,
+          params: { seatNumber: row.seatNumber, name: removedHolder },
+        });
       }
       const name = typeof row?.name === 'string' ? row.name.trim() : '';
       if (name && existingActiveNames.has(name)) {

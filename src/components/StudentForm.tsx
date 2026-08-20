@@ -68,7 +68,7 @@ export function StudentForm({ roomId, editing, onSaved, onCancelEdit }: StudentF
         setName('');
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(resolveError(messages, data.error));
+        setError(resolveError(messages, data.error, data.params));
       }
     } catch (err) {
       console.error('Failed to save student:', err);

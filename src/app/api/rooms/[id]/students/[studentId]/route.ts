@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { getDb, isUniqueConstraintError } from '@/lib/db';
 import { student } from '@/db/schema';
+import { findSeatHolder, seatConflictError } from '@/lib/seatHolder';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 // PATCH：編輯學生（姓名 / 座號）。002 US2。
@@ -36,6 +37,14 @@ export async function PATCH(
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: ERROR_CODES.STUDENT_NAME_REQUIRED }, { status: 400 });
+    }
+
+    // 改座號時先查佔用者（排除自己），以便分辨佔用者是名單上的學生還是已移除的學生。
+    if (data.seatNumber !== undefined) {
+      const holder = await findSeatHolder(db, roomId, data.seatNumber, studentId);
+      if (holder) {
+        return NextResponse.json(seatConflictError(holder), { status: 409 });
+      }
     }
 
     const updated = await db

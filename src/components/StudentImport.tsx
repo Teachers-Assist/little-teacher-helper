@@ -24,6 +24,8 @@ interface ConflictRow {
   rowNumber: number;
   field: 'seat' | 'name' | null;
   code: string;
+  /** 部分文案是函式（如座號被已移除學生佔用），需要後端一併帶回的替換值。 */
+  params?: { seatNumber: number; name: string };
 }
 
 export function StudentImport({ roomId, onImported, onParsed }: StudentImportProps) {
@@ -142,7 +144,7 @@ export function StudentImport({ roomId, onImported, onParsed }: StudentImportPro
                 <span className="font-mono font-semibold">
                   {messages.teacher.studentList.importErrors.rowLabel(c.rowNumber)}
                 </span>
-                <span>{resolveError(messages, c.code)}</span>
+                <span>{resolveError(messages, c.code, c.params)}</span>
               </li>
             ))}
           </ul>

@@ -13,6 +13,10 @@ export const ERROR_CODES = {
   STUDENT_NAME_TOO_LONG: 'student.nameTooLong',
   STUDENT_SEAT_REQUIRED: 'student.seatRequired',
   STUDENT_SEAT_DUPLICATE: 'student.seatDuplicate',
+  // 座號被「已移除」的學生佔用。座號的 unique 約束涵蓋已移除學生（座號同時是小老師
+  // 的身份，重用會讓歷史經手記錄無法歸屬），老師在名單上看不到那筆資料，因此必須與
+  // 「與現有學生重複」分開講，並點名是誰佔用。文案為函式，需搭配 params。
+  STUDENT_SEAT_DUPLICATE_REMOVED: 'student.seatDuplicateRemoved',
   STUDENT_CREATE_FAILED: 'student.createFailed',
 
   // 批次學生
@@ -45,7 +49,15 @@ export const NON_RETRYABLE_ERROR_CODES: ReadonlySet<ErrorCode> = new Set([
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
+/** 帶參數的錯誤文案所需的替換值（如 STUDENT_SEAT_DUPLICATE_REMOVED）。 */
+export interface SeatHolderParams {
+  seatNumber: number;
+  name: string;
+}
+
 /** API route 回傳的標準 JSON 錯誤格式。 */
 export interface ApiError {
   error: ErrorCode;
+  /** 文案為函式時的替換值，由 resolveError() 帶入。 */
+  params?: SeatHolderParams;
 }

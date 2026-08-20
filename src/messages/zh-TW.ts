@@ -226,6 +226,9 @@ export const messages = {
     nameTooLong: '學生姓名長度不可超過 50 字元',
     seatRequired: '座號為必填，且必須在 1-99 之間',
     seatDuplicate: '此座號在班級中已存在',
+    // 佔用者在名單上看不到（已移除），所以要點名是誰、並指出出路
+    seatDuplicateRemoved: ({ seatNumber, name }: { seatNumber: number; name: string }) =>
+      `座號 ${seatNumber} 屬於已移除的學生${name}。如需使用此座號請還原已移除學生並重新編輯姓名`,
     seatDuplicateInList: '名單中有重複的座號',
     seatDuplicateExisting: '有座號與班級中現有學生重複',
     createFailed: '新增學生失敗',
@@ -380,9 +383,29 @@ export const messages = {
     className: '班級名稱',
     classNamePlaceholder: '例如：三年二班',
     rosterOptional: '學生名單（選填）',
-    rosterHint: '每行一位學生，可加上座號，例如：',
-    rosterExample: '1 王小明',
-    rosterPlaceholder: '1 王小明\n2 李小華\n3 張小強',
+    rosterHint: '一列一位學生，左欄填座號、右欄填姓名。也可以直接從 Excel 複製整份名單貼上。',
+    roster: {
+      seatColumn: '座號',
+      nameColumn: '姓名',
+      actionColumn: '刪除',
+      seatExample: '1',
+      nameExample: '王小明',
+      seatAria: (row: number) => `第 ${row} 列座號`,
+      nameAria: (row: number) => `第 ${row} 列姓名`,
+      removeRow: (row: number) => `刪除第 ${row} 列`,
+      addRow: '再加一列',
+      count: (n: number) => `已填 ${n} 位`,
+      maxHint: (max: number) => `一次最多 ${max} 位`,
+      batchFailed: (reason: string) =>
+        `班級已建立，但學生名單沒有寫入：${reason} 修正後再按一次「建立班級」即可，不會重複建班。`,
+      errors: {
+        seatRequired: (p: { name: string }) => `「${p.name}」還沒有填座號`,
+        seatRange: (p: { name: string }) => `「${p.name}」的座號請填 1～99`,
+        nameRequired: (p: { seatNumber: number }) => `座號 ${p.seatNumber} 還沒有填姓名`,
+        seatDuplicate: (p: { seatNumber: number }) => `座號 ${p.seatNumber} 重複了，請改成不同號碼`,
+        tooMany: (p: { max: number }) => `一次最多建立 ${p.max} 位學生，請先刪掉幾列`,
+      },
+    },
     emptyClassName: '請輸入班級名稱',
     createRoomFailed: '建立班級失敗，請稍後再試',
 
