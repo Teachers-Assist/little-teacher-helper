@@ -1,6 +1,6 @@
 {
   "name": "little-teacher-helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "讓小老師幫忙收回條和登記作業繳交狀況的 PWA 應用程式",
   "private": true,
   "scripts": {
