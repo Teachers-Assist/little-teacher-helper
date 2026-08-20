@@ -70,7 +70,7 @@ export default function HomePage() {
             {/* 次要入口：試用示範沙盒（層級刻意低於兩張角色卡，FR-141） */}
             <Link
               href="/demo"
-              className="group flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-primary-600"
+              className="group flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-primary-600"
             >
               <Icon name="lucide:play-circle" size={15} />
               <span>{landing.tryDemoTitle}</span>
@@ -85,7 +85,7 @@ export default function HomePage() {
               href={ideaFormUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="-mt-2 inline-flex items-center justify-center gap-1.5 self-center rounded-full border-2 border-black bg-white px-3.5 py-1.5 text-xs font-bold text-slate-900 transition-transform hover:bg-accent-100 active:scale-95"
+              className="-mt-2 inline-flex items-center justify-center gap-1.5 self-center rounded-full border-2 border-black bg-white px-3.5 py-1.5 text-sm font-bold text-slate-900 transition-transform hover:bg-accent-100 active:scale-95"
             >
               <Icon name="lucide:message-square-warning" size={15} />
               {landing.feedbackCta}

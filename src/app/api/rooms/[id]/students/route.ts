@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, isUniqueConstraintError } from '@/lib/db';
 import { student } from '@/db/schema';
+import { findSeatHolder, seatConflictError } from '@/lib/seatHolder';
 import { ERROR_CODES } from '@/i18n/errorCodes';
 
 export async function GET(
@@ -47,6 +48,13 @@ export async function POST(
 
     if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) {
       return NextResponse.json({ error: ERROR_CODES.STUDENT_SEAT_REQUIRED }, { status: 400 });
+    }
+
+    // 先查佔用者，才能分辨「與名單上的學生重複」和「與已移除學生重複」——後者老師
+    // 在名單上看不到，訊息若不點名就無從查起。競態下仍由下方的 unique 約束把關。
+    const holder = await findSeatHolder(db, roomId, seatNumber);
+    if (holder) {
+      return NextResponse.json(seatConflictError(holder), { status: 409 });
     }
 
     const [created] = await db

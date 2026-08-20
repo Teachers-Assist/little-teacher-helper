@@ -226,6 +226,9 @@ export const messages = {
     nameTooLong: '學生姓名長度不可超過 50 字元',
     seatRequired: '座號為必填，且必須在 1-99 之間',
     seatDuplicate: '此座號在班級中已存在',
+    // 佔用者在名單上看不到（已移除），所以要點名是誰、並指出出路
+    seatDuplicateRemoved: ({ seatNumber, name }: { seatNumber: number; name: string }) =>
+      `座號 ${seatNumber} 屬於已移除的學生${name}。如需使用此座號請還原已移除學生並重新編輯姓名`,
     seatDuplicateInList: '名單中有重複的座號',
     seatDuplicateExisting: '有座號與班級中現有學生重複',
     createFailed: '新增學生失敗',
@@ -383,6 +386,12 @@ export const messages = {
     rosterHint: '每行一位學生，可加上座號，例如：',
     rosterExample: '1 王小明',
     rosterPlaceholder: '1 王小明\n2 李小華\n3 張小強',
+    rosterLineNoSpace: (line: string) =>
+      `「${line}」的座號和姓名要空一格分開。`,
+    rosterLineNoSeat: (line: string) =>
+      `「${line}」看不出座號。請寫成「座號、空格、姓名」。`,
+    rosterSaveFailed: (reason: string) =>
+      `班級已建立，但學生名單一位都沒有存進去：${reason}。請修正名單後再按一次「建立班級」，不會重複建班。`,
     emptyClassName: '請輸入班級名稱',
     createRoomFailed: '建立班級失敗，請稍後再試',
 

@@ -241,6 +241,8 @@ export const messages = {
     nameTooLong: 'Student name cannot exceed 50 characters',
     seatRequired: 'Seat number is required and must be between 1 and 99',
     seatDuplicate: 'This seat number already exists in the class',
+    seatDuplicateRemoved: ({ seatNumber, name }: { seatNumber: number; name: string }) =>
+      `Seat ${seatNumber} belongs to removed student ${name}. To use this seat, restore the removed student and edit their name.`,
     seatDuplicateInList: 'There are duplicate seat numbers in the list',
     seatDuplicateExisting: 'Some seat numbers conflict with existing students in the class',
     createFailed: 'Failed to add student',
@@ -409,6 +411,12 @@ export const messages = {
     rosterHint: 'One student per line, with seat number. Example:',
     rosterExample: '1 Alice Wang',
     rosterPlaceholder: '1 Alice Wang\n2 Bob Lee\n3 Charlie Zhang',
+    rosterLineNoSpace: (line: string) =>
+      `"${line}" needs a space between the seat number and the name.`,
+    rosterLineNoSeat: (line: string) =>
+      `This line has no seat number: "${line}". Write it as "seat, space, name".`,
+    rosterSaveFailed: (reason: string) =>
+      `The class was created, but not a single student was saved: ${reason}. Fix the list and press "Create Class" again — this will not create a second class.`,
     emptyClassName: 'Please enter a class name',
     createRoomFailed: 'Failed to create class. Please try again.',
 
